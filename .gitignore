@@ -1,0 +1,14 @@
+﻿# Backend
+helpdesk-center-backend/target/
+helpdesk-center-backend/.mvn/
+helpdesk-center-backend/src/main/resources/application.properties
+
+# Frontend
+helpdesk-center-frontend/node_modules/
+helpdesk-center-frontend/dist/
+helpdesk-center-frontend/.env.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
