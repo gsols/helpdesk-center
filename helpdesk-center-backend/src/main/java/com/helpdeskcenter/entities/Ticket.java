@@ -1,5 +1,6 @@
 package com.helpdeskcenter.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -36,12 +37,14 @@ public class Ticket {
     @Builder.Default
     private String status = "open"; // open, in_progress, resolved
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "created_by", nullable = false)
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User createdBy;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "assigned_to")
+    @JsonIgnoreProperties({"hibernateLazyInitializer", "handler", "password"})
     private User assignedTo;
 
     @Column(name = "created_at", updatable = false)

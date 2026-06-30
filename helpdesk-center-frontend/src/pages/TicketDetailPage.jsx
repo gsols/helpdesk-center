@@ -14,11 +14,14 @@ export default function TicketDetailPage() {
   const [ticket, setTicket] = useState(null);
   const [attachments, setAttachments] = useState([]);
   const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState('');
 
   const isAgent = user?.role !== 'employee';
 
   useEffect(() => {
-    getTicket(id).then(r => setTicket(r.data)).catch(() => navigate(-1));
+    getTicket(id)
+      .then(r => setTicket(r.data))
+      .catch(err => setError('Could not load ticket. ' + (err?.response?.data?.error || '')));
     getAttachments(id).then(r => setAttachments(r.data)).catch(() => {});
   }, [id]);
 
@@ -34,6 +37,7 @@ export default function TicketDetailPage() {
     }
   };
 
+  if (error)   return <div style={{ padding: 40, textAlign: 'center', color: '#b91c1c' }}>{error}</div>;
   if (!ticket) return <div style={{ padding: 40, textAlign: 'center', color: '#57606a' }}>Loading…</div>;
 
   return (
