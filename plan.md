@@ -6,14 +6,14 @@
 ## TABLE OF CONTENTS
 
 1. [Project Overview](#1-project-overview)
-2. [Technology Stack Explanation](#2-technology-stack-explanation)
+2. [Technology Stack](#2-technology-stack)
 3. [Architecture & Design Decisions](#3-architecture--design-decisions)
 4. [User Roles & Workflows](#4-user-roles--workflows)
 5. [Database Design](#5-database-design)
 6. [API Endpoints](#6-api-endpoints)
-7. [Development Timeline](#7-development-timeline)
-8. [Setup Instructions](#8-setup-instructions)
-9. [Deployment Guide](#9-deployment-guide)
+7. [File Attachment Workflow](#7-file-attachment-workflow)
+8. [Development Timeline](#8-development-timeline)
+9. [Setup Instructions](#9-setup-instructions)
 10. [Testing Strategy](#10-testing-strategy)
 11. [Risk Management](#11-risk-management)
 12. [Key Decisions & Rationale](#12-key-decisions--rationale)
@@ -39,7 +39,7 @@ Organizations waste time manually sorting support requests from shared email inb
 
 A centralized web application where:
 
-- Employees submit tickets with attachments
+- Employees submit tickets with file attachments
 - AI automatically categorizes tickets (Hardware, Software, HR)
 - Priority is auto-assigned based on keywords
 - Support agents see role-filtered dashboards
@@ -51,77 +51,53 @@ A centralized web application where:
 |---|---|
 | Timeline | 3–5 days |
 | Team | 1 developer (solo project) |
-| Budget | $0 (using free tiers) |
+| Budget | $0 |
 | Scope | MVP only (no email automation, no mobile app) |
 
 ---
 
-## 2. TECHNOLOGY STACK EXPLANATION
+## 2. TECHNOLOGY STACK
 
-### 2.1 Why Spring Boot Instead of Jakarta EE?
-
-**Decision:** Use Spring Boot (Jakarta EE encouraged but not required)
-
-**Rationale:**
-
-- **Faster setup:** Spring Boot auto-configures everything (no `server.xml`, no `persistence.xml` complexity)
-- **Better documentation:** Massive community support, more Stack Overflow answers
-- **Time savings:** 1–2 days faster development for a 3–5 day project
-- **Still satisfies requirement:** Spring Boot uses Jakarta EE standards (JPA, Servlet API)
-- **Industry relevance:** More commonly used in modern enterprises
-
-**Comparison:**
-
-| Feature | Jakarta EE (Open Liberty) | Spring Boot |
-|---|---|---|
-| Setup time | 2–3 hours | 15 minutes |
-| Configuration | Manual (XML files) | Auto-configuration |
-| DAO layer | Write manually | Auto-generated (Spring Data JPA) |
-| Community support | Smaller | Massive |
-| Time to first API | 3–4 hours | 30 minutes |
-
-> For a 1-person, 3–5 day capstone: Spring Boot is the pragmatic choice.
-
----
-
-### 2.2 Technology Stack Breakdown
+### 2.1 Stack Breakdown
 
 #### Backend
 | Component | Technology |
 |---|---|
-| Framework | Spring Boot 3.2.x |
-| Language | Java 17 |
+| Framework | Spring Boot 3.3.5 |
+| Language | Java 21 |
 | Build Tool | Maven 3.9.x |
-| Database | PostgreSQL 15.x |
-| ORM | Spring Data JPA (implements Jakarta Persistence API) |
-| Security | Spring Security (BCrypt password hashing) |
+| Database | PostgreSQL 18.x (local) |
+| ORM | Spring Data JPA |
+| Security | Spring Security — session-based (BCrypt passwords) |
+| File Storage | Local disk (`uploads/` folder inside the backend) |
 
 #### Frontend
 | Component | Technology |
 |---|---|
-| Framework | React 18.x |
+| Framework | React 19.x |
+| Bundler | Vite 8.x |
 | Language | JavaScript (ES6+) |
-| HTTP Client | Axios |
-| Routing | React Router |
-| Styling | CSS / Bootstrap (optional) |
+| HTTP Client | Axios 1.18.x |
+| Routing | React Router 7.x |
+| Linting | ESLint |
 
-#### AI & Cloud Services
+#### AI Service
 | Service | Provider |
 |---|---|
 | AI Classification | IBM Watson Natural Language Understanding (NLU) |
-| File Storage | IBM Cloud Object Storage (COS) |
-| Database Hosting | IBM Cloud Databases for PostgreSQL |
-| Application Hosting | IBM Cloud Code Engine |
+
+#### Authentication
+Session-based — no JWT. Spring Security manages the `JSESSIONID` cookie. Frontend stores the user object in `localStorage` for display only. Axios sends cookies automatically with `withCredentials: true`.
 
 #### DevOps
 | Tool | Purpose |
 |---|---|
-| Docker | Containerization |
+| Docker | Containerization (Day 5 optional) |
 | Git / GitHub | Version Control |
 
 ---
 
-### 2.3 What is Maven?
+### 2.2 What is Maven?
 
 Maven is a build automation tool for Java projects.
 
@@ -131,21 +107,6 @@ Maven is a build automation tool for Java projects.
 - **Builds the project** — compiles Java code into an executable `.jar` file
 - **Runs tests** — executes unit and integration tests
 - **Packages the application** — creates deployable artifacts
-
-**Key file:** `pom.xml` (Project Object Model)
-
-```xml
-<dependencies>
-  <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-web</artifactId>
-  </dependency>
-  <dependency>
-    <groupId>org.postgresql</groupId>
-    <artifactId>postgresql</artifactId>
-  </dependency>
-</dependencies>
-```
 
 **Common Maven commands:**
 
@@ -159,60 +120,6 @@ mvn spring-boot:run # Run the application
 
 ---
 
-### 2.4 What is Docker?
-
-Docker packages your application and all its dependencies into a **container** — a lightweight, portable unit that runs the same way everywhere.
-
-**Problem it solves:**
-
-- "It works on my laptop but not on the server"
-- Different Java versions
-- Missing dependencies
-- Configuration differences
-
-**How it works:**
-
-1. Create a `Dockerfile` (recipe for your container):
-
-```dockerfile
-FROM eclipse-temurin:17-jre
-COPY target/helpdesk-backend.jar app.jar
-ENTRYPOINT ["java", "-jar", "/app.jar"]
-```
-
-2. Build the image:
-
-```bash
-docker build -t helpdesk-backend .
-```
-
-3. Run locally (test):
-
-```bash
-docker run -p 8080:8080 helpdesk-backend
-```
-
-4. Push to IBM Cloud:
-
-```bash
-docker push us.icr.io/namespace/helpdesk-backend
-```
-
-5. Deploy to Code Engine:
-
-```bash
-ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
-```
-
-**Benefits:**
-
-- Runs the same on your laptop, classmate's laptop, and IBM Cloud
-- Easy deployment (one command)
-- Professional standard (used by Netflix, Uber, PayPal)
-- IBM Cloud Code Engine requires Docker images
-
----
-
 ## 3. ARCHITECTURE & DESIGN DECISIONS
 
 ### 3.1 System Architecture
@@ -223,7 +130,7 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 │  Employee, IT Hardware Agent, IT Software Agent,    │
 │  HR Agent (Web Browser)                             │
 └────────────────────┬────────────────────────────────┘
-                     │ HTTPS
+                     │ HTTP
 ┌────────────────────▼────────────────────────────────┐
 │            PRESENTATION LAYER                       │
 │              React Frontend (SPA)                   │
@@ -235,23 +142,23 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 │  │ - Ticket Details Page                      │    │
 │  └────────────────────────────────────────────┘    │
 └────────────────────┬────────────────────────────────┘
-                     │ REST API (JSON)
+                     │ REST API (JSON + multipart)
 ┌────────────────────▼────────────────────────────────┐
 │           APPLICATION LAYER                         │
 │          Spring Boot Backend                        │
 │  ┌────────────────────────────────────────────┐    │
 │  │ REST Controllers                           │    │
-│  │  - AuthController  (/api/auth/login)       │    │
+│  │  - AuthController  (/api/auth/*)           │    │
 │  │  - TicketController (/api/tickets)         │    │
-│  │  - CommentController (/api/comments)       │    │
-│  │  - AttachmentController (/api/attachments) │    │
+│  │  - CommentController                       │    │
+│  │  - AttachmentController                    │    │
 │  └──────────────────┬─────────────────────────┘    │
 │  ┌──────────────────▼─────────────────────────┐    │
 │  │ Business Services                          │    │
 │  │  - TicketService (CRUD logic)              │    │
 │  │  - AIService (Watson NLU integration)      │    │
 │  │  - PriorityService (keyword detection)     │    │
-│  │  - AttachmentService (presigned URLs)      │    │
+│  │  - AttachmentService (local disk I/O)      │    │
 │  │  - AuthService (login validation)          │    │
 │  └──────────────────┬─────────────────────────┘    │
 │  ┌──────────────────▼─────────────────────────┐    │
@@ -268,12 +175,13 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 ┌───────▼──────────┐      ┌─────────▼──────────┐
 │   DATA LAYER     │      │  EXTERNAL SERVICES  │
 │                  │      │                     │
-│  PostgreSQL DB   │      │ - Watson NLU        │
-│  - users         │      │ - Object Storage    │
-│  - tickets       │      └─────────────────────┘
-│  - comments      │
-│  - attachments   │
-└──────────────────┘
+│  PostgreSQL DB   │      │ - Watson NLU API    │
+│  - users         │      └─────────────────────┘
+│  - tickets       │
+│  - comments      │      ┌─────────────────────┐
+│  - attachments   │      │  LOCAL FILE SYSTEM  │
+└──────────────────┘      │  uploads/ folder    │
+                          └─────────────────────┘
 ```
 
 ---
@@ -296,10 +204,11 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 |---|---|
 | SQL Injection | JPA parameterized queries |
 | XSS (Cross-Site Scripting) | React auto-escapes output, input validation |
-| CSRF | CORS configuration, stateless REST API |
+| CSRF | CORS configuration, session-based REST API |
 | Password theft | BCrypt hashing (never store plaintext) |
 | Unauthorized access | Role-based access control |
-| File upload abuse | File type validation, size limits (10MB) |
+| File upload abuse | File type validation, size limits (10 MB) |
+| Path traversal | Sanitize file names before saving to disk |
 
 ---
 
@@ -309,10 +218,10 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 
 | Role | Description | Permissions |
 |---|---|---|
-| Employee | Regular user who submits tickets | Create tickets, view own tickets, add comments to own tickets |
-| IT Hardware Agent | Handles hardware issues | View all hardware tickets, update status, add comments, resolve tickets |
-| IT Software Agent | Handles software issues | View all software tickets, update status, add comments, resolve tickets |
-| HR Agent | Handles HR/facilities issues | View all HR tickets, update status, add comments, resolve tickets |
+| Employee | Regular user who submits tickets | Create tickets, view own tickets, add comments |
+| IT Hardware Agent | Handles hardware issues | View all hardware tickets, update status, add comments, resolve |
+| IT Software Agent | Handles software issues | View all software tickets, update status, add comments, resolve |
+| HR Agent | Handles HR/facilities issues | View all HR tickets, update status, add comments, resolve |
 
 ---
 
@@ -323,11 +232,11 @@ ibmcloud ce application create --image us.icr.io/namespace/helpdesk-backend
 ```
 STEP 1: Login
 ──────────────────────────────────────────────────────
-- Navigate to https://helpdesk-center.com
+- Navigate to http://localhost:5173
 - Enter username: john.doe
 - Enter password: ********
 - Click "Login"
-- System validates credentials and creates session
+- System validates credentials and creates session (JSESSIONID cookie)
 
 STEP 2: Navigate to Submit Ticket
 ──────────────────────────────────────────────────────
@@ -347,9 +256,9 @@ Click "Submit Ticket"
 STEP 4: Backend Processing (Automatic)
 ──────────────────────────────────────────────────────
 1. File Upload:
-   - Generate presigned URL for Object Storage
-   - Upload keyboard-photo.jpg to COS
-   - Store file URL in database
+   - Frontend sends multipart/form-data to POST /api/tickets/{id}/attachments
+   - Backend saves file to local uploads/ directory
+   - Stores relative file path in database
 
 2. AI Classification:
    - Send description to Watson NLU
@@ -376,8 +285,6 @@ STEP 5: Confirmation
    Category:  Hardware
    Priority:  High
    Status:    Open
-
-[View My Tickets] button
 
 STEP 6: Track Ticket
 ──────────────────────────────────────────────────────
@@ -409,7 +316,7 @@ STEP 2: View Filtered Queue
 STEP 3: Work the Ticket
 ──────────────────────────────────────────────────────
 - Click ticket #1001 to open details
-- View description, attachments, and history
+- View description, attachments (download via /api/attachments/{id}/download)
 - Add comment: "Reviewed your ticket. Scheduling a replacement keyboard."
 - Update status: OPEN → IN_PROGRESS
 
@@ -437,19 +344,18 @@ users ──< tickets ──< comments
 |---|---|---|---|
 | `id` | BIGSERIAL | PRIMARY KEY | Auto-increment |
 | `username` | VARCHAR(50) | UNIQUE, NOT NULL | Login identifier |
-| `password_hash` | VARCHAR(255) | NOT NULL | BCrypt hashed |
+| `password` | VARCHAR(255) | NOT NULL | BCrypt hashed |
 | `email` | VARCHAR(100) | UNIQUE, NOT NULL | Contact email |
-| `role` | VARCHAR(30) | NOT NULL | EMPLOYEE, IT_HARDWARE_AGENT, IT_SOFTWARE_AGENT, HR_AGENT |
+| `role` | VARCHAR(30) | NOT NULL | employee, it_hardware, it_software, hr |
 | `full_name` | VARCHAR(100) | NOT NULL | Display name |
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Account creation |
-| `is_active` | BOOLEAN | DEFAULT TRUE | Soft-delete flag |
 
-**Roles Enum:**
+**Roles:**
 ```
-EMPLOYEE
-IT_HARDWARE_AGENT
-IT_SOFTWARE_AGENT
-HR_AGENT
+employee
+it_hardware
+it_software
+hr
 ```
 
 ---
@@ -461,113 +367,57 @@ HR_AGENT
 | `id` | BIGSERIAL | PRIMARY KEY | Auto-increment |
 | `title` | VARCHAR(200) | NOT NULL | Short summary |
 | `description` | TEXT | NOT NULL | Full description |
-| `category` | VARCHAR(20) | NOT NULL | HARDWARE, SOFTWARE, HR |
-| `priority` | VARCHAR(10) | NOT NULL | LOW, MEDIUM, HIGH, CRITICAL |
-| `status` | VARCHAR(20) | NOT NULL | OPEN, IN_PROGRESS, RESOLVED, CLOSED |
+| `email` | VARCHAR(100) | NOT NULL | Submitter contact email |
+| `category` | VARCHAR(20) | NOT NULL | hardware, software, hr |
+| `priority` | VARCHAR(10) | NOT NULL | low, medium, high, critical |
+| `status` | VARCHAR(20) | NOT NULL DEFAULT 'open' | open, in_progress, resolved |
 | `created_by` | BIGINT | FK → users.id | Ticket submitter |
 | `assigned_to` | BIGINT | FK → users.id, NULL | Assigned agent |
 | `created_at` | TIMESTAMP | DEFAULT NOW() | Submission time |
 | `updated_at` | TIMESTAMP | DEFAULT NOW() | Last modification |
-| `resolved_at` | TIMESTAMP | NULL | Resolution time |
-
-**Categories Enum:**
-```
-HARDWARE
-SOFTWARE
-HR
-```
 
 **Priority Keyword Mapping:**
 ```
-CRITICAL  → "system down", "server down", "production down", "outage"
-HIGH      → "urgent", "cannot work", "blocked", "asap", "critical"
-MEDIUM    → "slow", "error", "not working", "issue", "problem"
-LOW       → everything else (default)
+critical → "system down", "server down", "production down", "outage"
+high     → "urgent", "cannot work", "blocked", "asap", "critical"
+medium   → "slow", "error", "not working", "issue", "problem"
+low      → everything else (default)
 ```
 
 **Status Transitions:**
 ```
-OPEN → IN_PROGRESS → RESOLVED → CLOSED
-OPEN → CLOSED (direct closure by agent)
+open → in_progress → resolved
 ```
 
 ---
 
-### 5.4 Table: `comments`
-
-| Column | Type | Constraints | Notes |
-|---|---|---|---|
-| `id` | BIGSERIAL | PRIMARY KEY | Auto-increment |
-| `ticket_id` | BIGINT | FK → tickets.id, NOT NULL | Parent ticket |
-| `author_id` | BIGINT | FK → users.id, NOT NULL | Comment author |
-| `content` | TEXT | NOT NULL | Comment body |
-| `created_at` | TIMESTAMP | DEFAULT NOW() | Posted time |
-
----
-
-### 5.5 Table: `attachments`
+### 5.4 Table: `attachments`
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
 | `id` | BIGSERIAL | PRIMARY KEY | Auto-increment |
 | `ticket_id` | BIGINT | FK → tickets.id, NOT NULL | Parent ticket |
 | `file_name` | VARCHAR(255) | NOT NULL | Original file name |
-| `file_url` | TEXT | NOT NULL | COS object URL |
+| `file_path` | TEXT | NOT NULL | Relative path on local disk (e.g. `uploads/1001/photo.jpg`) |
 | `file_size` | BIGINT | NOT NULL | Size in bytes |
 | `content_type` | VARCHAR(100) | NOT NULL | MIME type |
 | `uploaded_at` | TIMESTAMP | DEFAULT NOW() | Upload time |
 
-**Allowed file types:** `image/jpeg`, `image/png`, `image/gif`, `application/pdf`, `text/plain`  
+**Allowed file types:** `image/jpeg`, `image/png`, `image/gif`, `application/pdf`, `text/plain`
 **Max file size:** 10 MB
+**Storage location:** `helpdesk-center-backend/uploads/{ticket_id}/`
 
 ---
 
-### 5.6 SQL Schema (DDL)
+### 5.5 Table: `comments` (optional)
 
-```sql
-CREATE TABLE users (
-    id            BIGSERIAL PRIMARY KEY,
-    username      VARCHAR(50)  UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    email         VARCHAR(100) UNIQUE NOT NULL,
-    role          VARCHAR(30)  NOT NULL,
-    full_name     VARCHAR(100) NOT NULL,
-    created_at    TIMESTAMP    DEFAULT NOW(),
-    is_active     BOOLEAN      DEFAULT TRUE
-);
-
-CREATE TABLE tickets (
-    id          BIGSERIAL PRIMARY KEY,
-    title       VARCHAR(200) NOT NULL,
-    description TEXT         NOT NULL,
-    category    VARCHAR(20)  NOT NULL,
-    priority    VARCHAR(10)  NOT NULL,
-    status      VARCHAR(20)  NOT NULL DEFAULT 'OPEN',
-    created_by  BIGINT       NOT NULL REFERENCES users(id),
-    assigned_to BIGINT                REFERENCES users(id),
-    created_at  TIMESTAMP    DEFAULT NOW(),
-    updated_at  TIMESTAMP    DEFAULT NOW(),
-    resolved_at TIMESTAMP
-);
-
-CREATE TABLE comments (
-    id         BIGSERIAL PRIMARY KEY,
-    ticket_id  BIGINT NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-    author_id  BIGINT NOT NULL REFERENCES users(id),
-    content    TEXT   NOT NULL,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-CREATE TABLE attachments (
-    id           BIGSERIAL PRIMARY KEY,
-    ticket_id    BIGINT       NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
-    file_name    VARCHAR(255) NOT NULL,
-    file_url     TEXT         NOT NULL,
-    file_size    BIGINT       NOT NULL,
-    content_type VARCHAR(100) NOT NULL,
-    uploaded_at  TIMESTAMP    DEFAULT NOW()
-);
-```
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | BIGSERIAL | PRIMARY KEY | Auto-increment |
+| `ticket_id` | BIGINT | FK → tickets.id, NOT NULL | Parent ticket |
+| `user_id` | BIGINT | FK → users.id, NOT NULL | Comment author |
+| `message` | TEXT | NOT NULL | Comment body |
+| `created_at` | TIMESTAMP | DEFAULT NOW() | Posted time |
 
 ---
 
@@ -577,9 +427,9 @@ CREATE TABLE attachments (
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| POST | `/api/auth/login` | None | Login with username + password, returns JWT |
-| POST | `/api/auth/logout` | JWT | Invalidate session |
-| GET | `/api/auth/me` | JWT | Get current user profile |
+| POST | `/api/auth/login` | None | Login — returns user object, sets session cookie |
+| POST | `/api/auth/logout` | Session | Invalidate session |
+| GET | `/api/auth/me` | Session | Get current user profile |
 
 **Login Request:**
 ```json
@@ -592,14 +442,11 @@ CREATE TABLE attachments (
 **Login Response:**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 42,
-    "username": "john.doe",
-    "fullName": "John Doe",
-    "role": "EMPLOYEE",
-    "email": "john.doe@company.com"
-  }
+  "id": 42,
+  "username": "john.doe",
+  "fullName": "John Doe",
+  "role": "employee",
+  "email": "john.doe@company.com"
 }
 ```
 
@@ -609,260 +456,215 @@ CREATE TABLE attachments (
 
 | Method | Endpoint | Auth | Role | Description |
 |---|---|---|---|---|
-| POST | `/api/tickets` | JWT | EMPLOYEE | Create new ticket |
-| GET | `/api/tickets` | JWT | All | List tickets (role-filtered) |
-| GET | `/api/tickets/{id}` | JWT | All | Get single ticket details |
-| PATCH | `/api/tickets/{id}/status` | JWT | AGENT | Update ticket status |
-| PATCH | `/api/tickets/{id}/assign` | JWT | AGENT | Assign ticket to agent |
+| POST | `/api/tickets` | Session | employee | Create new ticket |
+| GET | `/api/tickets` | Session | All | List tickets (role-filtered) |
+| GET | `/api/tickets/{id}` | Session | All | Get single ticket details |
+| PUT | `/api/tickets/{id}/status` | Session | agent | Update ticket status |
 
-**Create Ticket Request:**
-```json
-{
-  "title": "Laptop keyboard not working",
-  "description": "Several keys are stuck. Cannot type. Urgent.",
-  "email": "john.doe@company.com"
-}
-```
-
-**Create Ticket Response:**
-```json
-{
-  "id": 1001,
-  "title": "Laptop keyboard not working",
-  "category": "HARDWARE",
-  "priority": "HIGH",
-  "status": "OPEN",
-  "createdAt": "2025-01-15T09:30:00Z"
-}
-```
-
-**List Tickets Response (Employee):** Returns only tickets where `created_by = current_user.id`  
-**List Tickets Response (IT Hardware Agent):** Returns only tickets where `category = HARDWARE`
+**List Tickets Response (Employee):** Returns only tickets where `created_by = current_user.id`
+**List Tickets Response (IT Hardware Agent):** Returns only tickets where `category = hardware`
 
 ---
 
-### 6.3 Comments
+### 6.3 Attachments
 
 | Method | Endpoint | Auth | Role | Description |
 |---|---|---|---|---|
-| POST | `/api/tickets/{id}/comments` | JWT | All | Add comment to ticket |
-| GET | `/api/tickets/{id}/comments` | JWT | All | List comments on ticket |
+| POST | `/api/tickets/{id}/attachments` | Session | employee | Upload file (multipart/form-data) — saved to local disk |
+| GET | `/api/tickets/{id}/attachments` | Session | All | List attachments for ticket |
+| GET | `/api/attachments/{id}/download` | Session | All | Download file from local disk |
+| DELETE | `/api/attachments/{id}` | Session | employee | Delete attachment + file from disk |
 
 ---
 
-### 6.4 Attachments
+### 6.4 Comments (optional)
 
 | Method | Endpoint | Auth | Role | Description |
 |---|---|---|---|---|
-| POST | `/api/tickets/{id}/attachments` | JWT | EMPLOYEE | Upload file (multipart/form-data) |
-| GET | `/api/tickets/{id}/attachments` | JWT | All | List attachments on ticket |
-| GET | `/api/attachments/{id}/download` | JWT | All | Get presigned download URL |
+| GET | `/api/tickets/{id}/comments` | Session | All | Get ticket comments |
+| POST | `/api/tickets/{id}/comments` | Session | All | Add comment |
 
 ---
 
-## 7. DEVELOPMENT TIMELINE
+## 7. FILE ATTACHMENT WORKFLOW
+
+### Upload Flow (Local Storage)
+
+```
+1. User selects file in React form
+   ↓
+2. Frontend sends multipart/form-data POST request
+   POST /api/tickets/{id}/attachments
+   Content-Type: multipart/form-data
+   Body: file binary
+   ↓
+3. Backend (AttachmentService):
+   - Validates file type and size (max 10 MB)
+   - Sanitizes file name (strip path separators)
+   - Saves file to: uploads/{ticketId}/{uuid}_{originalName}
+   - Creates directory if it doesn't exist
+   ↓
+4. Backend saves attachment record in database
+   file_path = "uploads/1001/a3f2b1_keyboard-photo.jpg"
+   ↓
+5. Response returned to frontend
+   { "id": 5, "fileName": "keyboard-photo.jpg", "fileSize": 2400000 }
+```
+
+### Download Flow (Local Storage)
+
+```
+1. Agent clicks attachment in Ticket Details page
+   ↓
+2. Browser calls GET /api/attachments/{id}/download
+   ↓
+3. Backend reads file_path from database
+   Reads file from local disk
+   Returns file as byte stream with correct Content-Type header
+   ↓
+4. Browser downloads the file
+```
+
+### Local Storage Configuration
+
+```properties
+# application.properties
+app.upload.dir=uploads
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
+```
+
+The `uploads/` directory is created automatically on first upload. It sits inside the backend working directory and is **git-ignored**.
+
+---
+
+## 8. DEVELOPMENT TIMELINE
 
 ### Day 1 — Backend Foundation
-- [ ] Initialize Spring Boot project (Spring Initializr)
-- [ ] Configure PostgreSQL connection (`application.properties`)
-- [ ] Create JPA entities: `User`, `Ticket`, `Comment`, `Attachment`
-- [ ] Create repositories: `UserRepository`, `TicketRepository`, etc.
-- [ ] Implement `AuthController` + `AuthService` (login endpoint)
-- [ ] Configure Spring Security + BCrypt
+- [x] Install Java 21, Maven, PostgreSQL, Node.js
+- [x] Create PostgreSQL database locally (`helpdesk_db`, `helpdesk_user`)
+- [x] Generate Spring Boot project (Spring Initializr)
+- [x] Fix `pom.xml` (Spring Boot 3.3.5, correct dependencies)
+- [x] Configure `application.properties` for local database
+- [ ] Create JPA entities: `User`, `Ticket`, `Attachment`, `Comment`
+- [ ] Create repositories: `UserRepository`, `TicketRepository`, `AttachmentRepository`
+- [ ] Configure `SecurityConfig` (session auth, BCrypt, CORS)
+- [ ] Implement `AuthController` + `AuthService` (login/logout endpoints)
+- [ ] Seed test users with BCrypt passwords
 - [ ] Test login with Postman
 
-### Day 2 — Core Ticket Features
-- [ ] Implement `TicketController` + `TicketService`
+### Day 2 — AI Integration + Ticket CRUD
+- [ ] Implement `TicketController` + `TicketService` (create, list, get by id)
 - [ ] Implement `PriorityService` (keyword detection logic)
-- [ ] Integrate Watson NLU for AI categorization (`AIService`)
-- [ ] Implement `CommentController` + `CommentService`
+- [ ] Sign up for IBM Watson NLU (free tier), get API key
+- [ ] Implement `AIService` (Watson NLU categorization)
 - [ ] Role-based ticket filtering logic
 - [ ] Test all ticket endpoints with Postman
 
-### Day 3 — File Upload & Frontend Start
-- [ ] Implement `AttachmentService` (IBM COS presigned URLs)
-- [ ] Implement `AttachmentController` (multipart upload)
-- [ ] Initialize React project (`create-react-app` or Vite)
-- [ ] Build Login page
-- [ ] Build Submit Ticket form
-- [ ] Connect frontend to backend (Axios, CORS configuration)
+### Day 3 — File Upload + Frontend Start
+- [ ] Implement `AttachmentService` (save to local `uploads/` directory)
+- [ ] Implement `AttachmentController` (multipart upload, download, delete)
+- [x] React + Vite frontend scaffolded
+- [x] Install Axios + React Router
+- [ ] Build Login page + connect to `/api/auth/login`
+- [ ] Build Submit Ticket form with file input
+- [ ] Configure Axios with `withCredentials: true`
 
 ### Day 4 — Frontend Dashboards
 - [ ] Build Employee Dashboard (My Tickets list)
-- [ ] Build Agent Dashboard (Role-filtered ticket queue)
-- [ ] Build Ticket Detail page (comments + attachments)
+- [ ] Build Agent Dashboard (role-filtered ticket queue)
+- [ ] Build Ticket Detail page (comments + attachment download links)
 - [ ] Implement React Router navigation
-- [ ] JWT storage and Axios interceptors
+- [ ] Session handling (store user in `localStorage`, protect routes)
+- [ ] End-to-end test: submit ticket → upload file → agent views + downloads
 
-### Day 5 — Testing & Deployment
-- [ ] Write unit tests (JUnit 5 + Mockito)
-- [ ] Write integration tests (Spring Boot Test)
-- [ ] Build Docker image, test locally
-- [ ] Push image to IBM Container Registry
-- [ ] Deploy backend to IBM Cloud Code Engine
-- [ ] Deploy frontend (Netlify or Code Engine)
-- [ ] End-to-end smoke test in production
+### Day 5 — Testing & Documentation (Optional Deployment)
+- [ ] Write unit tests (JUnit 5 + Mockito) for `PriorityService`, `AIService`
+- [ ] Write integration tests (Spring Boot Test) for ticket endpoints
+- [ ] Bug fixes and UI polish
+- [ ] Write README with setup instructions
+- [ ] Optional: build Docker image and deploy to IBM Cloud Code Engine
 
 ---
 
-## 8. SETUP INSTRUCTIONS
+## 9. SETUP INSTRUCTIONS
 
-### 8.1 Prerequisites
+### 9.1 Prerequisites
 
 ```bash
-# Verify installations
-java --version        # Must be 17+
-mvn --version         # Must be 3.9+
-node --version        # Must be 18+
-docker --version      # Any recent version
-psql --version        # PostgreSQL 15+
+java --version   # Must be 21
+mvn --version    # Must be 3.9+
+node --version   # Must be 18+
+psql --version   # PostgreSQL 15+
 ```
 
-### 8.2 Backend Setup (Local)
+### 9.2 Database Setup
+
+```sql
+psql -U postgres
+CREATE DATABASE helpdesk_db;
+CREATE USER helpdesk_user WITH PASSWORD 'helpdesk_pass';
+GRANT ALL PRIVILEGES ON DATABASE helpdesk_db TO helpdesk_user;
+\q
+```
+
+### 9.3 Backend Setup
 
 ```bash
-# 1. Clone repository
-git clone https://github.com/your-org/helpdesk-center.git
-cd helpdesk-center/helpdesk-center-backend
+cd helpdesk-center-backend
 
-# 2. Create local PostgreSQL database
-psql -U postgres -c "CREATE DATABASE helpdesk_db;"
-psql -U postgres -c "CREATE USER helpdesk_user WITH PASSWORD 'helpdesk_pass';"
-psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE helpdesk_db TO helpdesk_user;"
-
-# 3. Configure environment variables (copy and edit)
+# Copy example config and fill in real values
 cp src/main/resources/application.properties.example \
    src/main/resources/application.properties
 
-# 4. Run the backend
+# Run
 mvn spring-boot:run
-# Backend available at http://localhost:8080
+# → http://localhost:8080
 ```
 
-### 8.3 application.properties Template
+### 9.4 application.properties
 
 ```properties
+spring.application.name=helpdesk-center-backend
+
 # Database
 spring.datasource.url=jdbc:postgresql://localhost:5432/helpdesk_db
 spring.datasource.username=helpdesk_user
 spring.datasource.password=helpdesk_pass
+spring.datasource.driver-class-name=org.postgresql.Driver
 
 # JPA
 spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 
-# JWT Secret (change in production)
-app.jwt.secret=your-secret-key-min-32-chars
-app.jwt.expiration-ms=86400000
+# Server
+server.port=8080
+
+# Session
+server.servlet.session.timeout=86400s
+
+# Local file storage
+app.upload.dir=uploads
+
+# File size limits
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=10MB
 
 # IBM Watson NLU
-watson.nlu.api-key=your-watson-api-key
+watson.nlu.api-key=YOUR_WATSON_API_KEY_HERE
 watson.nlu.url=https://api.us-south.natural-language-understanding.watson.cloud.ibm.com
-
-# IBM Cloud Object Storage
-cos.api-key=your-cos-api-key
-cos.service-instance-id=your-service-instance-id
-cos.endpoint=https://s3.us-south.cloud-object-storage.appdomain.cloud
-cos.bucket-name=helpdesk-attachments
+watson.nlu.version=2023-08-01
 ```
 
-### 8.4 Frontend Setup (Local)
+### 9.5 Frontend Setup
 
 ```bash
-cd helpdesk-center/helpdesk-center-frontend
-
-# Install dependencies
+cd helpdesk-center-frontend
 npm install
-
-# Start development server
 npm run dev
-# Frontend available at http://localhost:5173
-
-# Configure API base URL
-# In src/config.js:
-export const API_BASE_URL = 'http://localhost:8080/api';
-```
-
----
-
-## 9. DEPLOYMENT GUIDE
-
-### 9.1 IBM Cloud Services Setup
-
-```bash
-# Install IBM Cloud CLI
-# https://cloud.ibm.com/docs/cli
-
-# Login
-ibmcloud login --sso
-
-# Target resource group
-ibmcloud target -g default
-
-# Install Code Engine plugin
-ibmcloud plugin install code-engine
-
-# Install Container Registry plugin
-ibmcloud plugin install container-registry
-```
-
-### 9.2 Build & Push Docker Image
-
-```bash
-# Build the Spring Boot jar
-mvn clean package -DskipTests
-
-# Build Docker image
-docker build -t helpdesk-backend:latest .
-
-# Login to IBM Container Registry
-ibmcloud cr login
-
-# Tag and push image
-ibmcloud cr namespace-add helpdesk-ns
-docker tag helpdesk-backend:latest us.icr.io/helpdesk-ns/helpdesk-backend:latest
-docker push us.icr.io/helpdesk-ns/helpdesk-backend:latest
-```
-
-### 9.3 Deploy to Code Engine
-
-```bash
-# Create Code Engine project
-ibmcloud ce project create --name helpdesk-center
-
-# Select project
-ibmcloud ce project select --name helpdesk-center
-
-# Create application
-ibmcloud ce application create \
-  --name helpdesk-backend \
-  --image us.icr.io/helpdesk-ns/helpdesk-backend:latest \
-  --port 8080 \
-  --env SPRING_DATASOURCE_URL="jdbc:postgresql://..." \
-  --env SPRING_DATASOURCE_USERNAME="helpdesk_user" \
-  --env SPRING_DATASOURCE_PASSWORD="helpdesk_pass" \
-  --env APP_JWT_SECRET="your-production-secret" \
-  --env WATSON_NLU_API_KEY="your-watson-key" \
-  --env COS_API_KEY="your-cos-key"
-
-# Get backend URL
-ibmcloud ce application get --name helpdesk-backend
-```
-
-### 9.4 Frontend Deployment (Netlify)
-
-```bash
-# Build frontend
-npm run build
-
-# Install Netlify CLI
-npm install -g netlify-cli
-
-# Deploy
-netlify deploy --prod --dir=dist
-
-# Set environment variable in Netlify UI:
-# VITE_API_BASE_URL = https://helpdesk-backend.<code-engine-url>/api
+# → http://localhost:5173
 ```
 
 ---
@@ -883,10 +685,8 @@ netlify deploy --prod --dir=dist
 
 ### 10.2 Unit Tests
 
-**Target:** Services (business logic)
-
 ```java
-// Example: PriorityServiceTest.java
+// PriorityServiceTest.java
 @ExtendWith(MockitoExtension.class)
 class PriorityServiceTest {
 
@@ -896,65 +696,34 @@ class PriorityServiceTest {
     @Test
     void shouldReturnHighPriorityForUrgentKeyword() {
         String description = "This is urgent, I cannot work!";
-        Priority result = priorityService.detectPriority(description);
-        assertEquals(Priority.HIGH, result);
+        String result = priorityService.detectPriority(description);
+        assertEquals("high", result);
     }
 
     @Test
     void shouldReturnLowPriorityForNeutralDescription() {
         String description = "Please update my email signature.";
-        Priority result = priorityService.detectPriority(description);
-        assertEquals(Priority.LOW, result);
+        String result = priorityService.detectPriority(description);
+        assertEquals("low", result);
     }
 }
 ```
 
-### 10.3 Integration Tests
-
-**Target:** Controllers + Repository + Database
-
-```java
-// Example: TicketControllerIntegrationTest.java
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@AutoConfigureMockMvc
-class TicketControllerIntegrationTest {
-
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Test
-    void shouldCreateTicketAndReturnCategory() throws Exception {
-        mockMvc.perform(post("/api/tickets")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "title": "Keyboard broken",
-                      "description": "My laptop keyboard is not working",
-                      "email": "test@test.com"
-                    }
-                """)
-                .header("Authorization", "Bearer " + testToken))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.category").value("HARDWARE"))
-            .andExpect(jsonPath("$.status").value("OPEN"));
-    }
-}
-```
-
-### 10.4 Manual Test Cases (Postman)
+### 10.3 Manual Test Cases (Postman)
 
 | Test Case | Steps | Expected Result |
 |---|---|---|
-| TC-001: Login | POST /api/auth/login with valid credentials | 200 OK + JWT token |
+| TC-001: Login | POST /api/auth/login with valid credentials | 200 OK + user object + session cookie |
 | TC-002: Login Fail | POST /api/auth/login with wrong password | 401 Unauthorized |
-| TC-003: Submit Ticket | POST /api/tickets with keyboard description | 201 Created, category=HARDWARE |
-| TC-004: AI Categorization | Submit ticket with "payroll" description | category=HR |
-| TC-005: Priority Detection | Submit ticket with "urgent" keyword | priority=HIGH |
-| TC-006: Role Filtering | Login as IT_HARDWARE_AGENT, GET /api/tickets | Only HARDWARE tickets returned |
+| TC-003: Submit Ticket | POST /api/tickets with keyboard description | 201 Created, category=hardware |
+| TC-004: AI Categorization | Submit ticket with "payroll" description | category=hr |
+| TC-005: Priority Detection | Submit ticket with "urgent" keyword | priority=high |
+| TC-006: Role Filtering | Login as it_hardware, GET /api/tickets | Only hardware tickets returned |
 | TC-007: Employee Isolation | Login as Employee A, GET /api/tickets | Only own tickets returned |
-| TC-008: File Upload | POST /api/tickets/{id}/attachments with JPEG | 201 Created, file URL in response |
-| TC-009: Add Comment | POST /api/tickets/{id}/comments | 201 Created, comment visible |
-| TC-010: Update Status | PATCH /api/tickets/{id}/status as agent | Status updated, 200 OK |
+| TC-008: File Upload | POST /api/tickets/{id}/attachments with JPEG | 201 Created, file saved to uploads/ |
+| TC-009: File Download | GET /api/attachments/{id}/download | File returned as byte stream |
+| TC-010: Add Comment | POST /api/tickets/{id}/comments | 201 Created, comment visible |
+| TC-011: Update Status | PUT /api/tickets/{id}/status as agent | Status updated, 200 OK |
 
 ---
 
@@ -962,13 +731,13 @@ class TicketControllerIntegrationTest {
 
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Watson NLU API rate limit hit | Low | High | Cache results, implement fallback keyword classification |
-| COS upload fails | Low | Medium | Return error to user, allow retry; ticket can be submitted without attachment |
-| IBM Cloud free tier exhausted | Low | High | Monitor usage daily; stay within limits |
+| Watson NLU API rate limit hit | Low | High | Implement fallback keyword classification if Watson fails |
+| Local disk fills up | Low | Low | 10 MB file size limit per upload; only dev data stored |
 | PostgreSQL connection lost | Low | High | Spring Boot auto-reconnects; connection pool configured |
-| JWT secret exposed | Low | Critical | Store in environment variables, never in code |
 | AI misclassifies ticket | Medium | Low | Agents can manually re-categorize tickets |
-| Time overrun on Day 3–4 | Medium | Medium | Cut attachment feature if needed; submit text-only tickets as MVP |
+| File name collision | Low | Low | Prefix file names with UUID before saving |
+| Time overrun on Day 3–4 | Medium | Medium | Cut comment feature first; attachment is MVP |
+| Uploaded files not git-ignored | Low | Medium | Add `uploads/` to `.gitignore` |
 
 ---
 
@@ -977,12 +746,12 @@ class TicketControllerIntegrationTest {
 | Decision | Alternative Considered | Reason for Choice |
 |---|---|---|
 | Spring Boot over Jakarta EE | Jakarta EE + Open Liberty | Faster setup for solo 3–5 day project |
-| PostgreSQL over MySQL | MySQL | IBM Cloud Databases offers managed PostgreSQL; better JSON support |
-| JWT over sessions | HTTP Sessions | Stateless; works across Code Engine instances |
-| IBM Watson NLU over custom ML | OpenAI GPT API | IBM ecosystem alignment; free tier available |
-| IBM COS over AWS S3 | AWS S3, local disk | IBM ecosystem; presigned URL support; free tier |
-| React over Angular/Vue | Angular, Vue | Most widely used; faster to scaffold; team familiarity |
-| Netlify for frontend | Code Engine, GitHub Pages | Instant HTTPS, free tier, zero-config CDN |
+| PostgreSQL over MySQL | MySQL | Better JSON support; widely used with Spring Boot |
+| Session auth over JWT | JWT | Simpler for MVP; no token management on frontend |
+| Local disk over IBM COS | IBM Cloud Object Storage | Zero setup, zero cost, works offline, no SDK complexity |
+| Watson NLU for AI | OpenAI GPT API, keyword-only | IBM ecosystem alignment; free tier available |
+| React + Vite over CRA | Create React App | Faster builds, modern default, actively maintained |
+| Netlify for frontend (optional) | GitHub Pages | Instant HTTPS, free tier, zero-config CDN |
 
 ---
 
@@ -993,73 +762,63 @@ helpdesk-center/
 ├── helpdesk-center-backend/
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/com/helpdeskce/
-│   │   │   │   ├── controller/
+│   │   │   ├── java/com/helpdeskcenter/
+│   │   │   │   ├── controllers/
 │   │   │   │   │   ├── AuthController.java
 │   │   │   │   │   ├── TicketController.java
 │   │   │   │   │   ├── CommentController.java
 │   │   │   │   │   └── AttachmentController.java
-│   │   │   │   ├── service/
+│   │   │   │   ├── services/
 │   │   │   │   │   ├── AuthService.java
 │   │   │   │   │   ├── TicketService.java
 │   │   │   │   │   ├── AIService.java
 │   │   │   │   │   ├── PriorityService.java
-│   │   │   │   │   └── AttachmentService.java
-│   │   │   │   ├── repository/
+│   │   │   │   │   └── AttachmentService.java   ← saves to uploads/ on disk
+│   │   │   │   ├── repositories/
 │   │   │   │   │   ├── UserRepository.java
 │   │   │   │   │   ├── TicketRepository.java
 │   │   │   │   │   ├── CommentRepository.java
 │   │   │   │   │   └── AttachmentRepository.java
-│   │   │   │   ├── model/
+│   │   │   │   ├── entities/
 │   │   │   │   │   ├── User.java
 │   │   │   │   │   ├── Ticket.java
 │   │   │   │   │   ├── Comment.java
-│   │   │   │   │   └── Attachment.java
-│   │   │   │   ├── dto/
-│   │   │   │   │   ├── LoginRequest.java
-│   │   │   │   │   ├── LoginResponse.java
-│   │   │   │   │   ├── TicketRequest.java
-│   │   │   │   │   └── TicketResponse.java
-│   │   │   │   ├── security/
-│   │   │   │   │   ├── JwtUtil.java
-│   │   │   │   │   ├── JwtAuthFilter.java
+│   │   │   │   │   └── Attachment.java          ← stores file_path, not file_url
+│   │   │   │   ├── config/
 │   │   │   │   │   └── SecurityConfig.java
-│   │   │   │   └── HelpdeskCenterApplication.java
+│   │   │   │   └── util/
+│   │   │   │       └── FileStorageUtil.java     ← replaces CosUtil.java
 │   │   │   └── resources/
-│   │   │       ├── application.properties
-│   │   │       └── application-prod.properties
-│   │   └── test/
-│   │       └── java/com/helpdeskce/
-│   │           ├── service/
-│   │           │   └── PriorityServiceTest.java
-│   │           └── controller/
-│   │               └── TicketControllerIntegrationTest.java
+│   │   │       ├── application.properties       ← git-ignored
+│   │   │       └── application.properties.example
+│   │   └── test/java/com/helpdeskcenter/
+│   │       ├── services/
+│   │       │   └── PriorityServiceTest.java
+│   │       └── controllers/
+│   │           └── TicketControllerIntegrationTest.java
+│   ├── uploads/                                 ← git-ignored, created at runtime
 │   ├── Dockerfile
 │   └── pom.xml
 │
 └── helpdesk-center-frontend/
     ├── src/
+    │   ├── api/
+    │   │   ├── axiosInstance.js
+    │   │   ├── authApi.js
+    │   │   ├── ticketsApi.js
+    │   │   └── attachmentsApi.js
+    │   ├── components/
+    │   │   ├── TicketCard.jsx
+    │   │   ├── StatusBadge.jsx
+    │   │   └── CommentSection.jsx
     │   ├── pages/
     │   │   ├── LoginPage.jsx
     │   │   ├── SubmitTicketPage.jsx
     │   │   ├── EmployeeDashboard.jsx
     │   │   ├── AgentDashboard.jsx
     │   │   └── TicketDetailPage.jsx
-    │   ├── components/
-    │   │   ├── TicketCard.jsx
-    │   │   ├── CommentSection.jsx
-    │   │   └── FileUpload.jsx
-    │   ├── services/
-    │   │   ├── authService.js
-    │   │   └── ticketService.js
-    │   ├── context/
-    │   │   └── AuthContext.jsx
-    │   ├── config.js
-    │   └── App.jsx
-    ├── public/
-    └── package.json
+    │   ├── App.jsx
+    │   └── main.jsx
+    ├── package.json
+    └── vite.config.js
 ```
-
----
-
-*This document is the single source of truth for the Helpdesk Center capstone project. All implementation decisions should reference and align with this plan.*
