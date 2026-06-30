@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { getTicket, updateStatus } from '../api/ticketsApi';
 import { getAttachments, downloadUrl } from '../api/attachmentsApi';
 import StatusBadge from '../components/StatusBadge';
+import CommentSection from '../components/CommentSection';
 
 const STATUSES = ['open', 'in_progress', 'resolved'];
 
@@ -85,6 +86,8 @@ export default function TicketDetailPage() {
           ))}
         </div>
       )}
+
+      <CommentSection ticketId={id} />
     </div>
   );
 }
