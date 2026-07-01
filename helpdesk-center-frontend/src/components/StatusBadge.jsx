@@ -1,32 +1,41 @@
-const PRIORITY_COLORS = {
-  critical: '#b91c1c',
-  high:     '#c2410c',
-  medium:   '#b45309',
-  low:      '#15803d',
+const STATUS_MAP = {
+  open: {
+    label: 'Open',
+    color:  '#1d4ed8',
+    bg:     '#eff6ff',
+    border: '#bfdbfe',
+  },
+  in_progress: {
+    label: 'In Progress',
+    color:  '#7c3aed',
+    bg:     '#f5f3ff',
+    border: '#ddd6fe',
+  },
+  resolved: {
+    label: 'Resolved',
+    color:  '#15803d',
+    bg:     '#f0fdf4',
+    border: '#bbf7d0',
+  },
 };
 
-const STATUS_COLORS = {
-  open:        '#1d4ed8',
-  in_progress: '#7c3aed',
-  resolved:    '#15803d',
-};
-
-export default function StatusBadge({ value, type = 'status' }) {
-  const colors = type === 'status' ? STATUS_COLORS : PRIORITY_COLORS;
-  const color = colors[value] || '#57606a';
+export default function StatusBadge({ value }) {
+  const s = STATUS_MAP[value] ?? { label: value ?? '—', color: '#57606a', bg: '#f3f4f6', border: '#e5e7eb' };
   return (
     <span style={{
-      display: 'inline-block',
-      padding: '2px 10px',
-      borderRadius: 12,
-      fontSize: 12,
-      fontWeight: 600,
-      background: color + '20',
-      color,
-      border: `1px solid ${color}40`,
-      textTransform: 'capitalize',
+      display:       'inline-flex',
+      alignItems:    'center',
+      padding:       '2px 8px',
+      borderRadius:  999,
+      fontSize:      11,
+      fontWeight:    600,
+      letterSpacing: '0.02em',
+      color:         s.color,
+      background:    s.bg,
+      border:        `1px solid ${s.border}`,
+      whiteSpace:    'nowrap',
     }}>
-      {value?.replace('_', ' ')}
+      {s.label}
     </span>
   );
 }

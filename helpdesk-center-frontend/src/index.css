@@ -1,8 +1,121 @@
+/* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Design tokens ───────────────────────────────────────────────────────── */
+:root {
+  /* Page / surface */
+  --bg-page:    #f7f8fa;
+  --bg-card:    #ffffff;
+  --border:     #e5e7eb;
+  --border-input: #d1d5db;
+
+  /* Text */
+  --text-primary:   #1f2328;
+  --text-secondary: #57606a;
+  --text-muted:     #9ca3af;
+
+  /* Accent */
+  --accent:       #3b82d4;
+  --accent-hover: #2c6fbd;
+  --accent-light: #eff6ff;
+
+  /* Status badges */
+  --status-open-text:   #1d4ed8;
+  --status-open-bg:     #eff6ff;
+  --status-open-border: #bfdbfe;
+
+  --status-progress-text:   #7c3aed;
+  --status-progress-bg:     #f5f3ff;
+  --status-progress-border: #ddd6fe;
+
+  --status-resolved-text:   #15803d;
+  --status-resolved-bg:     #f0fdf4;
+  --status-resolved-border: #bbf7d0;
+
+  /* Priority badges */
+  --priority-critical-text:   #b91c1c;
+  --priority-critical-bg:     #fef2f2;
+  --priority-critical-border: #fecaca;
+
+  --priority-high-text:   #c2410c;
+  --priority-high-bg:     #fff7ed;
+  --priority-high-border: #fed7aa;
+
+  --priority-medium-text:   #b45309;
+  --priority-medium-bg:     #fffbeb;
+  --priority-medium-border: #fde68a;
+
+  --priority-low-text:   #15803d;
+  --priority-low-bg:     #f0fdf4;
+  --priority-low-border: #bbf7d0;
+
+  /* Category badges */
+  --category-hardware-text:   #1d4ed8;
+  --category-hardware-bg:     #eff6ff;
+  --category-hardware-border: #bfdbfe;
+
+  --category-software-text:   #7c3aed;
+  --category-software-bg:     #f5f3ff;
+  --category-software-border: #ddd6fe;
+
+  --category-hr-text:   #065f46;
+  --category-hr-bg:     #ecfdf5;
+  --category-hr-border: #a7f3d0;
+
+  /* Elevation */
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04);
+  --shadow-filter: 0 1px 3px rgba(0,0,0,0.08);
+
+  /* Layout */
+  --radius-card:  8px;
+  --radius-input: 6px;
+  --radius-badge: 4px;
+  --header-h:     56px;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
 body {
-  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: #1f2328;
-  background: #f7f8fa;
+  color: var(--text-primary);
+  background: var(--bg-page);
+}
+
+button { cursor: pointer; font-family: inherit; }
+
+input, textarea, select {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-input);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 212, 0.15);
+}
+
+/* ── Responsive helpers ──────────────────────────────────────────────────── */
+.hide-mobile  { display: block; }
+.show-mobile  { display: none;  }
+
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+  .show-mobile { display: flex !important; }
+}
+
+/* ── Animations ──────────────────────────────────────────────────────────── */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
 }

@@ -12,3 +12,6 @@ helpdesk-center-frontend/.env.local
 .idea/
 *.iml
 .vscode/
+
+# Design reference
+front-end-design/
