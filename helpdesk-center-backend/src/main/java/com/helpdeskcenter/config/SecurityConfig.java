@@ -32,6 +32,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/auth/logout").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/tickets/preview").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/test/**").permitAll()
                 .anyRequest().authenticated()
             )

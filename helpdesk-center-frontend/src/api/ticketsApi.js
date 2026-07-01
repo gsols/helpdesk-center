@@ -9,5 +9,8 @@ export const getTicket = (id) =>
 export const createTicket = (data) =>
   api.post('/api/tickets', data);
 
+export const previewTicket = (data) =>
+  api.post('/api/tickets/preview', data);
+
 export const updateStatus = (id, status) =>
   api.put(`/api/tickets/${id}/status`, { status });
