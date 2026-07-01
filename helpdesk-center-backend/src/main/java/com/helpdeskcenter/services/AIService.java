@@ -35,6 +35,7 @@ public class AIService {
                     "policy", "benefits", "training", "contract", "hire", "termination");
 
     public String categorize(String text) {
+        log.info("AIService.categorize called. API key set: {}", !apiKey.equals("YOUR_WATSON_API_KEY_HERE"));
         try {
             IamAuthenticator authenticator = new IamAuthenticator(apiKey);
             NaturalLanguageUnderstanding nlu = new NaturalLanguageUnderstanding(version, authenticator);
