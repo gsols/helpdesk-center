@@ -38,7 +38,7 @@ Employees see their own tickets. Let them narrow the list by category, status, a
 - `helpdesk-center-frontend/src/components/TicketCard.jsx` — unchanged, receives `ticket` prop
 - Ticket fields: `category` (hardware|software|hr), `status` (open|in_progress|resolved), `priority` (critical|high|medium|low)
 
-**Status** [ ] pending
+**Status** [x] done
 
 ---
 
@@ -71,7 +71,7 @@ only ever see one category.
 - Same `TicketCard` component, same ticket field values as above
 - Agent role is one of: `it_hardware`, `it_software`, `hr`
 
-**Status** [ ] pending
+**Status** [x] done
 
 ---
 

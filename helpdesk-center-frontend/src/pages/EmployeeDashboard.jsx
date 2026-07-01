@@ -20,6 +20,9 @@ export default function EmployeeDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess]     = useState(null);
 
+  // Filter state
+  const [filters, setFilters] = useState({ category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '' });
+
   // Preview state
   const [preview, setPreview]         = useState(null);   // { source, category, allowed, watsonKeywords }
   const [previewing, setPreviewing]   = useState(false);
@@ -79,6 +82,27 @@ export default function EmployeeDashboard() {
   };
 
   const canSubmit = preview?.allowed === true && !submitting && !previewing;
+
+  const filteredTickets = tickets
+    .filter(t => {
+      const created = new Date(t.createdAt);
+      const from = filters.dateFrom ? new Date(filters.dateFrom) : null;
+      const to   = filters.dateTo   ? new Date(filters.dateTo + 'T23:59:59') : null;
+      return (
+        (filters.category === 'all' || t.category === filters.category) &&
+        (filters.status   === 'all' || t.status   === filters.status)   &&
+        (filters.priority === 'all' || t.priority === filters.priority) &&
+        (!from || created >= from) &&
+        (!to   || created <= to)
+      );
+    })
+    .sort((a, b) => {
+      const diff = new Date(a.createdAt) - new Date(b.createdAt);
+      return filters.sort === 'newest' ? -diff : diff;
+    });
+  const hasActiveFilter =
+    filters.category !== 'all' || filters.status !== 'all' || filters.priority !== 'all' ||
+    filters.sort !== 'newest'  || filters.dateFrom !== ''  || filters.dateTo !== '';
 
   return (
     <div style={pageStyle}>
@@ -213,19 +237,65 @@ export default function EmployeeDashboard() {
         </form>
       )}
 
+      {tickets.length > 0 && (
+        <div style={filterBarStyle}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+            <select style={selectStyle} value={filters.category} onChange={e => setFilters(f => ({ ...f, category: e.target.value }))}>
+              <option value="all">All Categories</option>
+              <option value="hardware">IT Hardware</option>
+              <option value="software">IT Software</option>
+              <option value="hr">HR</option>
+            </select>
+            <select style={selectStyle} value={filters.status} onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}>
+              <option value="all">All Statuses</option>
+              <option value="open">Open</option>
+              <option value="in_progress">In Progress</option>
+              <option value="resolved">Resolved</option>
+            </select>
+            <select style={selectStyle} value={filters.priority} onChange={e => setFilters(f => ({ ...f, priority: e.target.value }))}>
+              <option value="all">All Priorities</option>
+              <option value="critical">Critical</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <select style={selectStyle} value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </select>
+            <input type="date" style={dateStyle} value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} title="From date" />
+            <input type="date" style={dateStyle} value={filters.dateTo}   onChange={e => setFilters(f => ({ ...f, dateTo:   e.target.value }))} title="To date" />
+            {hasActiveFilter && (
+              <button onClick={() => setFilters({ category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '' })} style={clearBtnStyle}>
+                Clear filters
+              </button>
+            )}
+          </div>
+          <span style={{ fontSize: 12, color: '#57606a', whiteSpace: 'nowrap' }}>
+            Showing {filteredTickets.length} of {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
       {tickets.length === 0 && !showForm
         ? <p style={{ color: '#57606a', textAlign: 'center', marginTop: 40 }}>No tickets yet. Submit your first ticket above.</p>
-        : tickets.map(t => <TicketCard key={t.id} ticket={t} />)
+        : filteredTickets.length === 0
+          ? <p style={{ color: '#57606a', textAlign: 'center', marginTop: 24 }}>No tickets match the current filters.</p>
+          : filteredTickets.map(t => <TicketCard key={t.id} ticket={t} />)
       }
     </div>
   );
 }
 
-const pageStyle     = { maxWidth: 760, margin: '0 auto', padding: '28px 16px' };
-const headerStyle   = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 };
-const formStyle     = { background: '#f7f8fa', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 20 };
-const labelStyle    = { display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, marginTop: 12 };
-const inputStyle    = { width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' };
-const btnPrimary    = { padding: '8px 16px', background: '#3b82d4', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
-const btnSecondary  = { padding: '8px 16px', background: '#f1f5f9', color: '#1f2328', border: '1px solid #e5e7eb', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
+const pageStyle        = { maxWidth: 760, margin: '0 auto', padding: '28px 16px' };
+const headerStyle      = { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 };
+const formStyle        = { background: '#f7f8fa', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 20 };
+const labelStyle       = { display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, marginTop: 12 };
+const inputStyle       = { width: '100%', padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14, boxSizing: 'border-box' };
+const btnPrimary       = { padding: '8px 16px', background: '#3b82d4', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
+const btnSecondary     = { padding: '8px 16px', background: '#f1f5f9', color: '#1f2328', border: '1px solid #e5e7eb', borderRadius: 6, fontWeight: 600, fontSize: 13, cursor: 'pointer' };
 const previewPanelStyle = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '14px 16px', marginTop: 14, marginBottom: 4 };
+const filterBarStyle   = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' };
+const selectStyle      = { padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, background: '#fff', cursor: 'pointer' };
+const dateStyle        = { padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, background: '#fff', cursor: 'pointer', colorScheme: 'light' };
+const clearBtnStyle    = { fontSize: 12, color: '#3b82d4', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', padding: 0 };
