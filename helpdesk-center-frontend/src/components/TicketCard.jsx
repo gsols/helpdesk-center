@@ -5,7 +5,7 @@ import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
 
-export default function TicketCard({ ticket, showSubmitter = false }) {
+export default function TicketCard({ ticket, showSubmitter = false, onSelect, isSelected = false }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
 
@@ -13,9 +13,16 @@ export default function TicketCard({ ticket, showSubmitter = false }) {
     ? new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
 
+  const active = isSelected || hovered;
+
+  const handleClick = () => {
+    if (onSelect) onSelect(ticket);
+    else navigate(`/tickets/${ticket.id}`);
+  };
+
   return (
     <div
-      onClick={() => navigate(`/tickets/${ticket.id}`)}
+      onClick={handleClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
@@ -24,8 +31,8 @@ export default function TicketCard({ ticket, showSubmitter = false }) {
         padding:         '14px 20px',
         borderBottom:    '1px solid #e5e7eb',
         cursor:          'pointer',
-        background:      hovered ? '#f0f6ff' : '#ffffff',
-        borderLeft:      `3px solid ${hovered ? '#3b82d4' : 'transparent'}`,
+        background:      active ? '#f0f6ff' : '#ffffff',
+        borderLeft:      `3px solid ${active ? '#3b82d4' : 'transparent'}`,
         transition:      'background 0.12s, border-left-color 0.12s',
         gap:             16,
         flexWrap:        'wrap',
@@ -50,7 +57,7 @@ export default function TicketCard({ ticket, showSubmitter = false }) {
         <StatusBadge value={ticket.status} />
         <PriorityBadge value={ticket.priority} />
         <span style={{ fontSize: 12, color: '#9ca3af', minWidth: 80, textAlign: 'right' }}>{date}</span>
-        <ChevronRight size={15} color={hovered ? '#3b82d4' : '#9ca3af'} style={{ transition: 'color 0.12s', flexShrink: 0 }} />
+        <ChevronRight size={15} color={active ? '#3b82d4' : '#9ca3af'} style={{ transition: 'color 0.12s', flexShrink: 0 }} />
       </div>
     </div>
   );
