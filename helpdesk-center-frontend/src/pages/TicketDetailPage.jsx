@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getTicket, updateStatus } from '../api/ticketsApi';
@@ -9,7 +9,7 @@ import PriorityBadge from '../components/PriorityBadge';
 import CategoryBadge from '../components/CategoryBadge';
 import CommentSection from '../components/CommentSection';
 import {
-  ArrowLeft, ChevronDown, FileText, ImageIcon, File, Paperclip, Download
+  ArrowLeft, ChevronDown, FileText, ImageIcon, File, Download, X
 } from 'lucide-react';
 
 const STATUSES = ['open', 'in_progress', 'resolved'];
@@ -23,6 +23,114 @@ function FileTypeIcon({ type }) {
   return                       <div style={{ ...base, background: '#9ca3af' }}><File     size={14} color="#fff" /></div>;
 }
 
+function FileViewer({ attachment, onClose }) {
+  const ext  = attachment.fileName?.split('.').pop()?.toLowerCase();
+  const type = ext === 'pdf' ? 'pdf' : ['png','jpg','jpeg','gif','webp'].includes(ext) ? 'image' : ext === 'txt' ? 'text' : 'other';
+  const url  = downloadUrl(attachment.id);
+
+  const handleBackdrop = useCallback((e) => {
+    if (e.target === e.currentTarget) onClose();
+  }, [onClose]);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  return (
+    <div
+      onClick={handleBackdrop}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: 16,
+      }}
+    >
+      <div style={{
+        background: '#fff', borderRadius: 10, display: 'flex', flexDirection: 'column',
+        maxWidth: 900, width: '100%', maxHeight: '90vh', overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+      }}>
+        {/* Toolbar */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '12px 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+        }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: '#1f2328', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 16 }}>
+            {attachment.fileName}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+            <a
+              href={url}
+              download={attachment.fileName}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontSize: 13, fontWeight: 600, color: '#fff',
+                background: '#3b82d4', border: 'none', borderRadius: 6,
+                padding: '6px 14px', textDecoration: 'none', cursor: 'pointer',
+              }}
+            >
+              <Download size={13} />
+              Download
+            </a>
+            <button
+              onClick={onClose}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, border: '1px solid #e5e7eb', borderRadius: 6,
+                background: '#fff', cursor: 'pointer', color: '#57606a',
+              }}
+              title="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, overflow: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f7f8fa', minHeight: 200 }}>
+          {type === 'image' && (
+            <img
+              src={url}
+              alt={attachment.fileName}
+              style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', display: 'block' }}
+            />
+          )}
+          {type === 'pdf' && (
+            <iframe
+              src={url}
+              title={attachment.fileName}
+              style={{ width: '100%', height: '75vh', border: 'none' }}
+            />
+          )}
+          {(type === 'text' || type === 'other') && (
+            <div style={{ padding: 24, textAlign: 'center' }}>
+              <File size={48} color="#9ca3af" style={{ marginBottom: 12 }} />
+              <p style={{ fontSize: 14, color: '#57606a', marginBottom: 16 }}>
+                Preview not available for this file type.
+              </p>
+              <a
+                href={url}
+                download={attachment.fileName}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 13, fontWeight: 600, color: '#fff',
+                  background: '#3b82d4', borderRadius: 6, padding: '8px 20px',
+                  textDecoration: 'none',
+                }}
+              >
+                <Download size={14} />
+                Download File
+              </a>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function TicketDetailPage() {
   const { id }   = useParams();
   const navigate = useNavigate();
@@ -32,6 +140,7 @@ export default function TicketDetailPage() {
   const [updating,    setUpdating]    = useState(false);
   const [pendingStatus, setPendingStatus] = useState('');
   const [error,       setError]       = useState('');
+  const [viewingFile, setViewingFile] = useState(null);
 
   const isAgent = user?.role !== 'employee';
 
@@ -170,22 +279,20 @@ export default function TicketDetailPage() {
                 const ext = a.fileName?.split('.').pop()?.toLowerCase();
                 const type = ext === 'pdf' ? 'pdf' : ['png','jpg','jpeg','gif','webp'].includes(ext) ? 'image' : ext === 'txt' ? 'text' : 'other';
                 return (
-                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 6, background: '#fff' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#f9fafb'}
+                  <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px', borderRadius: 6, background: '#fff', cursor: 'pointer' }}
+                    onClick={() => setViewingFile(a)}
+                    onMouseEnter={e => e.currentTarget.style.background = '#f0f6ff'}
                     onMouseLeave={e => e.currentTarget.style.background = '#fff'}
                   >
                     <FileTypeIcon type={type} />
-                    <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#1f2328', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.fileName}</span>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#3b82d4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                      onMouseEnter={e => e.currentTarget.style.textDecorationColor = '#3b82d4'}
+                      onMouseLeave={e => e.currentTarget.style.textDecorationColor = 'transparent'}
+                    >{a.fileName}</span>
                     <span style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0 }}>{(a.fileSize / 1024).toFixed(1)} KB</span>
-                    <a
-                      href={downloadUrl(a.id)}
-                      target="_blank"
-                      rel="noreferrer"
-                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#3b82d4', fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}
-                    >
-                      <Download size={12} />
-                      Download
-                    </a>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#57606a', flexShrink: 0 }}>
+                      Click to view
+                    </span>
                   </div>
                 );
               })}
@@ -196,6 +303,11 @@ export default function TicketDetailPage() {
         {/* Comments */}
         <CommentSection ticketId={id} />
       </main>
+
+      {/* File Viewer Modal */}
+      {viewingFile && (
+        <FileViewer attachment={viewingFile} onClose={() => setViewingFile(null)} />
+      )}
 
       {/* Responsive style for detail grid */}
       <style>{`
