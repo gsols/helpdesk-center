@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, UserPlus } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
+import { T } from '../styles/tokens';
 
-export default function TicketCard({ ticket, showSubmitter = false, onSelect, isSelected = false }) {
+export default function TicketCard({ ticket, showSubmitter = false, onSelect, isSelected = false, onAssign }) {
   const navigate = useNavigate();
   const [hovered, setHovered] = useState(false);
 
@@ -26,38 +27,52 @@ export default function TicketCard({ ticket, showSubmitter = false, onSelect, is
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display:         'flex',
-        alignItems:      'center',
-        padding:         '14px 20px',
-        borderBottom:    '1px solid #e5e7eb',
-        cursor:          'pointer',
-        background:      active ? '#f0f6ff' : '#ffffff',
-        borderLeft:      `3px solid ${active ? '#3b82d4' : 'transparent'}`,
-        transition:      'background 0.12s, border-left-color 0.12s',
-        gap:             16,
-        flexWrap:        'wrap',
+        display:      'flex',
+        alignItems:   'center',
+        padding:      '13px 20px',
+        borderBottom: `1px solid ${T.border}`,
+        cursor:       'pointer',
+        background:   isSelected ? T.accentLight : hovered ? '#f0f6ff' : '#ffffff',
+        borderLeft:   `3px solid ${active ? T.navy : 'transparent'}`,
+        transition:   'background 0.12s, border-left-color 0.12s',
+        gap:          14,
+        flexWrap:     'wrap',
       }}
     >
       {/* Left: ID + title */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>#{ticket.id}</span>
+          <span style={{ fontSize: 11, color: T.textMuted, fontFamily: 'monospace' }}>#{ticket.id}</span>
           {showSubmitter && ticket.createdBy?.username && (
-            <span style={{ fontSize: 12, color: '#57606a' }}>· {ticket.createdBy.username}</span>
+            <span style={{ fontSize: 11, color: T.textSecondary }}>· {ticket.createdBy.username}</span>
           )}
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: '#1f2328', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {ticket.title}
         </span>
       </div>
 
-      {/* Right: badges + date + chevron */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
+      {/* Right: badges + assign + date + chevron */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, flexWrap: 'wrap' }}>
         <CategoryBadge value={ticket.category} />
         <StatusBadge value={ticket.status} />
         <PriorityBadge value={ticket.priority} />
-        <span style={{ fontSize: 12, color: '#9ca3af', minWidth: 80, textAlign: 'right' }}>{date}</span>
-        <ChevronRight size={15} color={active ? '#3b82d4' : '#9ca3af'} style={{ transition: 'color 0.12s', flexShrink: 0 }} />
+        {onAssign && (
+          <button
+            onClick={e => { e.stopPropagation(); onAssign(); }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              fontSize: 11, fontWeight: 600, color: T.navy,
+              background: T.accentLight, border: `1px solid #bfdbfe`,
+              borderRadius: T.radiusPill, padding: '2px 8px', cursor: 'pointer',
+            }}
+            title="Assign to me"
+          >
+            <UserPlus size={11} />Assign to me
+          </button>
+        )}
+        <span style={{ fontSize: 11, color: T.textMuted, minWidth: 76, textAlign: 'right' }}>{date}</span>
+        <ChevronRight size={14} color={active ? T.navy : T.textMuted} style={{ transition: 'color 0.12s', flexShrink: 0 }} />
       </div>
     </div>
   );

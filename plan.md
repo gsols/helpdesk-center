@@ -1,526 +1,142 @@
-# Helpdesk Center – Project Plan
+# System Blueprint: Multi-Tenant AI Help Desk Platform
 
-## Project Information
-
-| Item                     | Details                                                             |
-| ------------------------ | ------------------------------------------------------------------- |
-| **Project Name**         | Helpdesk Center                                                     |
-| **Project Type**         | AI-Powered Internal Helpdesk Ticketing System                       |
-| **Developer**            | Solo Developer                                                      |
-| **Estimated Duration**   | 3–5 Days                                                            |
-| **Development Approach** | Local Development (Days 1–4), Optional IBM Cloud Deployment (Day 5) |
+This document serves as the absolute source of truth and comprehensive master plan for the implementation of the Multi-Tenant Support Help Desk application. All AI coding assistants, agents, and developers must strictly adhere to the architecture, business logic, constraints, and development phases outlined below.
 
 ---
 
-# 1. Project Overview
+## 1. Project High-Level Overview & Core Value
+The system is a multi-tenant help desk application designed for organizations where employees can submit work-related issues impacting various departments (e.g., IT, HR, Finance, Facilities). 
 
-## Objective
-
-Helpdesk Center is an AI-powered internal ticketing system that enables employees to submit technical or HR support requests while allowing support agents to efficiently manage and resolve them.
-
-The system integrates IBM Cloud services for intelligent ticket categorization and secure file storage.
+The platform's core differentiator is automated ticket triage using **IBM watsonx.ai** to extract intent, classify issues, and intelligently assign them to the correct department queue, eliminating human routing delay.
 
 ---
 
-## Core Features
+## 2. Global Business Rules & Logic Constraints
 
-### Employee Features
+### A. AI Taxonomy, Routing, & Fallback (Triage) Logic
+1. **Confidence Threshold**: When an issue text is dispatched to the IBM watsonx.ai classification endpoint, it must return a predicted department tag and a numerical confidence score (0.00 to 100.00).
+2. **The Triage Queue**: If the AI confidence score drops **below 60.00%**, or if the classification returns an error, the system must set `department_id = NULL`. This implicitly drops the ticket into the global **"Uncategorized/Triage"** queue.
+3. **Manual Clarification Loop**: System Administrators or specific Triage Managers supervise the Uncategorized queue. They review vague tickets (e.g., *"My thing is broken"*) and use a dedicated tool interface to message the employee for clarification or manually force-assign a department tag.
+4. **Multi-Department Tickets (Parent-Child Splitting)**: If an employee's ticket contains text signaling problems across multiple departments (e.g., *"The new office laptop arrived but my payroll portal login fails"*, involving both IT and Finance):
+   - The initial ticket becomes a **Parent Ticket**.
+   - The system or an agent generates isolated **Child Tickets** linked via `parent_id`.
+   - Each Child Ticket gets routed to its respective department (`department_id` assigned to IT for one, Finance for the other).
+   - Independent agents work their separate Child Tickets. The Parent Ticket remains open and aggregates updates, closing automatically *only* when all Child Tickets are marked `RESOLVED` or `CLOSED`.
 
-* Secure login
-* Submit support tickets
-* Upload attachments (screenshots, documents, logs)
-* Automatic AI ticket categorization
-* View submitted tickets
-* Track ticket status
+### B. User Roles & Permission Boundaries
+The system enforces strict data-privacy isolation across four explicit roles:
+1. **Employee**: 
+   - Can create tickets.
+   - Can *only* view, read, or comment on tickets where they are the explicit creator (`creator_id = current_user.id`).
+2. **Agent**:
+   - Belongs to a dedicated department (e.g., HR Agent).
+   - **My Queue View (Primary Workspace - Read/Write)**: Full control over tickets specifically assigned to their individual account (`assignee_id == current_user.id`). This is their main daily focus.
+   - **Department Pool View (Unassigned - Read/Write)**: Can view and claim any ticket matching their department that has no assignee (`department_id == agent.department_id AND assignee_id == NULL`).
+   - **Department Archive View (Peer Collaboration - Read Only)**: Can search and view tickets assigned to *other agents* within their same department (`department_id == agent.department_id AND assignee_id != current_user.id`). This allows team members to review peer historical fixes or take over work if a colleague is absent. However, they *cannot* edit descriptions, change statuses, or re-route these tickets unless they explicitly re-assign the ticket to themselves first.
+   - **Cross-Department Block (Absolute Restriction)**: Agents are completely blocked from viewing, searching, or interacting with tickets belonging to other departments entirely (`ticket.department_id != agent.department_id`) to safeguard sensitive organizational data.
 
-### Support Agent Features
+3. **Department Manager**:
+   - Can view all tickets inside their assigned department.
+   - Has permission to manually override workloads, reassign tickets to specific agents, and view team resolution performance metrics.
+4. **System Admin**:
+   - Global multi-tenant clearance. Configures systemic parameters, creates/deletes company spaces, manages global settings, and configures third-party integrations.
 
-* Role-based dashboard
-* View assigned tickets
-* Download attachments
-* Update ticket status
-* Resolve tickets
-* Optional comments
+### C. Handling Misclassifications & AI Feedback Loops
+1. **The Re-Route Mechanism**: If the AI misclassifies a ticket (e.g., routes a confidential payroll ticket to the IT department queue), the IT agent must click a **"Re-Route Ticket"** action.
+2. **Instant Isolation**: Upon re-routing, the agent selects the correct target department from a restricted dropdown. The system updates the `department_id` field immediately, making the ticket instantly vanish from the IT dashboard view and securely populating the target department's queue.
+3. **AI Training Payload Logging**: Every time an agent triggers a manual re-route action, the backend transaction must write an event log payload into the `ai_classification_logs` table:
+   ```json
+   {
+     "ticket_id": 1234,
+     "raw_text": "Original text input from employee",
+     "predicted_department_id": 2, // The bad AI guess (IT)
+     "actual_department_id": 5,    // The human correction (HR)
+     "confidence_score": 72.50,
+     "is_misclassified": true
+   }
+   ```
+   This dataset acts as an isolated, high-value training log that system admins export periodically to retrain or fine-tune the company's custom IBM watsonx.ai underlying classification model.
 
-### AI Features
+### D. Ticket Lifecycle (ITIL Standard Compliance)
+Every ticket must transition through these precise, state-controlled enums:
+[ OPEN ] ──> [ IN_PROGRESS ] ──> [ PENDING_EMPLOYEE ] ──> [ RESOLVED ] ──> [ CLOSED ]
 
-* Automatic ticket categorization
+*   **OPEN**: Freshly submitted by an employee, or newly dropped into a queue via a human re-routing or triage loop. No agent has officially claimed ownership yet.
+*   **IN_PROGRESS**: An agent has actively assigned the ticket to themselves or a manager has delegated it. The agent is working on a fix.
+*   **PENDING_EMPLOYEE**: The agent has posted a clarifying question or requested data from the employee. The SLA clock pauses, and the system waits for the user's input/comment.
+*   **RESOLVED**: The technical or operational fix has been applied. The employee receives a notification.
+*   **CLOSED**: Read-only archival state. The system automatically locks the ticket 3 calendar days after moving to `RESOLVED` if the employee does not explicitly trigger a re-open action.
 
-  * Hardware
-  * Software
-  * Human Resources
+### E. Fair-Share Assignment Workflows
+To support arbitrary operational models for different companies, the system panel provides an administrative toggle supporting two distinct distribution modes:
+1. **Manual Pull Mode (Jira/GitHub Style)**: Agents browse their department pool view and manually click an "Assign to Me" button to claim tickets.
+2. **Round-Robin Mode (Fair-Share)**: The backend runs an event-driven scheduler. When a new ticket lands in a department, the system evaluates all active agents in that department and automatically assigns the incoming ticket to whoever holds the lowest active workload count (`status IN ('OPEN', 'IN_PROGRESS')`).
 
-* Automatic priority detection using keywords
-
-  * Low
-  * Medium
-  * High
-  * Critical
-
----
-
-# 2. Technology Stack
-
-## Backend
-
-* Spring Boot 3.2.x
-* Java 17
-* Maven 3.9.x
-* Spring Data JPA
-* PostgreSQL 15
-* IBM Cloud Object Storage SDK
-* IBM Watson Natural Language Understanding
-
-## Frontend
-
-* React 18
-* Axios
-* React Router
-
-## Database
-
-* PostgreSQL
-
-## Cloud Services
-
-* IBM Watson NLU
-* IBM Cloud Object Storage
-
-## Deployment (Optional)
-
-* IBM Cloud Code Engine
-
----
-
-# 3. System Architecture
-
-```
-Browser (React)
-
-        │
-
-        ▼
-
-React Frontend (localhost:3000)
-
-        │
-        │ REST API
-        ▼
-
-Spring Boot Backend (localhost:8080)
-
-        │
-        │ JPA / JDBC
-        ▼
-
-PostgreSQL Database
-
-External Services
------------------------------
-IBM Watson NLU
-IBM Cloud Object Storage
-```
+### F. Multi-Tenant SLAs & Performance Metrics
+1. **Dynamic SLA Rule Configuration**: Because this is a multi-tenant platform built to support different companies, target resolution windows must never be hardcoded. The application provides an administrative table (`sla_rules`) mapping `priority` levels (LOW, MEDIUM, HIGH, CRITICAL) to a target duration value (`target_resolution_hours`). Each tenant company configures their unique SLA limits.
+2. **Core Tracked KPIs**: The analytical dashboard tracks:
+   - **First Response Time (FRT)**: Duration from ticket creation (`created_at`) to the precise timestamp when status shifts from `OPEN` to `IN_PROGRESS`.
+   - **Mean Time to Resolution (MTTR)**: Elapsed duration from ticket creation to `RESOLVED` status.
+   - **AI Classification Accuracy**: A calculated statistical percentage representing:
+     $$\text{Accuracy} = \frac{\text{Logs where is\_misclassified is FALSE}}{\text{Total AI Logs}} \times 100$$
 
 ---
 
-# 4. Project Structure
+## 3. Approved Modernized Tech Stack
 
-## Backend
+### 🖥️ Frontend Architecture
+*   **Framework**: React 19 (Strict functional components with Hooks)
+*   **Build Tooling**: Vite 8+
+*   **Routing Engines**: React Router DOM v7 (Data API routing structures)
+*   **Data Fetching & State Caching**: TanStack Query v5 (React Query) — *Replaces vanilla Axios operations to manage background data syncing, caching, mutation state transitions, and loading skeletons out-of-the-box.*
+*   **UI/Styling Utility**: Tailwind CSS v4+ — *Mandatory for fast layout structures and responsive component design.*
+*   **Icon Library**: Lucide React
+*   **Code Linting Quality**: ESLint
 
-```
-src/main/java/com/helpdeskcenter/
+### ⚙️ Backend Engineering
+*   **Language Runtime**: Java 21 LTS
+*   **Framework Layer**: Spring Boot 3.4+ (Production-ready stable stream)
+*   **Data Access Abstraction**: Spring Data JPA
+*   **Security Protocol**: Spring Security configured with **JWT (JSON Web Tokens) or OAuth2 Resource Server Patterns** — *Replaces older stateful session cookies to ensure frictionless API authentication, easy scalability across multi-tenancies, and future-proof integrations with third-party messaging systems like Slack/Teams.*
+*   **Data Validation Engine**: Spring Validation (`jakarta.validation-api`)
+*   **Code Boilerplate Reduction**: Lombok
+*   **Automation Build Tool**: Maven
+*   **AI Integration System**: Unified IBM Cloud Core SDK / watsonx.ai integration frameworks.
 
-controllers/
-services/
-repositories/
-entities/
-config/
-util/
-dto/
-security/
-```
-
-## Frontend
-
-```
-src/
-
-components/
-pages/
-api/
-hooks/
-utils/
-App.js
-```
+### 🗄️ Database Tier
+*   **Engine**: PostgreSQL (Production-grade relational server)
+*   **Persistence Mapping**: Managed Hibernate schemas matching the structural entity rules.
 
 ---
 
-# 5. Database Design
-
-## Users
-
-| Column     | Description                               |
-| ---------- | ----------------------------------------- |
-| id         | Primary Key                               |
-| username   | Login username                            |
-| password   | Encrypted password                        |
-| role       | employee / it_hardware / it_software / hr |
-| email      | User email                                |
-| created_at | Timestamp                                 |
-
----
-
-## Tickets
-
-| Column      | Description                    |
-| ----------- | ------------------------------ |
-| id          | Primary Key                    |
-| title       | Ticket title                   |
-| description | Problem description            |
-| email       | Contact email                  |
-| category    | Hardware / Software / HR       |
-| priority    | Low / Medium / High / Critical |
-| status      | Open / In Progress / Resolved  |
-| created_by  | FK → Users                     |
-| assigned_to | FK → Users                     |
-| created_at  | Timestamp                      |
-| updated_at  | Timestamp                      |
-
----
-
-## Attachments
-
-| Column       | Description       |
-| ------------ | ----------------- |
-| id           | Primary Key       |
-| ticket_id    | FK → Ticket       |
-| file_name    | Uploaded filename |
-| file_url     | IBM COS URL       |
-| file_size    | Size              |
-| content_type | MIME type         |
-| uploaded_at  | Timestamp         |
-
----
-
-## Comments (Optional)
-
-| Column     | Description |
-| ---------- | ----------- |
-| id         | Primary Key |
-| ticket_id  | FK          |
-| user_id    | FK          |
-| message    | Comment     |
-| created_at | Timestamp   |
-
----
-
-# 6. API Endpoints
-
-## Authentication
-
-```
-POST   /api/auth/login
-POST   /api/auth/logout
-```
-
----
-
-## Tickets
-
-```
-GET    /api/tickets
-GET    /api/tickets/{id}
-POST   /api/tickets
-PUT    /api/tickets/{id}/status
-```
-
----
-
-## Attachments
-
-```
-POST   /api/attachments/presigned-url
-
-GET    /api/tickets/{id}/attachments
-
-POST   /api/tickets/{id}/attachments
-
-DELETE /api/attachments/{id}
-```
-
----
-
-## Comments (Optional)
-
-```
-GET    /api/tickets/{id}/comments
-
-POST   /api/tickets/{id}/comments
-```
-
----
-
-# 7. File Upload Workflow
-
-```
-Employee
-
-Select File
-      │
-      ▼
-Request Presigned URL
-      │
-      ▼
-Backend generates URL
-      │
-      ▼
-Upload directly to IBM Cloud Object Storage
-      │
-      ▼
-Save metadata in PostgreSQL
-      │
-      ▼
-Attachment available in ticket
-```
-
-Download Flow
-
-```
-Agent
-
-Open Ticket
-
-      │
-
-      ▼
-
-Click Attachment
-
-      │
-
-      ▼
-
-Download directly from IBM Cloud Object Storage
-```
-
----
-
-# 8. User Workflows
-
-## Employee Workflow
-
-1. Login
-2. Open Submit Ticket
-3. Enter title
-4. Enter description
-5. Upload attachments
-6. Submit
-7. AI categorizes ticket
-8. View ticket status
-
----
-
-## Support Agent Workflow
-
-1. Login
-2. Open dashboard
-3. View assigned tickets
-4. Review ticket
-5. Download attachments
-6. Update status
-7. Resolve ticket
-
----
-
-# 9. Development Timeline
-
-## Day 1 — Backend Foundation
-
-### Tasks
-
-* Install Java
-* Install PostgreSQL
-* Install Maven
-* Create database
-* Generate Spring Boot project
-* Configure database
-* Create JPA entities
-* Build repositories
-* Implement authentication
-* Implement Ticket CRUD
-* Test with Postman
-
-### Deliverable
-
-Working backend with PostgreSQL integration.
-
----
-
-## Day 2 — AI + File Storage
-
-### Tasks
-
-* Configure IBM Watson NLU
-* Implement AI categorization
-* Implement Priority Service
-* Configure IBM Cloud Object Storage
-* Generate presigned upload URLs
-* Save attachment metadata
-
-### Deliverable
-
-Automatic ticket categorization and secure file upload support.
-
----
-
-## Day 3 — React Frontend
-
-### Tasks
-
-* Create React project
-* Configure routing
-* Build login page
-* Build submit ticket page
-* Implement attachment upload
-* Connect backend APIs
-* Display ticket list
-
-### Deliverable
-
-Complete frontend connected to backend.
-
----
-
-## Day 4 — Agent Dashboard
-
-### Tasks
-
-* Dashboard
-* Ticket filtering
-* Ticket details
-* Attachment download
-* Status updates
-* Optional comments
-* Testing
-* Bug fixes
-* UI improvements
-
-### Deliverable
-
-Fully functional local application.
-
----
-
-## Day 5 — Deployment (Optional)
-
-### Option A
-
-Deploy backend to IBM Cloud Code Engine
-
-* Build JAR
-* Configure environment variables
-* Deploy
-* Test
-
-### Option B
-
-Local demonstration
-
-* Final testing
-* Documentation
-* README
-* Presentation
-* Demo
-
----
-
-# 10. Local Development Setup
-
-## Prerequisites
-
-* Java 17
-* Maven 3.9+
-* PostgreSQL 15+
-* Node.js 18+
-
----
-
-## Database
-
-Create
-
-* Database
-* User
-* Grant permissions
-
-Configure
-
-```
-spring.datasource.url
-spring.datasource.username
-spring.datasource.password
-```
-
----
-
-## IBM Cloud Setup
-
-### Watson NLU
-
-* Create service
-* Generate API Key
-* Save URL
-
-### Cloud Object Storage
-
-* Create bucket
-* Enable HMAC credentials
-* Save
-
-  * Access Key
-  * Secret Key
-  * Endpoint
-
----
-
-# 11. Configuration
-
-Application configuration includes
-
-* PostgreSQL
-* JPA
-* Watson NLU
-* IBM Cloud Object Storage
-* Server Port
-
-Secrets should be stored using environment variables or a `.env` file and excluded from version control.
-
----
-
-# 12. Project Milestones
-
-| Day | Milestone                             |
-| --- | ------------------------------------- |
-| 1   | Backend CRUD complete                 |
-| 2   | AI categorization complete            |
-| 2   | IBM Object Storage integrated         |
-| 3   | React frontend completed              |
-| 4   | Agent dashboard completed             |
-| 4   | End-to-end testing completed          |
-| 5   | Deployment or documentation completed |
-
----
-
-# 13. Success Criteria
-
-The project is considered complete when:
-
-* User authentication works
-* Employees can submit tickets
-* AI categorizes tickets automatically
-* Attachments upload successfully to IBM Cloud Object Storage
-* Attachment metadata is stored in PostgreSQL
-* Agents can download files
-* Ticket status updates correctly
-* Role-based dashboards function properly
-* End-to-end workflow is fully operational
+## 4. Phase-by-Phase Development Implementation Roadmap
+
+### Phase 1: Database Setup & Core JPA Foundations
+- [ ] Initialize PostgreSQL schema schemas based on the structural DBML/SQL specification.
+- [ ] Establish indexes on key optimization paths (`company_id`, `department_id`, `assignee_id`, `status`).
+- [ ] Generate the corresponding Spring Boot JPA Entities (`Company`, `Department`, `User`, `Ticket`, `SlaRule`, `AiClassificationLog`).
+- [ ] Implement explicit mapping logic for Parent-Child relationships on the `Ticket` entity using standard self-referencing properties (`@ManyToOne` and `@OneToMany`).
+
+### Phase 2: Security & Multi-Tenant Authentication (JWT)
+- [ ] Configure Spring Security filter chains to reject unauthenticated actions.
+- [ ] Build a robust Custom UserDetails service handling user roles (`EMPLOYEE`, `AGENT`, etc.).
+- [ ] Write the security utility classes for JWT generation, validation, and claim parsing.
+- [ ] Implement a custom global tenant extraction filter that bounds incoming API calls to the authenticated user's specific `company_id`.
+
+### Phase 3: IBM watsonx.ai Service Integration
+- [ ] Implement the IBM watsonx Service bean utilizing the latest unified SDK.
+- [ ] Build an extraction mapping service parsing raw incoming ticket descriptions and dispatching payloads to the AI model.
+- [ ] Write logic determining whether the returned confidence score beats the 60.00% requirement boundary.
+- [ ] Setup the asynchronous event listeners that write logging events to the `ai_classification_logs` table upon human re-routing actions.
+
+### Phase 4: Core Ticket Lifecycle REST API & Distribution Engine
+- [ ] Build transactional endpoints for ticket creation, state modification, and comment tracking.
+- [ ] Write the transactional layer for Parent-Child splitting logic.
+- [ ] Program the fair-share assignment routing mechanisms (Manual Pull vs. Round-Robin Workload Calculation).
+- [ ] Write internal validation controls protecting against cross-department data leakage.
+
+### Phase 5: Frontend Dashboard & TanStack Syncing
+- [ ] Scaffolding layout folders with Vite, Tailwind CSS v4, and React Router DOM v7.
+- [ ] Construct the core views: Employee Submission form, Agent Ticket Pool, Agent "My Queue" Workspace, and Administrative SLA panels.
+- [ ] Bind frontend state changes to the backend REST resources using TanStack Query hooks (`useQuery` for views, `useMutation` for actions like re-routing or changing statuses).
+- [ ] Verify that an agent's workspace view automatically updates, enforces cross-department blocks, and defaults elegantly to their personal work queue.

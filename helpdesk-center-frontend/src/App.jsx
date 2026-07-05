@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import TicketDetailPage from './pages/TicketDetailPage';
 
 function ProtectedRoute({ children }) {
@@ -13,19 +14,20 @@ function ProtectedRoute({ children }) {
 function RoleRoute() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  return user.role === 'employee'
-    ? <Navigate to="/dashboard" replace />
-    : <Navigate to="/agent" replace />;
+  if (user.role === 'employee')      return <Navigate to="/dashboard" replace />;
+  if (user.role === 'administrator') return <Navigate to="/admin"     replace />;
+  return <Navigate to="/agent" replace />;
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login"      element={<LoginPage />} />
-      <Route path="/dashboard"  element={<ProtectedRoute><EmployeeDashboard /></ProtectedRoute>} />
-      <Route path="/agent"      element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
+      <Route path="/login"       element={<LoginPage />} />
+      <Route path="/dashboard"   element={<ProtectedRoute><EmployeeDashboard /></ProtectedRoute>} />
+      <Route path="/agent"       element={<ProtectedRoute><AgentDashboard /></ProtectedRoute>} />
+      <Route path="/admin"       element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/tickets/:id" element={<ProtectedRoute><TicketDetailPage /></ProtectedRoute>} />
-      <Route path="*"           element={<RoleRoute />} />
+      <Route path="*"            element={<RoleRoute />} />
     </Routes>
   );
 }

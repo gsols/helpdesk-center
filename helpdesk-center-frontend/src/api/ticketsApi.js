@@ -14,3 +14,6 @@ export const previewTicket = (data) =>
 
 export const updateStatus = (id, status) =>
   api.put(`/api/tickets/${id}/status`, { status });
+
+export const assignTicket = (id, agentId) =>
+  api.put(`/api/tickets/${id}/assign`, { agentId });

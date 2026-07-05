@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { T } from '../styles/tokens';
 import { getTicket, updateStatus } from '../api/ticketsApi';
 import { getAttachments, downloadUrl } from '../api/attachmentsApi';
 import StatusBadge from './StatusBadge';
@@ -17,9 +18,9 @@ const STATUS_LABELS = { open: 'Open', in_progress: 'In Progress', resolved: 'Res
 function FileTypeIcon({ type }) {
   const base = { width: 28, height: 28, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 };
   if (type === 'pdf')   return <div style={{ ...base, background: '#dc2626' }}><FileText size={14} color="#fff" /></div>;
-  if (type === 'image') return <div style={{ ...base, background: '#3b82d4' }}><ImageIcon size={14} color="#fff" /></div>;
-  if (type === 'text')  return <div style={{ ...base, background: '#57606a' }}><FileText size={14} color="#fff" /></div>;
-  return                       <div style={{ ...base, background: '#9ca3af' }}><File     size={14} color="#fff" /></div>;
+  if (type === 'image') return <div style={{ ...base, background: T.navy }}><ImageIcon size={14} color="#fff" /></div>;
+  if (type === 'text')  return <div style={{ ...base, background: T.textSecondary }}><FileText size={14} color="#fff" /></div>;
+  return                       <div style={{ ...base, background: T.textMuted }}><File     size={14} color="#fff" /></div>;
 }
 
 /* ── File viewer modal ───────────────────────────────────────────────────── */
@@ -54,9 +55,9 @@ function FileViewer({ attachment, onClose }) {
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '12px 16px', borderBottom: '1px solid #e5e7eb', flexShrink: 0,
+          padding: '12px 16px', borderBottom: `1px solid ${T.border}`, flexShrink: 0,
         }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#1f2328', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 16 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, marginRight: 16 }}>
             {attachment.fileName}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
@@ -66,7 +67,7 @@ function FileViewer({ attachment, onClose }) {
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
                 fontSize: 13, fontWeight: 600, color: '#fff',
-                background: '#3b82d4', border: 'none', borderRadius: 6,
+                background: T.navy, border: 'none', borderRadius: T.radiusMd,
                 padding: '6px 14px', textDecoration: 'none', cursor: 'pointer',
               }}
             >
@@ -77,8 +78,8 @@ function FileViewer({ attachment, onClose }) {
               onClick={onClose}
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 32, border: '1px solid #e5e7eb', borderRadius: 6,
-                background: '#fff', cursor: 'pointer', color: '#57606a',
+                width: 32, height: 32, border: `1px solid ${T.border}`, borderRadius: T.radiusMd,
+                background: '#fff', cursor: 'pointer', color: T.textSecondary,
               }}
               title="Close"
             >
@@ -96,15 +97,15 @@ function FileViewer({ attachment, onClose }) {
           )}
           {(type === 'text' || type === 'other') && (
             <div style={{ padding: 24, textAlign: 'center' }}>
-              <File size={48} color="#9ca3af" style={{ marginBottom: 12 }} />
-              <p style={{ fontSize: 14, color: '#57606a', marginBottom: 16 }}>Preview not available for this file type.</p>
+              <File size={48} color={T.textMuted} style={{ marginBottom: 12 }} />
+              <p style={{ fontSize: 14, color: T.textSecondary, marginBottom: 16 }}>Preview not available for this file type.</p>
               <a
                 href={url}
                 download={attachment.fileName}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   fontSize: 13, fontWeight: 600, color: '#fff',
-                  background: '#3b82d4', borderRadius: 6, padding: '8px 20px',
+                  background: T.navy, borderRadius: T.radiusMd, padding: '8px 20px',
                   textDecoration: 'none',
                 }}
               >
@@ -170,7 +171,7 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
     <div style={{ padding: 32, textAlign: 'center', color: '#b91c1c', fontSize: 14 }}>{error}</div>
   );
   if (!ticket) return (
-    <div style={{ padding: 32, textAlign: 'center', color: '#57606a', fontSize: 14 }}>Loading…</div>
+    <div style={{ padding: 32, textAlign: 'center', color: T.textSecondary, fontSize: 14 }}>Loading…</div>
   );
 
   return (
@@ -181,10 +182,10 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
           {/* Title + badges */}
           <div style={{ flex: 1, minWidth: 0 }}>
-            <h2 style={{ fontSize: 17, fontWeight: 700, color: '#1f2328', marginBottom: 8 }}>{ticket.title}</h2>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: T.textPrimary, marginBottom: 8 }}>{ticket.title}</h2>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, color: '#9ca3af', fontFamily: 'monospace' }}>#{ticket.id}</span>
-              <span style={{ fontSize: 12, color: '#9ca3af' }}>{fmtDate(ticket.createdAt)}</span>
+              <span style={{ fontSize: 12, color: T.textMuted, fontFamily: 'monospace' }}>#{ticket.id}</span>
+              <span style={{ fontSize: 12, color: T.textMuted }}>{fmtDate(ticket.createdAt)}</span>
               <CategoryBadge value={ticket.category} />
               <StatusBadge value={ticket.status} />
               <PriorityBadge value={ticket.priority} />
@@ -235,14 +236,14 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
               >
                 {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
-              <ChevronDown size={11} color="#9ca3af" style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <ChevronDown size={11} color={T.textMuted} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
             </div>
             <button
               onClick={handleSaveStatus}
               disabled={updating || pendingStatus === ticket.status}
               style={{
                 height: 34, padding: '0 14px',
-                background: (updating || pendingStatus === ticket.status) ? '#93c5fd' : '#3b82d4',
+                background: (updating || pendingStatus === ticket.status) ? T.accentMid : T.navy,
                 color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, fontSize: 13,
                 cursor: (updating || pendingStatus === ticket.status) ? 'not-allowed' : 'pointer',
               }}
@@ -258,9 +259,9 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)', gap: '0 28px' }} className="ticket-detail-grid">
           <div>
             <h3 style={sectionHeadSt}>Description</h3>
-            <p style={{ fontSize: 14, color: '#1f2328', lineHeight: 1.75 }}>{ticket.description}</p>
+            <p style={{ fontSize: 14, color: T.textPrimary, lineHeight: 1.75 }}>{ticket.description}</p>
           </div>
-          <div style={{ borderLeft: '1px solid #e5e7eb', paddingLeft: 28, display: 'flex', flexDirection: 'column', gap: 14 }} className="ticket-detail-meta">
+          <div style={{ borderLeft: `1px solid ${T.border}`, paddingLeft: 28, display: 'flex', flexDirection: 'column', gap: 14 }} className="ticket-detail-meta">
             <div>
               <p style={metaLabelSt}>Submitted By</p>
               <p style={metaValueSt}>{ticket.createdBy?.username ?? '—'}</p>
@@ -272,11 +273,11 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
             </div>
             <div>
               <p style={metaLabelSt}>Created</p>
-              <p style={{ fontSize: 13, color: '#57606a' }}>{fmtDate(ticket.createdAt)}</p>
+              <p style={{ fontSize: 13, color: T.textSecondary }}>{fmtDate(ticket.createdAt)}</p>
             </div>
             <div>
               <p style={metaLabelSt}>Last Updated</p>
-              <p style={{ fontSize: 13, color: '#57606a' }}>{fmtDate(ticket.updatedAt)}</p>
+              <p style={{ fontSize: 13, color: T.textSecondary }}>{fmtDate(ticket.updatedAt)}</p>
             </div>
           </div>
         </div>
@@ -285,13 +286,13 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
       {/* Attachments card */}
       <div style={cardSt}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <h3 style={{ fontSize: 13, fontWeight: 600, color: '#1f2328' }}>Attachments</h3>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#57606a', background: '#f3f4f6', padding: '2px 8px', borderRadius: 999 }}>
+          <h3 style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary }}>Attachments</h3>
+          <span style={{ fontSize: 11, fontWeight: 600, color: T.textSecondary, background: T.surface, border: `1px solid ${T.border}`, padding: '2px 8px', borderRadius: T.radiusPill }}>
             {attachments.length}
           </span>
         </div>
         {attachments.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#9ca3af' }}>No attachments.</p>
+          <p style={{ fontSize: 13, color: T.textMuted }}>No attachments.</p>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {attachments.map(a => {
@@ -307,12 +308,12 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
                 >
                   <FileTypeIcon type={type} />
                   <span
-                    style={{ flex: 1, fontSize: 13, fontWeight: 500, color: '#3b82d4', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent' }}
-                    onMouseEnter={e => e.currentTarget.style.textDecorationColor = '#3b82d4'}
+                    style={{ flex: 1, fontSize: 13, fontWeight: 500, color: T.accent, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline', textDecorationColor: 'transparent' }}
+                    onMouseEnter={e => e.currentTarget.style.textDecorationColor = T.accent}
                     onMouseLeave={e => e.currentTarget.style.textDecorationColor = 'transparent'}
                   >{a.fileName}</span>
-                  <span style={{ fontSize: 12, color: '#9ca3af', flexShrink: 0 }}>{(a.fileSize / 1024).toFixed(1)} KB</span>
-                  <span style={{ fontSize: 12, color: '#57606a', flexShrink: 0 }}>Click to view</span>
+                  <span style={{ fontSize: 12, color: T.textMuted, flexShrink: 0 }}>{(a.fileSize / 1024).toFixed(1)} KB</span>
+                  <span style={{ fontSize: 12, color: T.textSecondary, flexShrink: 0 }}>Click to view</span>
                 </div>
               );
             })}
@@ -332,20 +333,20 @@ export default function TicketDetailPanel({ ticketId, onClose, onMaximize, onMin
       <style>{`
         @media (max-width: 640px) {
           .ticket-detail-grid { grid-template-columns: 1fr !important; }
-          .ticket-detail-meta { border-left: none !important; padding-left: 0 !important; border-top: 1px solid #e5e7eb; padding-top: 16px; margin-top: 16px; }
+          .ticket-detail-meta { border-left: none !important; padding-left: 0 !important; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 16px; }
         }
       `}</style>
     </div>
   );
 }
 
-const cardSt        = { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, boxShadow: '0 1px 3px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04)' };
-const sectionHeadSt = { fontSize: 13, fontWeight: 600, color: '#1f2328', marginBottom: 10 };
-const metaLabelSt   = { fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 };
-const metaValueSt   = { fontSize: 13, fontWeight: 500, color: '#1f2328' };
-const metaSubSt     = { fontSize: 12, color: '#57606a' };
+const cardSt        = { background: T.card, border: `1px solid ${T.border}`, borderRadius: T.radiusLg, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' };
+const sectionHeadSt = { fontSize: 13, fontWeight: 600, color: T.textPrimary, marginBottom: 10 };
+const metaLabelSt   = { fontSize: 11, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 };
+const metaValueSt   = { fontSize: 13, fontWeight: 500, color: T.textPrimary };
+const metaSubSt     = { fontSize: 12, color: T.textSecondary };
 const iconBtnSt     = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
-  width: 30, height: 30, border: '1px solid #e5e7eb', borderRadius: 6,
-  background: '#fff', cursor: 'pointer', color: '#57606a',
+  width: 30, height: 30, border: `1px solid ${T.border}`, borderRadius: T.radiusMd,
+  background: '#fff', cursor: 'pointer', color: T.textSecondary,
 };
