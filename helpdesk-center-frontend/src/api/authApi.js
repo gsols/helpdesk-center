@@ -1,7 +1,7 @@
 import api from './axiosInstance';
 
-export const login = (username, password) =>
-  api.post('/api/auth/login', { username, password });
+export const login = (email, password) =>
+  api.post('/api/auth/login', { email, password });
 
 export const logout = () =>
   api.post('/api/auth/logout');

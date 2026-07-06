@@ -1,36 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { getTickets, createTicket, previewTicket } from '../api/ticketsApi';
+import { useTickets, useCreateTicket } from '../hooks/useTickets';
+import { previewTicket } from '../api/ticketsApi';
 import { uploadAttachment } from '../api/attachmentsApi';
 import AppShell from '../components/AppShell';
 import TicketCard from '../components/TicketCard';
 import TicketDetailPanel from '../components/TicketDetailPanel';
 import SplitPane from '../components/SplitPane';
-import StatCard from '../components/StatCard';
 import CategoryBadge from '../components/CategoryBadge';
-import { T, cardStyle, btnPrimary } from '../styles/tokens';
 import {
   Plus, X, Upload, Paperclip, Sparkles, Loader2, AlertCircle,
   ChevronDown, CircleDot, Clock, CheckCircle2, Ticket,
 } from 'lucide-react';
 
-const CATEGORY_LABEL  = { hardware: 'Hardware', software: 'Software', hr: 'HR' };
-const CATEGORY_COLOR  = { hardware: '#1d4ed8', software: '#7c3aed', hr: '#065f46' };
-const CATEGORY_BG     = { hardware: '#eff6ff', software: '#f5f3ff', hr: '#ecfdf5' };
-const CATEGORY_BORDER = { hardware: '#bfdbfe', software: '#ddd6fe', hr: '#a7f3d0' };
-
 /* ── New Ticket Drawer ───────────────────────────────────────────────────── */
 function NewTicketDrawer({ user, onClose, onCreated }) {
-  const [form, setForm]               = useState({ title: '', description: '', email: user?.email || '' });
-  const [file, setFile]               = useState(null);
-  const [isDragging, setIsDragging]   = useState(false);
-  const [submitting, setSubmitting]   = useState(false);
-  const [errors, setErrors]           = useState({});
-  const [preview, setPreview]         = useState(null);
-  const [previewing, setPreviewing]   = useState(false);
+  const createTicket = useCreateTicket();
+  const [form, setForm]                 = useState({ title: '', description: '', email: user?.email || '' });
+  const [file, setFile]                 = useState(null);
+  const [isDragging, setIsDragging]     = useState(false);
+  const [errors, setErrors]             = useState({});
+  const [preview, setPreview]           = useState(null);
+  const [previewing, setPreviewing]     = useState(false);
   const [previewError, setPreviewError] = useState(null);
-  const [focusedField, setFocusedField] = useState(null);
   const fileInputRef = useRef(null);
   const debounceRef  = useRef(null);
 
@@ -63,149 +57,211 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
     const e2 = validate();
     if (Object.keys(e2).length) { setErrors(e2); return; }
     if (!preview?.allowed) return;
-    setSubmitting(true);
     try {
-      const res    = await createTicket(form);
-      const ticket = res.data;
+      const ticket = await createTicket.mutateAsync(form);
       if (file) await uploadAttachment(ticket.id, file);
       onCreated(ticket);
       onClose();
     } catch { alert('Failed to submit ticket'); }
-    finally  { setSubmitting(false); }
   };
 
-  const canSubmit = preview?.allowed === true && !submitting && !previewing;
-
-  const inputSt = (field) => ({
-    width: '100%', height: 36, padding: '0 12px', boxSizing: 'border-box',
-    border: `1px solid ${errors[field] ? T.danger : focusedField === field ? T.accent : T.border}`,
-    borderRadius: T.radiusMd, fontSize: 13, outline: 'none', background: '#fff', color: T.textPrimary,
-    boxShadow: focusedField === field ? `0 0 0 3px ${T.accentLight}` : 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-  });
-  const textareaSt = (field) => ({ ...inputSt(field), height: 'auto', padding: '10px 12px', resize: 'vertical', minHeight: 100 });
+  const canSubmit = preview?.allowed === true && !createTicket.isPending && !previewing;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(15,23,42,0.3)' }} />
-      <div style={{
-        position: 'absolute', right: 0, top: 0, height: '100%',
-        width: 'min(720px,100vw)', background: '#fff',
-        boxShadow: '-4px 0 32px rgba(0,0,0,0.14)',
-        display: 'flex', flexDirection: 'column',
-      }}>
+    <div className="fixed inset-0 z-50 flex">
+      <div onClick={onClose} className="absolute inset-0 bg-slate-900/30" />
+      <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col">
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 24px', height: 56, borderBottom: `1px solid ${T.border}`, flexShrink: 0 }}>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary }}>New Support Ticket</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, display: 'flex' }}><X size={18} /></button>
+        <div className="flex items-center justify-between px-6 h-14 border-b border-gray-200 shrink-0">
+          <h2 className="text-base font-bold text-gray-900">New Support Ticket</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex items-center">
+            <X size={18} />
+          </button>
         </div>
+
         {/* Body */}
-        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'row', flexWrap: 'wrap' }}>
+        <div className="flex-1 overflow-y-auto flex flex-wrap">
           {/* Form */}
-          <div style={{ flex: '1 1 300px', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <div className="flex-1 min-w-64 p-6 flex flex-col gap-5">
             <div>
-              <label style={labelSt}>Title <span style={{ color: T.danger }}>*</span></label>
-              <input type="text" value={form.title} placeholder="Brief summary of your issue" style={inputSt('title')}
-                onFocus={() => setFocusedField('title')} onBlur={() => setFocusedField(null)}
-                onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(p => ({ ...p, title: undefined })); }} />
-              {errors.title && <p style={errorSt}><AlertCircle size={11} /> {errors.title}</p>}
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={form.title}
+                placeholder="Brief summary of your issue"
+                className={`w-full h-9 px-3 border rounded-md text-sm outline-none bg-white text-gray-900 focus:ring-2 focus:ring-blue-200 ${errors.title ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
+                onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(p => ({ ...p, title: undefined })); }}
+              />
+              {errors.title && (
+                <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+                  <AlertCircle size={11} /> {errors.title}
+                </p>
+              )}
             </div>
+
             <div>
-              <label style={labelSt}>Description <span style={{ color: T.danger }}>*</span></label>
-              <textarea rows={5} value={form.description} placeholder="Describe the issue in detail"
-                style={textareaSt('description')} onFocus={() => setFocusedField('description')} onBlur={() => setFocusedField(null)}
-                onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(p => ({ ...p, description: undefined })); }} />
-              {errors.description && <p style={errorSt}><AlertCircle size={11} /> {errors.description}</p>}
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                rows={5}
+                value={form.description}
+                placeholder="Describe the issue in detail"
+                className={`w-full px-3 py-2.5 border rounded-md text-sm outline-none bg-white text-gray-900 resize-vertical min-h-24 focus:ring-2 focus:ring-blue-200 ${errors.description ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
+                onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(p => ({ ...p, description: undefined })); }}
+              />
+              {errors.description && (
+                <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
+                  <AlertCircle size={11} /> {errors.description}
+                </p>
+              )}
             </div>
+
             <div>
-              <label style={labelSt}>Contact Email</label>
-              <input type="email" value={form.email} style={inputSt('email')}
-                onFocus={() => setFocusedField('email')} onBlur={() => setFocusedField(null)}
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required />
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Contact Email</label>
+              <input
+                type="email"
+                value={form.email}
+                className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm outline-none bg-white text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                required
+              />
             </div>
+
             <div>
-              <label style={labelSt}>Attachment <span style={{ fontSize: 12, color: T.textMuted, fontWeight: 400 }}>(optional, max 10 MB)</span></label>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+                Attachment <span className="text-xs text-gray-400 font-normal">(optional, max 10 MB)</span>
+              </label>
               {file ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', border: `1px solid ${T.border}`, borderRadius: T.radiusMd, background: T.surface }}>
-                  <Paperclip size={14} color={T.textSecondary} />
-                  <span style={{ flex: 1, fontSize: 13, color: T.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-                  <button onClick={() => setFile(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textMuted, display: 'flex' }}><X size={14} /></button>
+                <div className="flex items-center gap-2.5 px-3 py-2 border border-gray-200 rounded-md bg-gray-50">
+                  <Paperclip size={14} className="text-gray-400 shrink-0" />
+                  <span className="flex-1 text-sm text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
+                  <button onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600 flex items-center">
+                    <X size={14} />
+                  </button>
                 </div>
               ) : (
-                <div onClick={() => fileInputRef.current?.click()}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
                   onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) setFile(f); }}
-                  style={{ border: `2px dashed ${isDragging ? T.accent : T.border}`, borderRadius: T.radiusLg, padding: '28px 20px', textAlign: 'center', cursor: 'pointer', background: isDragging ? T.accentLight : T.surface, transition: 'border-color 0.15s, background 0.15s' }}>
-                  <Upload size={20} color={T.textMuted} style={{ margin: '0 auto 8px' }} />
-                  <p style={{ fontSize: 13, color: T.textSecondary }}>Drag & drop a file here, or <span style={{ color: T.accent, fontWeight: 500 }}>click to browse</span></p>
-                  <p style={{ fontSize: 12, color: T.textMuted, marginTop: 4 }}>PDF, PNG, JPG, TXT up to 10 MB</p>
-                  <input ref={fileInputRef} type="file" accept=".jpg,.jpeg,.png,.gif,.pdf,.txt" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); }} />
+                  className={`border-2 border-dashed rounded-lg p-7 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}
+                >
+                  <Upload size={20} className="text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">
+                    Drag & drop a file here, or <span className="text-blue-500 font-medium">click to browse</span>
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">PDF, PNG, JPG, TXT up to 10 MB</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.gif,.pdf,.txt"
+                    className="hidden"
+                    onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); }}
+                  />
                 </div>
               )}
             </div>
           </div>
-          {/* AI Preview */}
-          <div style={{ width: 220, flexShrink: 0, borderLeft: `1px solid ${T.border}`, background: T.surface, padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Sparkles size={13} color={T.accent} />
-              <span style={{ fontSize: 11, fontWeight: 600, color: T.textPrimary, textTransform: 'uppercase', letterSpacing: '0.06em' }}>AI Classification</span>
+
+          {/* AI Preview panel */}
+          <div className="w-56 shrink-0 border-l border-gray-200 bg-gray-50 p-4 flex flex-col gap-3.5">
+            <div className="flex items-center gap-1.5">
+              <Sparkles size={13} className="text-blue-500" />
+              <span className="text-xs font-semibold text-gray-800 uppercase tracking-wide">AI Classification</span>
             </div>
-            {!previewing && !preview && !previewError && <p style={{ fontSize: 12, color: T.textMuted, lineHeight: 1.6 }}>Start typing — AI will predict the category and priority.</p>}
+            {!previewing && !preview && !previewError && (
+              <p className="text-xs text-gray-400 leading-relaxed">Start typing — AI will predict the category and priority.</p>
+            )}
             {previewing && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div><p style={aiLabelSt}>Category</p><div style={{ height: 22, width: 80, background: T.border, borderRadius: 4 }} /></div>
-                <div><p style={aiLabelSt}>Priority</p><div style={{ height: 22, width: 64, background: T.border, borderRadius: 4 }} /></div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.textMuted }}>
-                  <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />Detecting…
+              <div className="flex flex-col gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</p>
+                  <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Priority</p>
+                  <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Loader2 size={11} className="animate-spin" /> Detecting…
                 </div>
               </div>
             )}
-            {previewError && <p style={{ fontSize: 12, color: T.danger }}>{previewError}</p>}
+            {previewError && <p className="text-xs text-red-500">{previewError}</p>}
             {preview && !previewing && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div className="flex flex-col gap-3">
                 {preview.category ? (
                   <>
-                    <div><p style={aiLabelSt}>Category</p><CategoryBadge value={preview.category} /></div>
                     <div>
-                      <p style={aiLabelSt}>Source</p>
-                      <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 10, fontWeight: 600, background: preview.source === 'watson' ? T.accentLight : '#fef3c7', color: preview.source === 'watson' ? '#1e40af' : '#92400e', border: `1px solid ${preview.source === 'watson' ? '#bfdbfe' : '#fde68a'}` }}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</p>
+                      <CategoryBadge value={preview.category} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Source</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${preview.source === 'watson' ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
                         {preview.source === 'watson' ? 'Watson NLU' : 'Keyword Fallback'}
                       </span>
                     </div>
                     {preview.watsonKeywords?.length > 0 && (
                       <div>
-                        <p style={aiLabelSt}>Keywords</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Keywords</p>
+                        <div className="flex flex-wrap gap-1">
                           {preview.watsonKeywords.map((kw, i) => (
-                            <span key={i} style={{ fontSize: 11, padding: '2px 7px', borderRadius: 10, fontWeight: 500, background: kw.matchedCategory ? CATEGORY_BG[kw.matchedCategory] : '#f1f5f9', border: `1px solid ${kw.matchedCategory ? CATEGORY_BORDER[kw.matchedCategory] : '#e2e8f0'}`, color: kw.matchedCategory ? CATEGORY_COLOR[kw.matchedCategory] : '#475569' }}>
-                              {kw.text} <span style={{ opacity: 0.7 }}>{kw.relevance}%</span>
+                            <span key={i} className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-gray-100 border border-gray-200 text-gray-600">
+                              {kw.text} <span className="opacity-70">{kw.relevance}%</span>
                             </span>
                           ))}
                         </div>
                       </div>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: T.success, background: T.successBg, padding: '6px 10px', borderRadius: T.radiusMd, border: `1px solid ${T.successBorder}` }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.success, flexShrink: 0 }} />Auto-detected by AI
+                    <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1.5 rounded-md border border-green-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" />
+                      Auto-detected by AI
                     </div>
                   </>
                 ) : (
-                  <div style={{ background: T.dangerBg, border: `1px solid ${T.dangerBorder}`, borderRadius: T.radiusMd, padding: '10px 12px' }}>
-                    <p style={{ fontSize: 12, color: T.danger, fontWeight: 600, marginBottom: 4 }}>No work-related category detected</p>
-                    <p style={{ fontSize: 11, color: '#7f1d1d', lineHeight: 1.5 }}>Your ticket must relate to Hardware, Software, or HR.</p>
+                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                    <p className="text-xs text-red-600 font-semibold mb-1">No work-related category detected</p>
+                    <p className="text-xs text-red-800 leading-relaxed">Your ticket must relate to Hardware, Software, or HR.</p>
                   </div>
                 )}
               </div>
             )}
           </div>
         </div>
+
         {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, padding: '14px 24px', borderTop: `1px solid ${T.border}`, flexShrink: 0 }}>
-          <button onClick={onClose} style={{ ...btnSecSt }}>Cancel</button>
-          <button onClick={handleSubmit} disabled={!canSubmit} style={{ ...btnPrimary, background: canSubmit ? T.navy : T.accentMid, cursor: canSubmit ? 'pointer' : 'not-allowed' }}>
-            {submitting ? 'Submitting…' : previewing ? 'Classifying…' : !preview ? 'Waiting for AI…' : !preview.allowed ? 'Ticket blocked' : 'Submit Ticket'}
+        <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-gray-200 shrink-0">
+          <button onClick={onClose} className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className={`h-9 px-4 text-sm font-semibold text-white rounded-md transition-colors ${canSubmit ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer' : 'bg-blue-300 cursor-not-allowed'}`}
+          >
+            {createTicket.isPending ? 'Submitting…' : previewing ? 'Classifying…' : !preview ? 'Waiting for AI…' : !preview.allowed ? 'Ticket blocked' : 'Submit Ticket'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Stat Card ───────────────────────────────────────────────────────────── */
+function StatCard({ label, count, colorClass, bgClass, icon: Icon }) {
+  return (
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white flex-1 min-w-32`}>
+      <div className={`w-9 h-9 rounded-lg ${bgClass} flex items-center justify-center shrink-0`}>
+        <Icon size={16} className={colorClass} />
+      </div>
+      <div>
+        <p className="text-2xl font-bold text-gray-900 leading-none">{count}</p>
+        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
       </div>
     </div>
   );
@@ -214,11 +270,11 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
 /* ── Empty state ─────────────────────────────────────────────────────────── */
 function EmptyState({ message }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '64px 24px', textAlign: 'center' }}>
-      <div style={{ width: 52, height: 52, borderRadius: 12, background: T.surface, border: `1px solid ${T.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-        <Ticket size={22} color={T.textMuted} />
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-13 h-13 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
+        <Ticket size={22} className="text-gray-400" />
       </div>
-      <p style={{ fontSize: 14, color: T.textSecondary }}>{message}</p>
+      <p className="text-sm text-gray-500">{message}</p>
     </div>
   );
 }
@@ -226,23 +282,20 @@ function EmptyState({ message }) {
 /* ── EmployeeDashboard ───────────────────────────────────────────────────── */
 export default function EmployeeDashboard() {
   const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: tickets = [], isLoading } = useTickets();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tickets,   setTickets]  = useState([]);
-  const [showForm,  setShowForm] = useState(false);
-  const [success,   setSuccess]  = useState(null);
+  const [showForm,  setShowForm]  = useState(false);
+  const [success,   setSuccess]   = useState(null);
   const [maximized, setMaximized] = useState(false);
 
   const [filters, setFilters] = useState({
-    category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: ''
+    category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '',
   });
 
   const selectedId = searchParams.get('ticket');
   const selectTicket = (t) => { setMaximized(false); setSearchParams({ ticket: t.id }); };
   const closePanel   = ()  => { setMaximized(false); setSearchParams({}); };
-
-  useEffect(() => {
-    getTickets().then(r => setTickets(r.data)).catch(() => {});
-  }, []);
 
   const filteredTickets = tickets
     .filter(t => {
@@ -265,84 +318,108 @@ export default function EmployeeDashboard() {
     filters.category !== 'all' || filters.status !== 'all' || filters.priority !== 'all' ||
     filters.sort !== 'newest'  || filters.dateFrom !== ''  || filters.dateTo !== '';
 
-  const openCount       = tickets.filter(t => t.status === 'open').length;
-  const inProgressCount = tickets.filter(t => t.status === 'in_progress').length;
-  const resolvedCount   = tickets.filter(t => t.status === 'resolved').length;
+  const openCount       = tickets.filter(t => t.status === 'OPEN').length;
+  const inProgressCount = tickets.filter(t => t.status === 'IN_PROGRESS').length;
+  const resolvedCount   = tickets.filter(t => t.status === 'RESOLVED').length;
 
-  const handleCreated = async (ticket) => {
+  const handleCreated = (ticket) => {
     setSuccess(ticket);
-    const updated = await getTickets();
-    setTickets(updated.data);
+    qc.invalidateQueries({ queryKey: ['tickets'] });
   };
 
-  /* ── List content (sticky header + filter + list) ── */
   const listContent = (
     <>
-      <div style={selectedId ? { position: 'sticky', top: 0, zIndex: 10, background: T.surface, paddingBottom: 4 } : {}}>
+      <div className={selectedId ? 'sticky top-0 z-10 bg-gray-50 pb-1' : ''}>
         {/* Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h2 style={{ fontSize: 16, fontWeight: 700, color: T.textPrimary }}>My Tickets</h2>
-            <span style={{ fontSize: 11, fontWeight: 600, color: T.accent, background: T.accentLight, border: `1px solid #bfdbfe`, padding: '2px 10px', borderRadius: T.radiusPill }}>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-base font-bold text-gray-900">My Tickets</h2>
+            <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
               {filteredTickets.length} {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
             </span>
           </div>
-          <button onClick={() => setShowForm(true)} style={{ ...btnPrimary, background: T.navy }}>
-            <Plus size={14} strokeWidth={2.5} />New Ticket
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-md cursor-pointer transition-colors"
+          >
+            <Plus size={14} strokeWidth={2.5} /> New Ticket
           </button>
         </div>
 
         {/* Success banner */}
         {success && (
-          <div style={{ background: T.successBg, border: `1px solid ${T.successBorder}`, borderRadius: T.radiusLg, padding: '10px 14px', marginBottom: 12, fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>Ticket <strong>#{success.id}</strong> submitted — Category: <strong>{CATEGORY_LABEL[success.category] ?? success.category}</strong></span>
-            <button onClick={() => setSuccess(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.textSecondary, display: 'flex' }}><X size={14} /></button>
+          <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg px-3.5 py-2.5 mb-3 text-sm">
+            <span>
+              Ticket <strong>#{success.id}</strong> submitted — Category: <strong>{success.category}</strong>
+            </span>
+            <button onClick={() => setSuccess(null)} className="text-gray-400 hover:text-gray-600 flex items-center ml-2">
+              <X size={14} />
+            </button>
           </div>
         )}
 
         {/* Filter bar */}
-        <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: T.radiusLg, padding: '12px 14px', marginBottom: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={filterGroupLabelSt}>Filter</span>
+        <div className="bg-white border border-gray-200 rounded-lg px-3.5 py-3 mb-3 shadow-sm flex flex-col gap-2.5">
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Filter</span>
             {[
               { key: 'category', opts: [['all','Category'],['hardware','Hardware'],['software','Software'],['hr','HR']] },
-              { key: 'status',   opts: [['all','Status'],['open','Open'],['in_progress','In Progress'],['resolved','Resolved']] },
-              { key: 'priority', opts: [['all','Priority'],['critical','Critical'],['high','High'],['medium','Medium'],['low','Low']] },
+              { key: 'status',   opts: [['all','Status'],['OPEN','Open'],['IN_PROGRESS','In Progress'],['PENDING_EMPLOYEE','Pending'],['RESOLVED','Resolved'],['CLOSED','Closed']] },
+              { key: 'priority', opts: [['all','Priority'],['CRITICAL','Critical'],['HIGH','High'],['MEDIUM','Medium'],['LOW','Low']] },
             ].map(({ key, opts }) => (
-              <div key={key} style={{ position: 'relative' }}>
-                <select value={filters[key]} onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))} style={selectSt}>
+              <div key={key} className="relative">
+                <select
+                  value={filters[key]}
+                  onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
+                  className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
+                >
                   {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
-                <ChevronDown size={11} color={T.textMuted} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
               </div>
             ))}
-            <div style={{ width: 1, height: 20, background: T.border, flexShrink: 0 }} />
-            <span style={filterGroupLabelSt}>Sort</span>
-            <div style={{ position: 'relative' }}>
-              <select value={filters.sort} onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))} style={selectSt}>
+            <div className="w-px h-5 bg-gray-200 shrink-0" />
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort</span>
+            <div className="relative">
+              <select
+                value={filters.sort}
+                onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}
+                className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
+              >
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
               </select>
-              <ChevronDown size={11} color={T.textMuted} style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
             </div>
             {hasActiveFilter && (
-              <button onClick={() => setFilters({ category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '' })}
-                style={{ marginLeft: 'auto', fontSize: 12, color: T.accent, background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+              <button
+                onClick={() => setFilters({ category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '' })}
+                className="ml-auto text-xs text-blue-500 bg-transparent border-none cursor-pointer underline whitespace-nowrap"
+              >
                 Clear filters
               </button>
             )}
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <span style={filterGroupLabelSt}>Date</span>
-            <label style={dateLabelSt}>From<input type="date" style={dateSt} value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))} /></label>
-            <label style={dateLabelSt}>To<input type="date" style={dateSt} value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))} /></label>
+          <div className="flex gap-2 items-center flex-wrap">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Date</span>
+            <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
+              From
+              <input type="date" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
+                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
+            </label>
+            <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
+              To
+              <input type="date" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
+                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
+            </label>
           </div>
         </div>
       </div>
 
       {/* Ticket list */}
-      <div style={{ background: T.card, border: `1px solid ${T.border}`, borderRadius: T.radiusLg, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-        {tickets.length === 0 ? <EmptyState message="No tickets yet. Submit your first ticket using '+ New Ticket'." />
+      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+        {isLoading         ? <EmptyState message="Loading tickets…" />
+          : tickets.length === 0   ? <EmptyState message="No tickets yet. Submit your first ticket using '+ New Ticket'." />
           : filteredTickets.length === 0 ? <EmptyState message="No tickets match the current filters." />
           : filteredTickets.map(t => (
             <TicketCard key={t.id} ticket={t} isSelected={String(t.id) === String(selectedId)} onSelect={selectTicket} />
@@ -353,34 +430,35 @@ export default function EmployeeDashboard() {
 
   return (
     <AppShell title="My Tickets">
-      {/* Stat cards — hidden in split/maximized mode */}
       {!selectedId && (
         <>
           {/* Welcome banner */}
-          <div style={{ background: `linear-gradient(135deg, ${T.navy} 0%, #2a4a73 100%)`, borderRadius: T.radiusXl, padding: '20px 24px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div className="rounded-xl bg-blue-900 px-6 py-5 mb-5 flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p style={{ fontSize: 13, color: T.accentLight, fontWeight: 500, marginBottom: 4 }}>Welcome back</p>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#ffffff' }}>{user?.fullName ?? user?.username}</h2>
+              <p className="text-sm text-blue-200 font-medium mb-1">Welcome back</p>
+              <h2 className="text-xl font-bold text-white">{user?.name ?? user?.email}</h2>
             </div>
-            <button onClick={() => setShowForm(true)} style={{ ...btnPrimary, background: '#ffffff', color: T.navy, gap: 6 }}>
-              <Plus size={14} strokeWidth={2.5} />Submit New Ticket
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-blue-900 bg-white hover:bg-blue-50 rounded-md cursor-pointer transition-colors"
+            >
+              <Plus size={14} strokeWidth={2.5} /> Submit New Ticket
             </button>
           </div>
 
           {/* Stat cards */}
-          <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-            <StatCard label="Open Tickets"     count={openCount}       color={T.accent}   bg={T.accentLight}  icon={CircleDot}    />
-            <StatCard label="In Progress"      count={inProgressCount} color="#7c3aed"    bg="#f5f3ff"        icon={Clock}        />
-            <StatCard label="Resolved"         count={resolvedCount}   color={T.success}  bg={T.successBg}    icon={CheckCircle2} />
+          <div className="flex gap-4 mb-5 flex-wrap">
+            <StatCard label="Open Tickets" count={openCount}       colorClass="text-blue-500"  bgClass="bg-blue-50"   icon={CircleDot}    />
+            <StatCard label="In Progress"  count={inProgressCount} colorClass="text-violet-600" bgClass="bg-violet-50" icon={Clock}        />
+            <StatCard label="Resolved"     count={resolvedCount}   colorClass="text-green-600"  bgClass="bg-green-50"  icon={CheckCircle2} />
           </div>
         </>
       )}
 
-      {/* Split / list view */}
       {selectedId ? (
         <div>
           {maximized ? (
-            <div className="split-detail-col" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 88px)' }}>
+            <div className="split-detail-col overflow-y-auto max-h-[calc(100vh-88px)]">
               <TicketDetailPanel ticketId={selectedId} onClose={closePanel} onMinimize={() => setMaximized(false)} />
             </div>
           ) : (
@@ -405,12 +483,3 @@ export default function EmployeeDashboard() {
     </AppShell>
   );
 }
-
-const labelSt          = { display: 'block', fontSize: 13, fontWeight: 600, color: T.textPrimary, marginBottom: 6 };
-const errorSt          = { display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: T.danger, marginTop: 4 };
-const btnSecSt         = { height: 36, padding: '0 16px', fontSize: 13, fontWeight: 500, color: T.textSecondary, background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radiusMd, cursor: 'pointer' };
-const aiLabelSt        = { fontSize: 11, fontWeight: 600, color: T.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 };
-const selectSt         = { height: 34, paddingLeft: 10, paddingRight: 28, border: `1px solid ${T.border}`, borderRadius: T.radiusMd, fontSize: 13, background: '#fff', cursor: 'pointer', appearance: 'none', outline: 'none', color: T.textPrimary };
-const dateSt           = { height: 34, padding: '0 10px', border: `1px solid ${T.border}`, borderRadius: T.radiusMd, fontSize: 13, background: '#fff', cursor: 'pointer', outline: 'none', colorScheme: 'light', color: T.textPrimary };
-const filterGroupLabelSt = { fontSize: 11, fontWeight: 700, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.06em', whiteSpace: 'nowrap' };
-const dateLabelSt      = { display: 'flex', flexDirection: 'column', gap: 3, fontSize: 11, fontWeight: 600, color: T.textMuted, textTransform: 'uppercase', letterSpacing: '0.04em' };

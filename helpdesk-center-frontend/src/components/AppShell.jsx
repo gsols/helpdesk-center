@@ -3,39 +3,35 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { T } from '../styles/tokens';
 import {
-  Headphones, LayoutDashboard, Ticket, PlusCircle, Users,
-  Settings, LogOut, Menu, X, Bell, ChevronDown,
+  Headphones, LayoutDashboard, Ticket,
+  Settings, LogOut, Menu, X, Bell,
 } from 'lucide-react';
 
 /* ── Role → nav definitions ─────────────────────────────────────────────── */
 const NAV = {
   employee: [
-    { label: 'Dashboard',      icon: LayoutDashboard, to: '/dashboard' },
-    { label: 'My Tickets',     icon: Ticket,          to: '/dashboard' },
-    { label: 'Submit Ticket',  icon: PlusCircle,      to: '/submit'    },
+    { label: 'Dashboard',   icon: LayoutDashboard, to: '/dashboard' },
+    { label: 'My Tickets',  icon: Ticket,          to: '/dashboard' },
   ],
-  it_hardware: [
-    { label: 'Queue',          icon: LayoutDashboard, to: '/agent'     },
+  agent: [
+    { label: 'Queue',       icon: LayoutDashboard, to: '/agent'     },
   ],
-  it_software: [
-    { label: 'Queue',          icon: LayoutDashboard, to: '/agent'     },
+  dept_manager: [
+    { label: 'Queue',       icon: LayoutDashboard, to: '/agent'     },
+    { label: 'Admin',       icon: Settings,        to: '/admin'     },
   ],
-  hr: [
-    { label: 'Queue',          icon: LayoutDashboard, to: '/agent'     },
-  ],
-  administrator: [
-    { label: 'Dashboard',      icon: LayoutDashboard, to: '/admin'     },
-    { label: 'All Tickets',    icon: Ticket,          to: '/admin'     },
-    { label: 'Agents',         icon: Users,           to: '/admin'     },
+  sys_admin: [
+    { label: 'Dashboard',   icon: LayoutDashboard, to: '/admin'     },
+    { label: 'All Tickets', icon: Ticket,          to: '/admin'     },
+    { label: 'Settings',    icon: Settings,        to: '/admin'     },
   ],
 };
 
 const ROLE_LABELS = {
-  employee:      'Employee',
-  it_hardware:   'IT Hardware',
-  it_software:   'IT Software',
-  hr:            'HR Agent',
-  administrator: 'Administrator',
+  employee:     'Employee',
+  agent:        'Support Agent',
+  dept_manager: 'Dept. Manager',
+  sys_admin:    'System Admin',
 };
 
 function getInitials(name) {
@@ -86,7 +82,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
   const location = useNavigate();
   const { pathname } = useLocation();
   const navItems = NAV[user?.role] ?? [];
-  const initials  = getInitials(user?.fullName ?? user?.username);
+  const initials  = getInitials(user?.name ?? user?.email);
   const roleLabel = ROLE_LABELS[user?.role] ?? user?.role ?? '';
 
   return (
@@ -179,7 +175,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: '#ffffff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.fullName ?? user?.username}
+                {user?.name ?? user?.email}
               </div>
               <div style={{ fontSize: 11, color: T.sidebarMuted, textTransform: 'capitalize' }}>{roleLabel}</div>
             </div>
@@ -218,7 +214,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
 /* ── TopBar ──────────────────────────────────────────────────────────────── */
 function TopBar({ title, sidebarWidth }) {
   const { user } = useAuth();
-  const initials  = getInitials(user?.fullName ?? user?.username);
+  const initials  = getInitials(user?.name ?? user?.email);
 
   return (
     <header style={{

@@ -42,12 +42,14 @@ public class DataSeeder {
         hrDepartment.setName("HR");
         hrDepartment = departmentRepository.save(hrDepartment);
 
-        userRepository.save(createUser(company, null, "John Doe", "john.doe@company.com", UserRole.EMPLOYEE));
-        userRepository.save(createUser(company, itDepartment, "IT Hardware Agent", "it.hardware@company.com", UserRole.AGENT));
-        userRepository.save(createUser(company, itDepartment, "IT Software Agent", "it.software@company.com", UserRole.AGENT));
-        userRepository.save(createUser(company, hrDepartment, "HR Agent", "hr.agent@company.com", UserRole.AGENT));
+        userRepository.save(createUser(company, null,          "John Doe",          "john.doe@company.com",    UserRole.EMPLOYEE));
+        userRepository.save(createUser(company, itDepartment,  "IT Hardware Agent", "it.hardware@company.com", UserRole.AGENT));
+        userRepository.save(createUser(company, itDepartment,  "IT Software Agent", "it.software@company.com", UserRole.AGENT));
+        userRepository.save(createUser(company, hrDepartment,  "HR Agent",          "hr.agent@company.com",    UserRole.AGENT));
+        userRepository.save(createUser(company, itDepartment,  "IT Manager",        "it.manager@company.com",  UserRole.DEPT_MANAGER));
+        userRepository.save(createUser(company, null,          "System Admin",      "admin@company.com",       UserRole.SYS_ADMIN));
 
-        System.out.println("✅ Seeded default company, departments, and 4 test users");
+        System.out.println("✅ Seeded default company, departments, and 6 test users");
     }
 
     private User createUser(Company company, Department department, String name, String email, UserRole role) {

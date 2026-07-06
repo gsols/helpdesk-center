@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Headphones, AlertCircle } from 'lucide-react';
-import { T } from '../styles/tokens';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate  = useNavigate();
-  const [username, setUsername] = useState('');
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
   const [error,    setError]    = useState('');
   const [loading,  setLoading]  = useState(false);
@@ -18,77 +17,89 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const user = await login(username, password);
-      if (user.role === 'employee') navigate('/dashboard');
-      else if (user.role === 'administrator') navigate('/admin');
-      else navigate('/agent');
+      const user = await login(email, password);
+      // Role is lowercased in AuthContext from the enum name (e.g. 'employee', 'agent', 'sys_admin')
+      const role = user.role?.toLowerCase?.() ?? '';
+      if (role === 'employee')    navigate('/dashboard');
+      else if (role === 'sys_admin') navigate('/admin');
+      else navigate('/agent'); // agent, dept_manager
     } catch {
-      setError('Invalid username or password');
+      setError('Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const inputStyle = (field) => ({
-    width: '100%', height: 38, padding: '0 12px',
-    border: `1px solid ${focused === field ? T.accent : T.border}`,
-    borderRadius: T.radiusMd, fontSize: 13, boxSizing: 'border-box',
-    outline: 'none', background: '#fff', color: T.textPrimary,
-    boxShadow: focused === field ? `0 0 0 3px ${T.accentLight}` : 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-  });
+  const inputCls = (field) =>
+    `w-full h-9.5 px-3 text-sm border rounded-md outline-none bg-white transition-all
+     ${focused === field
+       ? 'border-blue-500 ring-2 ring-blue-100'
+       : 'border-gray-300'
+     }`;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: T.surface, padding: '24px 16px' }}>
-      <div style={{
-        background: '#fff', border: `1px solid ${T.border}`, borderRadius: T.radiusXl,
-        padding: '40px 36px', width: '100%', maxWidth: 380,
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
-      }}>
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+      <div className="bg-white border border-gray-200 rounded-2xl p-10 w-full max-w-sm shadow-lg">
+
         {/* Logo */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 52, height: 52, borderRadius: 14, background: T.navy,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-          }}>
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-13 h-13 rounded-2xl bg-blue-900 flex items-center justify-center mb-3.5">
             <Headphones size={26} color="#ffffff" strokeWidth={2} />
           </div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: T.textPrimary, marginBottom: 4, letterSpacing: '-0.02em' }}>Helpdesk Center</h1>
-          <p style={{ fontSize: 13, color: T.textSecondary, textAlign: 'center' }}>Sign in to submit and track support requests</p>
+          <h1 className="text-xl font-bold text-gray-800 tracking-tight mb-1">Helpdesk Center</h1>
+          <p className="text-sm text-gray-500 text-center">Sign in to submit and track support requests</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label style={labelStyle}>Username</label>
-            <input value={username} onChange={e => { setUsername(e.target.value); setError(''); }}
-              placeholder="Enter your username" required autoFocus
-              style={inputStyle('username')} onFocus={() => setFocused('username')} onBlur={() => setFocused(null)} />
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => { setEmail(e.target.value); setError(''); }}
+              placeholder="you@company.com"
+              required
+              autoFocus
+              className={inputCls('email')}
+              onFocus={() => setFocused('email')}
+              onBlur={() => setFocused(null)}
+            />
           </div>
           <div>
-            <label style={labelStyle}>Password</label>
-            <input type="password" value={password} onChange={e => { setPassword(e.target.value); setError(''); }}
-              placeholder="Enter your password" required
-              style={inputStyle('password')} onFocus={() => setFocused('password')} onBlur={() => setFocused(null)} />
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              placeholder="Enter your password"
+              required
+              className={inputCls('password')}
+              onFocus={() => setFocused('password')}
+              onBlur={() => setFocused(null)}
+            />
           </div>
+
           {error && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: T.danger }}>
+            <div className="flex items-center gap-1.5 text-xs text-red-600">
               <AlertCircle size={13} />{error}
             </div>
           )}
-          <button type="submit" disabled={loading} style={{
-            marginTop: 4, width: '100%', height: 40,
-            background: loading ? T.navyMid : T.navy,
-            color: '#fff', border: 'none', borderRadius: T.radiusMd,
-            fontWeight: 600, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'background 0.15s',
-          }}>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 w-full h-10 bg-blue-900 text-white rounded-md font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
+          >
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
+
+        {/* Test credentials hint */}
+        <p className="mt-5 text-xs text-gray-400 text-center">
+          Demo: <code className="text-gray-500">john.doe@company.com</code> / <code className="text-gray-500">password123</code>
+        </p>
       </div>
     </div>
   );
 }
-
-const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, color: T.textPrimary, marginBottom: 6 };
