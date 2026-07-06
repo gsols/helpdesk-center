@@ -31,19 +31,21 @@ export default function LoginPage() {
   };
 
   const inputCls = (field) =>
-    `w-full h-9.5 px-3 text-sm border rounded-md outline-none bg-white transition-all
+    `w-full h-9.5 px-3 text-sm border rounded-none outline-none bg-white transition-all
      ${focused === field
-       ? 'border-blue-500 ring-2 ring-blue-100'
+       ? 'border-blue-500 ring-1 ring-blue-500'
        : 'border-gray-300'
      }`;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <div className="bg-white border border-gray-200 rounded-2xl p-10 w-full max-w-sm shadow-lg">
+      {/* Login card — structural container, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white border border-neutral-200 rounded-none p-10 w-full max-w-sm">
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-13 h-13 rounded-2xl bg-blue-900 flex items-center justify-center mb-3.5">
+          {/* Logo icon box — structural container, rounded-none (ADR-0006 §1) */}
+          <div className="w-13 h-13 rounded-none bg-blue-900 flex items-center justify-center mb-3.5">
             <Headphones size={26} color="#ffffff" strokeWidth={2} />
           </div>
           <h1 className="text-xl font-bold text-gray-800 tracking-tight mb-1">Helpdesk Center</h1>
@@ -86,10 +88,11 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Submit button — interactive action control, rounded per hybrid rule (ADR-0006 §2) */}
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 w-full h-10 bg-blue-900 text-white rounded-md font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
+            className="mt-1 w-full h-10 bg-blue-900 text-white rounded font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
           >
             {loading ? 'Signing in…' : 'Sign In'}
           </button>

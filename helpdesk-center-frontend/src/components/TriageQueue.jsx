@@ -32,36 +32,40 @@ export default function TriageQueue() {
   if (tickets.length === 0) return <p className="text-sm text-gray-400">Triage queue is empty.</p>;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 bg-amber-50">
-        <h3 className="text-sm font-semibold text-amber-800">
+    // Structural outer container — rounded-none (ADR-0006 §1)
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none overflow-hidden">
+      {/* Header — structural section, rounded-none */}
+      <div className="px-4 py-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-800/40 rounded-none">
+        <span className="text-[11px] font-semibold tracking-wider text-neutral-500 dark:text-neutral-400 uppercase">
           Uncategorized Tickets ({tickets.length})
-        </h3>
-        <p className="text-xs text-amber-600 mt-0.5">These tickets had AI confidence below 60% and require manual assignment.</p>
+        </span>
+        <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">AI confidence &lt;60% — manual assignment required.</p>
       </div>
-      <div className="divide-y divide-gray-100">
+      <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
         {tickets.map(t => (
-          <div key={t.id} className="flex items-center gap-3 px-4 py-3 flex-wrap">
+          <div key={t.id} className="flex items-center gap-3 px-4 py-3 flex-wrap hover:bg-neutral-50/80 dark:hover:bg-neutral-800/30 transition-colors">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 font-mono">#{t.id}</p>
-              <p className="text-sm font-semibold text-gray-800 truncate">{t.title}</p>
-              <p className="text-xs text-gray-500 truncate">{t.creator?.name}</p>
+              <p className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">#{t.id}</p>
+              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-100 truncate">{t.title}</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">{t.creator?.name}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
+              {/* Form field select — rounded-none per blueprint §3 */}
               <select
                 value={selections[t.id] ?? ''}
                 onChange={e => setSelections(prev => ({ ...prev, [t.id]: e.target.value }))}
-                className="h-8 px-2 border border-gray-300 rounded text-sm bg-white focus:outline-none focus:border-blue-500"
+                className="h-8 px-2 border border-neutral-300 dark:border-neutral-600 rounded-none text-sm bg-white dark:bg-neutral-800 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 <option value="">— Assign department —</option>
                 {departments.map(d => (
                   <option key={d.id} value={d.id}>{d.name}</option>
                 ))}
               </select>
+              {/* Action button — rounded per hybrid rule (ADR-0006 §2) */}
               <button
                 onClick={() => handleAssign(t.id)}
                 disabled={!selections[t.id] || rerouteTicket.isPending}
-                className="flex items-center gap-1 h-8 px-3 text-xs font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40"
+                className="flex items-center gap-1 h-8 px-3 text-xs font-semibold text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-40 transition-colors"
               >
                 <ArrowRight size={12} /> Assign
               </button>

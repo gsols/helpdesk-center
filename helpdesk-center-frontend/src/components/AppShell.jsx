@@ -61,7 +61,7 @@ function NavItem({ item, active, collapsed }) {
         justifyContent: collapsed ? 'center' : 'flex-start',
         background:   active ? T.navyDark : hovered ? T.navyMid : 'transparent',
         border:       'none',
-        borderRadius: 6,
+        borderRadius: 0,
         cursor:       'pointer',
         color:        active ? '#ffffff' : T.sidebarText,
         fontSize:     13,
@@ -112,7 +112,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
         {!collapsed && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
             <div style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 32, height: 32, borderRadius: 0,
               background: 'rgba(255,255,255,0.12)',
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
@@ -125,7 +125,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
         )}
         {collapsed && (
           <div style={{
-            width: 32, height: 32, borderRadius: 8,
+            width: 32, height: 32, borderRadius: 0,
             background: 'rgba(255,255,255,0.12)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
@@ -137,7 +137,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
             color: T.sidebarText, display: 'flex', alignItems: 'center',
-            padding: 4, borderRadius: 4, flexShrink: 0,
+            padding: 4, borderRadius: 0, flexShrink: 0,
           }}
           title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
@@ -182,7 +182,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
             <button
               onClick={onLogout}
               title="Logout"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.sidebarMuted, display: 'flex', padding: 4, borderRadius: 4, flexShrink: 0 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.sidebarMuted, display: 'flex', padding: 4, borderRadius: 0, flexShrink: 0 }}
             >
               <LogOut size={15} />
             </button>
@@ -200,7 +200,7 @@ function Sidebar({ user, onLogout, collapsed, onToggle }) {
             <button
               onClick={onLogout}
               title="Logout"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.sidebarMuted, display: 'flex', padding: 4, borderRadius: 4 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: T.sidebarMuted, display: 'flex', padding: 4, borderRadius: 0 }}
             >
               <LogOut size={14} />
             </button>
@@ -239,7 +239,7 @@ function TopBar({ title, sidebarWidth }) {
         <button style={{
           background: 'none', border: 'none', cursor: 'pointer',
           color: T.textSecondary, display: 'flex', alignItems: 'center',
-          padding: 6, borderRadius: 6,
+          padding: 6, borderRadius: 0,
         }}>
           <Bell size={17} />
         </button>
@@ -275,31 +275,32 @@ export default function AppShell({ title = 'Helpdesk Center', children }) {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: T.surface }}>
+    <div style={{ height: '100vh', overflow: 'hidden', background: T.surface, display: 'flex' }}>
       <Sidebar
         user={user}
         onLogout={handleLogout}
         collapsed={collapsed}
         onToggle={() => setCollapsed(c => !c)}
       />
-      <TopBar title={title} sidebarWidth={sidebarWidth} />
-      <main style={{
-        marginLeft:  sidebarWidth,
-        paddingTop:  T.topBarHeight,
-        minHeight:   '100vh',
-        transition:  'margin-left 0.2s ease',
+      <div style={{
+        flex:       1,
+        marginLeft: sidebarWidth,
+        display:    'flex',
+        flexDirection: 'column',
+        transition: 'margin-left 0.2s ease',
+        minWidth:   0,
       }}>
-        <div style={{ padding: '24px 24px' }}>
-          {children}
-        </div>
-      </main>
-
-      {/* Responsive: hide sidebar on mobile, show hamburger */}
-      <style>{`
-        @media (max-width: 768px) {
-          /* AppShell sidebar goes icon-only */
-        }
-      `}</style>
+        <TopBar title={title} sidebarWidth={sidebarWidth} />
+        <main style={{
+          flex:       1,
+          overflowY:  'auto',
+          paddingTop: T.topBarHeight,
+        }}>
+          <div style={{ padding: '24px 24px' }}>
+            {children}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

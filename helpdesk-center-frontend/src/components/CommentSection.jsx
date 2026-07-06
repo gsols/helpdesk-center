@@ -36,10 +36,12 @@ export default function CommentSection({ ticketId }) {
   const isAgent = (c) => c.sender?.role && c.sender.role !== 'EMPLOYEE';
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-5">
+    // Structural container — rounded-none (ADR-0006 §1)
+    <div className="bg-white border border-neutral-200 rounded-none p-5">
       <h3 className="text-sm font-semibold text-gray-800 mb-4">
         Comments
         {comments.length > 0 && (
+          // Count badge — interactive micro-widget, rounded-full stays (ADR-0006 §2)
           <span className="ml-2 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
             {comments.length}
           </span>
@@ -51,12 +53,13 @@ export default function CommentSection({ ticketId }) {
       ) : comments.length === 0 ? (
         <p className="text-sm text-gray-400 mb-5">No comments yet.</p>
       ) : (
-        <div className="mb-5 divide-y divide-gray-100">
+        <div className="mb-5 divide-y divide-neutral-100">
           {comments.map((c) => {
             const agent = isAgent(c);
             const initials = getInitials(c.sender?.name);
             return (
               <div key={c.id} className="flex gap-3 py-3.5">
+                {/* Avatar — circular, rounded-full stays (ADR-0006 §2) */}
                 <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold ${agent ? 'bg-blue-700' : 'bg-gray-400'}`}>
                   {initials}
                 </div>
@@ -66,6 +69,7 @@ export default function CommentSection({ ticketId }) {
                       {c.sender?.name ?? 'User'}
                     </span>
                     {agent && (
+                      // Agent label — interactive badge, rounded stays (ADR-0006 §2)
                       <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
                         Agent
                       </span>
@@ -80,20 +84,22 @@ export default function CommentSection({ ticketId }) {
         </div>
       )}
 
-      <div className="border-t border-gray-200 pt-4">
+      <div className="border-t border-neutral-200 pt-4">
         <form onSubmit={handleSubmit}>
+          {/* Textarea — form field, rounded-none per blueprint §3 */}
           <textarea
             value={message}
             onChange={e => setMessage(e.target.value)}
             placeholder="Add a comment…"
             rows={3}
-            className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm resize-y mb-2.5 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full px-3 py-2.5 border border-neutral-300 rounded-none text-sm resize-y mb-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           />
           <div className="flex justify-end">
+            {/* Submit button — action control, rounded per hybrid rule (ADR-0006 §2) */}
             <button
               type="submit"
               disabled={addMessage.isPending || !message.trim()}
-              className="h-9 px-4 text-sm font-semibold text-white bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
+              className="h-9 px-4 text-sm font-semibold text-white bg-blue-700 rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
             >
               {addMessage.isPending ? 'Posting…' : 'Post Comment'}
             </button>

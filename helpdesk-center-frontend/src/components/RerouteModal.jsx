@@ -33,9 +33,10 @@ export default function RerouteModal({ ticket, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000] p-4 transition-all duration-150 ease-in-out">
+      {/* Modal container — structural, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white rounded-none w-full max-w-md border border-neutral-200">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-200">
           <h2 className="text-base font-semibold text-gray-800">Re-Route Ticket</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700"><X size={18} /></button>
         </div>
@@ -45,10 +46,11 @@ export default function RerouteModal({ ticket, onClose }) {
             This action will be logged for AI model improvement.
           </p>
           <label className="block text-xs font-semibold text-gray-600 mb-1.5">Target Department</label>
+          {/* Select — form field, rounded-none per blueprint §3 */}
           <select
             value={selectedDeptId}
             onChange={e => setSelectedDeptId(e.target.value)}
-            className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm bg-white focus:outline-none focus:border-blue-500"
+            className="w-full h-9 px-3 border border-neutral-300 rounded-none text-sm bg-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           >
             <option value="">— Select department —</option>
             {departments.map(d => (
@@ -57,13 +59,14 @@ export default function RerouteModal({ ticket, onClose }) {
           </select>
           {error && <p className="text-xs text-red-600 mt-2">{error}</p>}
           <div className="flex justify-end gap-2 mt-5">
+            {/* Buttons — action controls, rounded per hybrid rule (ADR-0006 §2) */}
             <button onClick={onClose}
-              className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md hover:bg-gray-50">
+              className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-neutral-300 rounded hover:bg-neutral-50 transition-colors">
               Cancel
             </button>
             <button onClick={handleReroute}
               disabled={rerouteTicket.isPending}
-              className="h-9 px-4 text-sm font-semibold text-white bg-orange-600 rounded-md disabled:opacity-50 hover:bg-orange-700">
+              className="h-9 px-4 text-sm font-semibold text-white bg-orange-600 rounded disabled:opacity-50 hover:bg-orange-700 transition-colors">
               {rerouteTicket.isPending ? 'Rerouting…' : 'Confirm Re-Route'}
             </button>
           </div>

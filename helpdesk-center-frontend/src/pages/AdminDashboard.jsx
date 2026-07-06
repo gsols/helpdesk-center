@@ -36,7 +36,8 @@ export default function AdminDashboard() {
 
   /* ── Overview ticket list ── */
   const ticketList = (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    // Structural list container — rounded-none (ADR-0006 §1)
+    <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none overflow-hidden">
       {isLoading ? (
         <p className="text-sm text-gray-400 p-5">Loading…</p>
       ) : tickets.length === 0 ? (

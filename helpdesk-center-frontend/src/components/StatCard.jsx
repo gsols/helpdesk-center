@@ -12,16 +12,16 @@ import { T } from '../styles/tokens';
  */
 export default function StatCard({ label, count, color, bg, icon: Icon }) {
   return (
+    // Structural card container — rounded-none (ADR-0006 §1)
     <div style={{
       background:   T.card,
       border:       `1px solid ${T.border}`,
-      borderRadius: T.radiusLg,
+      borderRadius: 0,
       padding:      '18px 20px',
       display:      'flex',
       alignItems:   'center',
       justifyContent: 'space-between',
       gap:          16,
-      boxShadow:    '0 1px 4px rgba(0,0,0,0.06)',
       flex:         1,
       minWidth:     0,
     }}>
@@ -34,10 +34,10 @@ export default function StatCard({ label, count, color, bg, icon: Icon }) {
         </p>
       </div>
       {Icon && (
-        <div style={{
+        // Icon container is an interactive visual widget — uses rounded (ADR-0006 §2)
+        <div className="rounded" style={{
           width:          44,
           height:         44,
-          borderRadius:   10,
           background:     bg ?? T.accentLight,
           display:        'flex',
           alignItems:     'center',

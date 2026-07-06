@@ -77,7 +77,8 @@ export default function AgentDashboard() {
   const listContent = (
     <div>
       <TabBar tabs={tabsWithCounts} value={activeTab} onChange={(id) => { setActiveTab(id); setSearchParams({}); }} />
-      <div className="mt-3 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      {/* Structural list container — rounded-none (ADR-0006 §1) */}
+      <div className="mt-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none overflow-hidden">
         {isLoading ? (
           <EmptyQueue message="Loading…" />
         ) : tickets.length === 0 ? (

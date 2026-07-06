@@ -18,10 +18,11 @@ const STATUS_LABELS = {
 
 /* ── File type icon ──────────────────────────────────────────────────────── */
 function FileTypeIcon({ type }) {
-  if (type === 'pdf')   return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-red-600"><FileText size={14} color="#fff" /></div>;
-  if (type === 'image') return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-blue-700"><ImageIcon size={14} color="#fff" /></div>;
-  if (type === 'text')  return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-gray-500"><FileText size={14} color="#fff" /></div>;
-  return                       <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-gray-400"><File     size={14} color="#fff" /></div>;
+  // Structural icon containers — rounded-none (ADR-0006 §1)
+  if (type === 'pdf')   return <div className="w-7 h-7 rounded-none flex items-center justify-center shrink-0 bg-red-600"><FileText size={14} color="#fff" /></div>;
+  if (type === 'image') return <div className="w-7 h-7 rounded-none flex items-center justify-center shrink-0 bg-blue-700"><ImageIcon size={14} color="#fff" /></div>;
+  if (type === 'text')  return <div className="w-7 h-7 rounded-none flex items-center justify-center shrink-0 bg-gray-500"><FileText size={14} color="#fff" /></div>;
+  return                       <div className="w-7 h-7 rounded-none flex items-center justify-center shrink-0 bg-gray-400"><File     size={14} color="#fff" /></div>;
 }
 
 /* ── File viewer modal ───────────────────────────────────────────────────── */
@@ -41,24 +42,26 @@ function FileViewer({ attachment, onClose }) {
   }, [onClose]);
 
   return (
-    <div onClick={handleBackdrop} className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4">
-      <div className="bg-white rounded-xl flex flex-col max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+    <div onClick={handleBackdrop} className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4 transition-all duration-150 ease-in-out">
+      {/* Modal container — structural, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white rounded-none flex flex-col max-w-4xl w-full max-h-[90vh] overflow-hidden border border-neutral-200">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 shrink-0">
           <span className="text-sm font-semibold text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap flex-1 mr-4">
             {attachment.fileName}
           </span>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Action button — rounded per hybrid rule (ADR-0006 §2) */}
             <a href={url} download={attachment.fileName}
-              className="flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded-md px-3.5 py-1.5 no-underline hover:bg-blue-800">
+              className="flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded px-3.5 py-1.5 no-underline hover:bg-blue-800">
               <Download size={13} /> Download
             </a>
             <button onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700">
+              className="flex items-center justify-center w-8 h-8 border border-neutral-200 rounded bg-white text-gray-400 hover:text-gray-700">
               <X size={16} />
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 min-h-48">
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-neutral-50 min-h-48">
           {type === 'image' && <img src={url} alt={attachment.fileName} className="max-w-full max-h-[75vh] object-contain block" />}
           {type === 'pdf'   && <iframe src={url} title={attachment.fileName} className="w-full h-[75vh] border-none" />}
           {(type === 'text' || type === 'other') && (
@@ -66,7 +69,7 @@ function FileViewer({ attachment, onClose }) {
               <File size={48} className="text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500 mb-4">Preview not available for this file type.</p>
               <a href={url} download={attachment.fileName}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded-md px-5 py-2 no-underline hover:bg-blue-800">
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded px-5 py-2 no-underline hover:bg-blue-800">
                 <Download size={14} /> Download File
               </a>
             </div>
@@ -126,7 +129,8 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
     <div className="flex flex-col gap-4">
 
       {/* Header card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+      {/* Header card — structural container, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white border border-neutral-200 rounded-none p-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold text-gray-800 mb-2">{ticket.title}</h2>
@@ -141,15 +145,16 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
 
           <div className="flex items-center gap-1.5 shrink-0">
             {canEdit && onReroute && (
+              // Action buttons — rounded per hybrid rule (ADR-0006 §2)
               <button onClick={() => onReroute(ticket)}
-                className="flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100"
+                className="flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded hover:bg-orange-100"
                 title="Re-route to correct department">
                 <ArrowLeftRight size={13} /> Re-Route
               </button>
             )}
-            {onMaximize && <button onClick={onMaximize} title="Maximize" className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><Maximize2 size={15} /></button>}
-            {onMinimize && <button onClick={onMinimize} title="Minimize" className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><Minimize2 size={15} /></button>}
-            {onClose    && <button onClick={onClose}    title="Close"    className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><X        size={15} /></button>}
+            {onMaximize && <button onClick={onMaximize} title="Maximize" className="flex items-center justify-center w-7.5 h-7.5 border border-neutral-200 rounded bg-white text-gray-400 hover:text-gray-700"><Maximize2 size={15} /></button>}
+            {onMinimize && <button onClick={onMinimize} title="Minimize" className="flex items-center justify-center w-7.5 h-7.5 border border-neutral-200 rounded bg-white text-gray-400 hover:text-gray-700"><Minimize2 size={15} /></button>}
+            {onClose    && <button onClick={onClose}    title="Close"    className="flex items-center justify-center w-7.5 h-7.5 border border-neutral-200 rounded bg-white text-gray-400 hover:text-gray-700"><X        size={15} /></button>}
           </div>
         </div>
 
@@ -157,20 +162,22 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
         {canEdit && (
           <div className="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-gray-100">
             <div className="relative">
+              {/* Status select — form field, rounded-none per blueprint §3 */}
               <select
                 value={pendingStatus}
                 onChange={e => setPendingStatus(e.target.value)}
                 disabled={updateStatus.isPending}
-                className="h-8.5 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white appearance-none outline-none cursor-pointer focus:border-blue-500"
+                className="h-8.5 pl-2.5 pr-7 border border-neutral-300 rounded-none text-sm bg-white appearance-none cursor-pointer focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               >
                 {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
               </select>
               <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
             </div>
+            {/* Save button — action control, rounded per hybrid rule (ADR-0006 §2) */}
             <button
               onClick={handleSaveStatus}
               disabled={updateStatus.isPending || pendingStatus === ticket.status}
-              className="h-8.5 px-3.5 bg-blue-700 text-white rounded-md font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800"
+              className="h-8.5 px-3.5 bg-blue-700 text-white rounded font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
             >
               {updateStatus.isPending ? 'Saving…' : 'Save'}
             </button>
@@ -178,14 +185,14 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
         )}
 
         {readOnly && (
-          <p className="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
+          <p className="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-none px-2.5 py-1.5">
             Read-only — this ticket is assigned to another agent in your department.
           </p>
         )}
       </div>
 
-      {/* Description + Metadata card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+      {/* Description + Metadata card — structural container, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white border border-neutral-200 rounded-none p-5">
         <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-7">
           <div>
             <h3 className="text-xs font-semibold text-gray-800 mb-2.5">Description</h3>
@@ -213,10 +220,11 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
         </div>
       </div>
 
-      {/* Attachments card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
+      {/* Attachments card — structural container, rounded-none (ADR-0006 §1) */}
+      <div className="bg-white border border-neutral-200 rounded-none p-5">
         <div className="flex items-center gap-2 mb-3.5">
           <h3 className="text-xs font-semibold text-gray-800">Attachments</h3>
+          {/* Count badge — interactive micro-widget, rounded-full stays (ADR-0006 §2) */}
           <span className="text-xs font-semibold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">{attachments.length}</span>
         </div>
         {attachments.length === 0 ? (
@@ -228,7 +236,7 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
               const type = ext === 'pdf' ? 'pdf' : ['png','jpg','jpeg','gif','webp'].includes(ext) ? 'image' : ext === 'txt' ? 'text' : 'other';
               return (
                 <div key={a.id} onClick={() => setViewingFile(a)}
-                  className="flex items-center gap-3 px-2.5 py-2 rounded-md bg-white hover:bg-blue-50 cursor-pointer transition-colors">
+                  className="flex items-center gap-3 px-2.5 py-2 rounded-none bg-white hover:bg-neutral-50/80 cursor-pointer transition-colors">
                   <FileTypeIcon type={type} />
                   <span className="flex-1 text-sm font-medium text-blue-600 overflow-hidden text-ellipsis whitespace-nowrap">{a.fileName}</span>
                   <span className="text-xs text-gray-400 shrink-0">{(a.fileSize / 1024).toFixed(1)} KB</span>
