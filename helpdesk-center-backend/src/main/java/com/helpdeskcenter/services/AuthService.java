@@ -1,7 +1,9 @@
 package com.helpdeskcenter.services;
 
+import com.helpdeskcenter.dto.LoginResponse;
 import com.helpdeskcenter.entities.User;
 import com.helpdeskcenter.repositories.UserRepository;
+import com.helpdeskcenter.security.JwtProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -12,13 +14,27 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtProvider jwtProvider;
 
-    /**
-     * Validates credentials. Returns the User if valid, null if invalid.
-     */
-    public User login(String username, String rawPassword) {
-        return userRepository.findByUsername(username)
-                .filter(user -> passwordEncoder.matches(rawPassword, user.getPassword()))
-                .orElse(null);
+    public LoginResponse login(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email)
+            .filter(u -> passwordEncoder.matches(rawPassword, u.getPasswordHash()))
+            .orElse(null);
+
+        if (user == null) {
+            return null;
+        }
+
+        String token = jwtProvider.generateToken(user);
+
+        return new LoginResponse(
+            token,
+            user.getId(),
+            user.getName(),
+            user.getEmail(),
+            user.getRole(),
+            user.getCompany().getId(),
+            user.getDepartment() == null ? null : user.getDepartment().getId()
+        );
     }
 }

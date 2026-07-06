@@ -1,17 +1,25 @@
 package com.helpdeskcenter.entities;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import jakarta.persistence.*;
-import lombok.*;
-
-import java.time.LocalDateTime;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.time.ZonedDateTime;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "attachments")
+@Table(name = "attachments", indexes = {
+    @Index(name = "idx_attachments_ticket", columnList = "ticket_id")
+})
 @Data
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
 public class Attachment {
 
     @Id
@@ -19,27 +27,25 @@ public class Attachment {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "ticket_id", nullable = false)
-    @JsonIgnore
+    @JoinColumn(name = "ticket_id")
     private Ticket ticket;
 
-    @Column(name = "file_name", nullable = false, length = 255)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "message_id")
+    private TicketMessage message;
+
+    @Column(name = "file_name", nullable = false)
     private String fileName;
 
-    @Column(name = "file_path", nullable = false, columnDefinition = "TEXT")
-    private String filePath;
+    @Column(name = "file_type", nullable = false, length = 100)
+    private String fileType;
 
     @Column(name = "file_size", nullable = false)
-    private Long fileSize;
+    private Integer fileSize;
 
-    @Column(name = "content_type", nullable = false, length = 100)
-    private String contentType;
+    @Column(name = "secure_url", nullable = false, columnDefinition = "TEXT")
+    private String secureUrl;
 
-    @Column(name = "uploaded_at", updatable = false)
-    private LocalDateTime uploadedAt;
-
-    @PrePersist
-    protected void onCreate() {
-        uploadedAt = LocalDateTime.now();
-    }
+    @Column(name = "uploaded_at", insertable = false, updatable = false)
+    private ZonedDateTime uploadedAt;
 }

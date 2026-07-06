@@ -1,7 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getComments, addComment } from '../api/commentsApi';
-import { T } from '../styles/tokens';
+import { useMessages, useAddMessage } from '../hooks/useMessages';
 
 function getInitials(fullName) {
   if (!fullName) return '?';
@@ -9,111 +8,94 @@ function getInitials(fullName) {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-export default function CommentSection({ ticketId }) {
-  const { user }   = useAuth();
-  const [comments, setComments]   = useState([]);
-  const [message,  setMessage]    = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [focused,  setFocused]    = useState(false);
+const fmtDateTime = (d) => d
+  ? new Date(d).toLocaleString('en-US', {
+      month: 'short', day: 'numeric', year: 'numeric',
+      hour: 'numeric', minute: '2-digit', hour12: true,
+    })
+  : '';
 
-  useEffect(() => {
-    getComments(ticketId).then(r => setComments(r.data)).catch(() => {});
-  }, [ticketId]);
+export default function CommentSection({ ticketId }) {
+  const { user } = useAuth();
+  const [message, setMessage] = useState('');
+
+  const { data: comments = [], isLoading } = useMessages(ticketId);
+  const addMessage = useAddMessage();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
-    setSubmitting(true);
     try {
-      const res = await addComment(ticketId, message);
-      setComments(prev => [...prev, res.data]);
+      await addMessage.mutateAsync({ ticketId, message });
       setMessage('');
     } catch {
       alert('Failed to post comment');
-    } finally {
-      setSubmitting(false);
     }
   };
 
-  const fmtDateTime = (d) => d
-    ? new Date(d).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true })
-    : '';
-
-  const isAgent = (c) => c.user?.role && c.user.role !== 'employee';
+  const isAgent = (c) => c.sender?.role && c.sender.role !== 'EMPLOYEE';
 
   return (
-    <div style={cardSt}>
-      <h3 style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary, marginBottom: 16 }}>
+    <div className="bg-white border border-gray-200 rounded-lg p-5">
+      <h3 className="text-sm font-semibold text-gray-800 mb-4">
         Comments
         {comments.length > 0 && (
-          <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: T.textSecondary, background: T.surface, border: `1px solid ${T.border}`, padding: '2px 8px', borderRadius: T.radiusPill }}>
+          <span className="ml-2 text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">
             {comments.length}
           </span>
         )}
       </h3>
 
-      {comments.length === 0 ? (
-        <p style={{ fontSize: 13, color: T.textMuted, marginBottom: 20 }}>No comments yet.</p>
+      {isLoading ? (
+        <p className="text-sm text-gray-400 mb-5">Loading…</p>
+      ) : comments.length === 0 ? (
+        <p className="text-sm text-gray-400 mb-5">No comments yet.</p>
       ) : (
-        <div style={{ marginBottom: 20 }}>
-          {comments.map((c, i) => {
-            const agent    = isAgent(c);
-            const initials = getInitials(c.user?.fullName);
+        <div className="mb-5 divide-y divide-gray-100">
+          {comments.map((c) => {
+            const agent = isAgent(c);
+            const initials = getInitials(c.sender?.name);
             return (
-              <div key={c.id}>
-                <div style={{ display: 'flex', gap: 12, padding: '14px 0' }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-                    background: agent ? T.navy : T.textSecondary,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff', fontSize: 11, fontWeight: 700,
-                  }}>
-                    {initials}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: T.textPrimary }}>{c.user?.fullName ?? c.user?.username ?? 'User'}</span>
-                      {agent && (
-                        <span style={{ fontSize: 10, fontWeight: 600, color: T.accent, background: T.accentLight, border: `1px solid #bfdbfe`, padding: '1px 6px', borderRadius: T.radiusSm }}>
-                          Agent
-                        </span>
-                      )}
-                      <span style={{ fontSize: 12, color: T.textMuted }}>{fmtDateTime(c.createdAt)}</span>
-                    </div>
-                    <p style={{ fontSize: 13, color: T.textPrimary, lineHeight: 1.65, margin: 0 }}>{c.message}</p>
-                  </div>
+              <div key={c.id} className="flex gap-3 py-3.5">
+                <div className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-white text-xs font-bold ${agent ? 'bg-blue-700' : 'bg-gray-400'}`}>
+                  {initials}
                 </div>
-                {i < comments.length - 1 && <div style={{ borderBottom: `1px solid ${T.border}` }} />}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 mb-1 flex-wrap">
+                    <span className="text-sm font-semibold text-gray-800">
+                      {c.sender?.name ?? 'User'}
+                    </span>
+                    {agent && (
+                      <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded">
+                        Agent
+                      </span>
+                    )}
+                    <span className="text-xs text-gray-400">{fmtDateTime(c.createdAt)}</span>
+                  </div>
+                  <p className="text-sm text-gray-800 leading-relaxed m-0">{c.body}</p>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
-      <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 16 }}>
+      <div className="border-t border-gray-200 pt-4">
         <form onSubmit={handleSubmit}>
-          <textarea value={message} onChange={e => setMessage(e.target.value)}
-            placeholder="Add a comment…" rows={3}
-            style={{
-              width: '100%', padding: '10px 12px',
-              border: `1px solid ${focused ? T.accent : T.border}`,
-              borderRadius: T.radiusMd, fontSize: 13, resize: 'vertical',
-              boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none',
-              background: '#fff', color: T.textPrimary,
-              boxShadow: focused ? `0 0 0 3px ${T.accentLight}` : 'none',
-              transition: 'border-color 0.15s, box-shadow 0.15s', marginBottom: 10,
-            }}
-            onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            placeholder="Add a comment…"
+            rows={3}
+            className="w-full px-3 py-2.5 border border-gray-300 rounded-md text-sm resize-y mb-2.5 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" disabled={submitting || !message.trim()} style={{
-              height: 36, padding: '0 16px', fontSize: 13, fontWeight: 600, color: '#fff',
-              background: (submitting || !message.trim()) ? T.accentMid : T.navy,
-              border: 'none', borderRadius: T.radiusMd,
-              cursor: (submitting || !message.trim()) ? 'not-allowed' : 'pointer',
-              transition: 'background 0.15s',
-            }}>
-              {submitting ? 'Posting…' : 'Post Comment'}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={addMessage.isPending || !message.trim()}
+              className="h-9 px-4 text-sm font-semibold text-white bg-blue-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
+            >
+              {addMessage.isPending ? 'Posting…' : 'Post Comment'}
             </button>
           </div>
         </form>
@@ -121,5 +103,3 @@ export default function CommentSection({ ticketId }) {
     </div>
   );
 }
-
-const cardSt = { background: T.card, border: `1px solid ${T.border}`, borderRadius: T.radiusLg, padding: 20, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' };

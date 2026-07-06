@@ -4,17 +4,21 @@ import { ChevronRight, UserPlus } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
-import { T } from '../styles/tokens';
 
-export default function TicketCard({ ticket, showSubmitter = false, onSelect, isSelected = false, onAssign }) {
+export default function TicketCard({
+  ticket,
+  showSubmitter = false,
+  onSelect,
+  isSelected = false,
+  onAssign,    // legacy prop (admin assign-to-agent)
+  showClaim,   // pool tab: show "Claim" button
+  onClaim,     // pool tab: handler
+}) {
   const navigate = useNavigate();
-  const [hovered, setHovered] = useState(false);
 
   const date = ticket.createdAt
     ? new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—';
-
-  const active = isSelected || hovered;
 
   const handleClick = () => {
     if (onSelect) onSelect(ticket);
@@ -24,55 +28,55 @@ export default function TicketCard({ ticket, showSubmitter = false, onSelect, is
   return (
     <div
       onClick={handleClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display:      'flex',
-        alignItems:   'center',
-        padding:      '13px 20px',
-        borderBottom: `1px solid ${T.border}`,
-        cursor:       'pointer',
-        background:   isSelected ? T.accentLight : hovered ? '#f0f6ff' : '#ffffff',
-        borderLeft:   `3px solid ${active ? T.navy : 'transparent'}`,
-        transition:   'background 0.12s, border-left-color 0.12s',
-        gap:          14,
-        flexWrap:     'wrap',
-      }}
+      className={`
+        flex items-center gap-3.5 px-5 py-3 border-b border-gray-100 cursor-pointer flex-wrap
+        transition-colors duration-100
+        border-l-[3px]
+        ${isSelected
+          ? 'bg-blue-50 border-l-blue-700'
+          : 'bg-white border-l-transparent hover:bg-blue-50 hover:border-l-blue-400'
+        }
+      `}
     >
       {/* Left: ID + title */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 11, color: T.textMuted, fontFamily: 'monospace' }}>#{ticket.id}</span>
-          {showSubmitter && ticket.createdBy?.username && (
-            <span style={{ fontSize: 11, color: T.textSecondary }}>· {ticket.createdBy.username}</span>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+          <span className="text-xs text-gray-400 font-mono">#{ticket.id}</span>
+          {showSubmitter && ticket.creator?.name && (
+            <span className="text-xs text-gray-500">· {ticket.creator.name}</span>
           )}
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: T.textPrimary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span className="text-sm font-semibold text-gray-800 block overflow-hidden text-ellipsis whitespace-nowrap">
           {ticket.title}
         </span>
       </div>
 
-      {/* Right: badges + assign + date + chevron */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0, flexWrap: 'wrap' }}>
-        <CategoryBadge value={ticket.category} />
+      {/* Right: badges + actions + date */}
+      <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+        <CategoryBadge value={ticket.department?.name} />
         <StatusBadge value={ticket.status} />
         <PriorityBadge value={ticket.priority} />
-        {onAssign && (
+
+        {showClaim && onClaim && (
           <button
-            onClick={e => { e.stopPropagation(); onAssign(); }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 4,
-              fontSize: 11, fontWeight: 600, color: T.navy,
-              background: T.accentLight, border: `1px solid #bfdbfe`,
-              borderRadius: T.radiusPill, padding: '2px 8px', cursor: 'pointer',
-            }}
-            title="Assign to me"
+            onClick={e => { e.stopPropagation(); onClaim(); }}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 hover:bg-blue-100"
+            title="Claim ticket"
           >
-            <UserPlus size={11} />Assign to me
+            <UserPlus size={11} /> Claim
           </button>
         )}
-        <span style={{ fontSize: 11, color: T.textMuted, minWidth: 76, textAlign: 'right' }}>{date}</span>
-        <ChevronRight size={14} color={active ? T.navy : T.textMuted} style={{ transition: 'color 0.12s', flexShrink: 0 }} />
+        {onAssign && !showClaim && (
+          <button
+            onClick={e => { e.stopPropagation(); onAssign(); }}
+            className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded-full px-2 py-0.5 hover:bg-blue-100"
+            title="Assign to me"
+          >
+            <UserPlus size={11} /> Assign
+          </button>
+        )}
+        <span className="text-xs text-gray-400 min-w-[76px] text-right">{date}</span>
+        <ChevronRight size={14} className={`shrink-0 ${isSelected ? 'text-blue-700' : 'text-gray-300'}`} />
       </div>
     </div>
   );
