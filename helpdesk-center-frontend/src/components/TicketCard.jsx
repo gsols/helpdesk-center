@@ -1,9 +1,9 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, UserPlus } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
+import SlaProgressBar from './SlaProgressBar';
 
 export default function TicketCard({
   ticket,
@@ -78,6 +78,17 @@ export default function TicketCard({
         <span className="text-xs text-gray-400 min-w-[76px] text-right">{date}</span>
         <ChevronRight size={14} className={`shrink-0 ${isSelected ? 'text-blue-700' : 'text-gray-300'}`} />
       </div>
+
+      {/* SLA progress bar — spans full width of the row */}
+      {ticket.dueAt && (
+        <div className="w-full px-5 pb-1.5">
+          <SlaProgressBar
+            createdAt={ticket.createdAt}
+            dueAt={ticket.dueAt}
+            status={ticket.status}
+          />
+        </div>
+      )}
     </div>
   );
 }

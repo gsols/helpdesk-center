@@ -16,7 +16,7 @@
  *
  * Color tokens sourced from COLORS in tokens.js.
  */
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import { COLORS } from '../styles/tokens';

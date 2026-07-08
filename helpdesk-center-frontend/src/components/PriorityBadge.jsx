@@ -14,8 +14,6 @@
  * Props:
  *   priority — string, one of: LOW | MEDIUM | HIGH | CRITICAL
  */
-import React from 'react';
-
 // ── Tailwind class maps keyed by priority ─────────────────────────────────────
 
 /** Full badge class string: background + text + border */

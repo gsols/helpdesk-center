@@ -30,8 +30,6 @@ export default function SlaConfigPanel() {
 
   const groups = groupRulesByDept(rules);
 
-  const getKey = (rule) => rule?.id ?? null;
-
   const setEdit = (ruleId, hours) => {
     setEdits(prev => ({ ...prev, [ruleId]: hours }));
   };

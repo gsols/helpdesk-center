@@ -1,5 +1,4 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import AppShell from '../components/AppShell';
 import TicketDetailPanel from '../components/TicketDetailPanel';
 import { ArrowLeft } from 'lucide-react';

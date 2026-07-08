@@ -1,10 +1,12 @@
-import { createBrowserRouter, RouterProvider, Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import TicketDetailPage from './pages/TicketDetailPage';
+import SettingsPage from './pages/SettingsPage';
+import ForbiddenPage from './pages/ForbiddenPage';
 
 /**
  * Guards the protected subtree.
@@ -52,6 +54,8 @@ const router = createBrowserRouter([
       { path: 'agent',        element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets/:id',  element: <TicketDetailPage /> },
+      { path: 'settings',     element: <SettingsPage /> },
+      { path: '403',          element: <ForbiddenPage /> },
       { path: '*',            element: <RoleRedirect /> },
     ],
   },

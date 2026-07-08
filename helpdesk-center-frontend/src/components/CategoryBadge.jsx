@@ -19,22 +19,13 @@ const CATEGORY_MAP = {
   },
 };
 
+// CategoryBadge — interactive micro-widget, uses rounded-md (ADR-0006 §2)
+// NOT rounded-full: circular avatars only. Department badges are interactive pills.
 export default function CategoryBadge({ value }) {
   const c = CATEGORY_MAP[value] ?? { label: value ?? '—', color: '#57606a', bg: '#f3f4f6', border: '#e5e7eb' };
   return (
-    <span style={{
-      display:       'inline-flex',
-      alignItems:    'center',
-      padding:       '2px 8px',
-      borderRadius:  999,
-      fontSize:      11,
-      fontWeight:    600,
-      letterSpacing: '0.02em',
-      color:         c.color,
-      background:    c.bg,
-      border:        `1px solid ${c.border}`,
-      whiteSpace:    'nowrap',
-    }}>
+    <span className="inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-semibold select-none whitespace-nowrap"
+      style={{ color: c.color, background: c.bg, borderColor: c.border }}>
       {c.label}
     </span>
   );

@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useMessages, useAddMessage } from '../hooks/useMessages';
 
 function getInitials(fullName) {
@@ -16,7 +15,6 @@ const fmtDateTime = (d) => d
   : '';
 
 export default function CommentSection({ ticketId }) {
-  const { user } = useAuth();
   const [message, setMessage] = useState('');
 
   const { data: comments = [], isLoading } = useMessages(ticketId);

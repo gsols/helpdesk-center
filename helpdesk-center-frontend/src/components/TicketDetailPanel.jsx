@@ -5,6 +5,7 @@ import { getAttachments, downloadUrl } from '../api/attachmentsApi';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CategoryBadge from './CategoryBadge';
+import SlaProgressBar from './SlaProgressBar';
 import CommentSection from './CommentSection';
 import {
   ChevronDown, FileText, ImageIcon, File, Download, X, Maximize2, Minimize2, ArrowLeftRight
@@ -96,15 +97,16 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
   const updateStatus = useUpdateStatus();
 
   const [attachments,   setAttachments]   = useState([]);
+  // pendingStatus is derived directly from ticket.status; updated only on user selection
   const [pendingStatus, setPendingStatus] = useState('');
   const [viewingFile,   setViewingFile]   = useState(null);
 
   const isAgent = user?.role !== 'employee';
   const canEdit = isAgent && !readOnly;
 
-  useEffect(() => {
-    if (ticket) setPendingStatus(ticket.status);
-  }, [ticket]);
+  // Derive the displayed status — use local selection if the user has changed it,
+  // otherwise fall back to the server value. Avoids setState-inside-effect.
+  const displayStatus = pendingStatus || ticket?.status || '';
 
   useEffect(() => {
     if (ticketId) getAttachments(ticketId).then(r => setAttachments(r.data)).catch(() => {});
@@ -112,7 +114,7 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
 
   const handleSaveStatus = async () => {
     try {
-      await updateStatus.mutateAsync({ id: ticketId, status: pendingStatus });
+      await updateStatus.mutateAsync({ id: ticketId, status: displayStatus });
     } catch {
       alert('Failed to update status');
     }
@@ -164,7 +166,7 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
             <div className="relative">
               {/* Status select — form field, rounded-none per blueprint §3 */}
               <select
-                value={pendingStatus}
+                value={displayStatus}
                 onChange={e => setPendingStatus(e.target.value)}
                 disabled={updateStatus.isPending}
                 className="h-8.5 pl-2.5 pr-7 border border-neutral-300 rounded-none text-sm bg-white appearance-none cursor-pointer focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -176,7 +178,7 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
             {/* Save button — action control, rounded per hybrid rule (ADR-0006 §2) */}
             <button
               onClick={handleSaveStatus}
-              disabled={updateStatus.isPending || pendingStatus === ticket.status}
+              disabled={updateStatus.isPending || displayStatus === ticket.status}
               className="h-8.5 px-3.5 bg-blue-700 text-white rounded font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
             >
               {updateStatus.isPending ? 'Saving…' : 'Save'}
@@ -216,6 +218,18 @@ export default function TicketDetailPanel({ ticketId, readOnly = false, onClose,
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Due</p>
               <p className="text-sm text-gray-600">{fmtDate(ticket.dueAt)}</p>
             </div>
+
+            {/* SLA progress bar */}
+            {ticket.dueAt && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">SLA Status</p>
+                <SlaProgressBar
+                  createdAt={ticket.createdAt}
+                  dueAt={ticket.dueAt}
+                  status={ticket.status}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>

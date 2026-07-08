@@ -30,8 +30,14 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
 
   useEffect(() => {
     const text = (form.title + ' ' + form.description).trim();
-    if (text.length < 10) { setPreview(null); setPreviewError(null); return; }
     clearTimeout(debounceRef.current);
+    if (text.length < 10) {
+      debounceRef.current = setTimeout(() => {
+        setPreview(null);
+        setPreviewError(null);
+      }, 0);
+      return () => clearTimeout(debounceRef.current);
+    }
     debounceRef.current = setTimeout(async () => {
       setPreviewing(true); setPreviewError(null);
       try {
@@ -69,10 +75,11 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
 
   return (
     <div className="fixed inset-0 z-50 flex">
-      <div onClick={onClose} className="absolute inset-0 bg-slate-900/30" />
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 h-14 border-b border-gray-200 shrink-0">
+    <div onClick={onClose} className="absolute inset-0 bg-slate-900/30" />
+    {/* Drawer panel — structural container, rounded-none */}
+    <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white rounded-none flex flex-col border-l border-neutral-200">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 h-14 border-b border-neutral-200 shrink-0">
           <h2 className="text-base font-bold text-gray-900">New Support Ticket</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex items-center">
             <X size={18} />
@@ -91,7 +98,7 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
                 type="text"
                 value={form.title}
                 placeholder="Brief summary of your issue"
-                className={`w-full h-9 px-3 border rounded-md text-sm outline-none bg-white text-gray-900 focus:ring-2 focus:ring-blue-200 ${errors.title ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
+                className={`w-full h-9 px-3 border rounded-none text-sm outline-none bg-white text-gray-900 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${errors.title ? 'border-red-400' : 'border-gray-300'}`}
                 onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(p => ({ ...p, title: undefined })); }}
               />
               {errors.title && (
@@ -109,7 +116,7 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
                 rows={5}
                 value={form.description}
                 placeholder="Describe the issue in detail"
-                className={`w-full px-3 py-2.5 border rounded-md text-sm outline-none bg-white text-gray-900 resize-vertical min-h-24 focus:ring-2 focus:ring-blue-200 ${errors.description ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
+                className={`w-full px-3 py-2.5 border rounded-none text-sm outline-none bg-white text-gray-900 resize-vertical min-h-24 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 ${errors.description ? 'border-red-400' : 'border-gray-300'}`}
                 onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(p => ({ ...p, description: undefined })); }}
               />
               {errors.description && (
@@ -124,7 +131,7 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
               <input
                 type="email"
                 value={form.email}
-                className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm outline-none bg-white text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
+                className="w-full h-9 px-3 border border-gray-300 rounded-none text-sm outline-none bg-white text-gray-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 required
               />
@@ -135,7 +142,7 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
                 Attachment <span className="text-xs text-gray-400 font-normal">(optional, max 10 MB)</span>
               </label>
               {file ? (
-                <div className="flex items-center gap-2.5 px-3 py-2 border border-gray-200 rounded-md bg-gray-50">
+                <div className="flex items-center gap-2.5 px-3 py-2 border border-neutral-200 rounded-none bg-gray-50">
                   <Paperclip size={14} className="text-gray-400 shrink-0" />
                   <span className="flex-1 text-sm text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
                   <button onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600 flex items-center">
@@ -148,7 +155,7 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
                   onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) setFile(f); }}
-                  className={`border-2 border-dashed rounded-lg p-7 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}
+                  className={`border-2 border-dashed rounded-none p-7 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}
                 >
                   <Upload size={20} className="text-gray-400 mx-auto mb-2" />
                   <p className="text-sm text-gray-500">
@@ -236,13 +243,13 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-gray-200 shrink-0">
-          <button onClick={onClose} className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+          <button onClick={onClose} className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded cursor-pointer hover:bg-gray-50">
             Cancel
           </button>
           <button
             onClick={handleSubmit}
             disabled={!canSubmit}
-            className={`h-9 px-4 text-sm font-semibold text-white rounded-md transition-colors ${canSubmit ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer' : 'bg-blue-300 cursor-not-allowed'}`}
+            className={`h-9 px-4 text-sm font-semibold text-white rounded transition-colors ${canSubmit ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer' : 'bg-blue-300 cursor-not-allowed'}`}
           >
             {createTicket.isPending ? 'Submitting…' : previewing ? 'Classifying…' : !preview ? 'Waiting for AI…' : !preview.allowed ? 'Ticket blocked' : 'Submit Ticket'}
           </button>
@@ -255,8 +262,8 @@ function NewTicketDrawer({ user, onClose, onCreated }) {
 /* ── Stat Card ───────────────────────────────────────────────────────────── */
 function StatCard({ label, count, colorClass, bgClass, icon: Icon }) {
   return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white flex-1 min-w-32`}>
-      <div className={`w-9 h-9 rounded-lg ${bgClass} flex items-center justify-center shrink-0`}>
+    <div className={`flex items-center gap-3 px-4 py-3 rounded-none border border-neutral-200 bg-white flex-1 min-w-32`}>
+      <div className={`w-9 h-9 rounded ${bgClass} flex items-center justify-center shrink-0`}>
         <Icon size={16} className={colorClass} />
       </div>
       <div>
@@ -271,7 +278,7 @@ function StatCard({ label, count, colorClass, bgClass, icon: Icon }) {
 function EmptyState({ message }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-13 h-13 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
+      <div className="w-13 h-13 rounded-none bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
         <Ticket size={22} className="text-gray-400" />
       </div>
       <p className="text-sm text-gray-500">{message}</p>
@@ -334,13 +341,13 @@ export default function EmployeeDashboard() {
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2.5">
           <div className="flex items-center gap-2.5">
             <h2 className="text-base font-bold text-gray-900">My Tickets</h2>
-            <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
+            <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded">
               {filteredTickets.length} {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
             </span>
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-md cursor-pointer transition-colors"
+            className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded cursor-pointer transition-colors"
           >
             <Plus size={14} strokeWidth={2.5} /> New Ticket
           </button>
@@ -348,7 +355,7 @@ export default function EmployeeDashboard() {
 
         {/* Success banner */}
         {success && (
-          <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg px-3.5 py-2.5 mb-3 text-sm">
+          <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-none px-3.5 py-2.5 mb-3 text-sm">
             <span>
               Ticket <strong>#{success.id}</strong> submitted — Category: <strong>{success.category}</strong>
             </span>
@@ -359,7 +366,7 @@ export default function EmployeeDashboard() {
         )}
 
         {/* Filter bar */}
-        <div className="bg-white border border-gray-200 rounded-lg px-3.5 py-3 mb-3 shadow-sm flex flex-col gap-2.5">
+        <div className="bg-white border border-neutral-200 rounded-none px-3.5 py-3 mb-3 flex flex-col gap-2.5">
           <div className="flex gap-2 items-center flex-wrap">
             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Filter</span>
             {[
@@ -371,7 +378,7 @@ export default function EmployeeDashboard() {
                 <select
                   value={filters[key]}
                   onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
-                  className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
+                  className="h-8 pl-2.5 pr-7 border border-neutral-300 rounded-none text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
                 >
                   {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                 </select>
@@ -384,7 +391,7 @@ export default function EmployeeDashboard() {
               <select
                 value={filters.sort}
                 onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}
-                className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
+                className="h-8 pl-2.5 pr-7 border border-neutral-300 rounded-none text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
               >
                 <option value="newest">Newest first</option>
                 <option value="oldest">Oldest first</option>
@@ -405,19 +412,19 @@ export default function EmployeeDashboard() {
             <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
               From
               <input type="date" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
-                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
+                className="h-8 px-2.5 border border-neutral-300 rounded-none text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
             </label>
             <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
               To
               <input type="date" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
-                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
+                className="h-8 px-2.5 border border-neutral-300 rounded-none text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
             </label>
           </div>
         </div>
       </div>
 
       {/* Ticket list */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+      <div className="bg-white border border-neutral-200 rounded-none overflow-hidden">
         {isLoading         ? <EmptyState message="Loading tickets…" />
           : tickets.length === 0   ? <EmptyState message="No tickets yet. Submit your first ticket using '+ New Ticket'." />
           : filteredTickets.length === 0 ? <EmptyState message="No tickets match the current filters." />
@@ -433,14 +440,14 @@ export default function EmployeeDashboard() {
       {!selectedId && (
         <>
           {/* Welcome banner */}
-          <div className="rounded-xl bg-blue-900 px-6 py-5 mb-5 flex items-center justify-between flex-wrap gap-3">
+          <div className="rounded-none bg-blue-900 px-6 py-5 mb-5 flex items-center justify-between flex-wrap gap-3">
             <div>
               <p className="text-sm text-blue-200 font-medium mb-1">Welcome back</p>
               <h2 className="text-xl font-bold text-white">{user?.name ?? user?.email}</h2>
             </div>
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-blue-900 bg-white hover:bg-blue-50 rounded-md cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-blue-900 bg-white hover:bg-blue-50 rounded cursor-pointer transition-colors"
             >
               <Plus size={14} strokeWidth={2.5} /> Submit New Ticket
             </button>

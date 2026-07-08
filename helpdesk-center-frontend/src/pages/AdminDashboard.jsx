@@ -10,7 +10,7 @@ import TabBar from '../components/TabBar';
 import SlaConfigPanel from '../components/SlaConfigPanel';
 import AnalyticsPanel from '../components/AnalyticsPanel';
 import TriageQueue from '../components/TriageQueue';
-import { CircleDot, Clock, CheckCircle2, Users } from 'lucide-react';
+import { CircleDot, Clock, CheckCircle2 } from 'lucide-react';
 
 const ADMIN_TABS = [
   { id: 'overview',   label: 'Overview' },

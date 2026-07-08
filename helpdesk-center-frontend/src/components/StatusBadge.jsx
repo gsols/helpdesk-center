@@ -14,8 +14,6 @@
  *             Accepts both the raw API value (e.g. "IN_PROGRESS") and a display
  *             value with spaces (normalised internally).
  */
-import React from 'react';
-
 // ── Tailwind class maps keyed by normalised status string ─────────────────────
 
 /** Full badge class string: background + text + border */
