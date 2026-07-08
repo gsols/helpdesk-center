@@ -1,0 +1,417 @@
+<!DOCTYPE html><html class="light" lang="en" style="width: 1280px; height: 1024px; overflow: hidden; position: relative;"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Employee Ticket Detail | OmniSupport</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@500&amp;family=Be+Vietnam+Pro:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-background": "#0b1c30",
+                        "tertiary-fixed-dim": "#dec29a",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#574425",
+                        "on-tertiary-fixed": "#271901",
+                        "inverse-primary": "#bec6e0",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#45464d",
+                        "surface-container-high": "#dce9ff",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "surface-dim": "#cbdbf5",
+                        "outline-variant": "#c6c6cd",
+                        "secondary": "#5c5f61",
+                        "primary": "#000000",
+                        "inverse-surface": "#213145",
+                        "surface": "#f8f9ff",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-secondary-fixed-variant": "#444749",
+                        "error-container": "#ffdad6",
+                        "on-error-container": "#93000a",
+                        "surface-bright": "#f8f9ff",
+                        "on-secondary-fixed": "#191c1e",
+                        "on-secondary": "#ffffff",
+                        "tertiary": "#000000",
+                        "primary-fixed-dim": "#bec6e0",
+                        "error": "#ba1a1a",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-surface": "#0b1c30",
+                        "surface-container": "#e5eeff",
+                        "surface-variant": "#d3e4fe",
+                        "secondary-container": "#e0e3e5",
+                        "outline": "#76777d",
+                        "on-primary-container": "#7c839b",
+                        "tertiary-container": "#271901",
+                        "on-secondary-container": "#626567",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#fcdeb5",
+                        "on-primary-fixed": "#131b2e",
+                        "surface-tint": "#565e74",
+                        "background": "#f8f9ff",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-tertiary-container": "#98805d"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "stack-sm": "4px",
+                        "shell-nav-width": "64px",
+                        "shell-header-height": "48px",
+                        "sidebar-width": "260px",
+                        "stack-md": "8px",
+                        "container-padding": "24px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: "Hanken Grotesk", sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .conversation-scroll { height: calc(100vh - 420px); overflow-y: auto; }
+        .jira-card { border: 1px solid #e0e3e5; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .sla-progress-bar {
+            background: linear-gradient(90deg, #131b2e 0%, #131b2e var(--progress), #e0e3e5 var(--progress), #e0e3e5 100%);
+        }
+        @keyframes pulse-soft {
+            0% { opacity: 0.8; }
+            50% { opacity: 1; }
+            100% { opacity: 0.8; }
+        }
+        .pulse { animation: pulse-soft 2s infinite ease-in-out; }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+<div class="flex h-screen w-full overflow-hidden">
+<!-- SideNavBar -->
+<aside class="flex flex-col h-full w-[64px] overflow-hidden bg-on-background border-r border-outline-variant/20 fixed left-0 top-0 z-50">
+<div class="flex flex-col items-center py-4 gap-6 h-full">
+<div class="font-headline-sm text-headline-sm text-white px-2">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: &quot;FILL&quot; 1;">terminal</span>
+</div>
+<nav class="flex flex-col w-full items-center gap-2">
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">dashboard</span>
+</div>
+<div class="w-full flex justify-center py-3 border-l-4 border-primary text-on-primary-fixed bg-surface-variant/10 cursor-pointer">
+<span class="material-symbols-outlined">confirmation_number</span>
+</div>
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">group</span>
+</div>
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">book</span>
+</div>
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+</nav>
+<div class="mt-auto flex flex-col w-full items-center gap-2 pb-4">
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<div class="w-full flex justify-center py-3 text-white/70 hover:text-white cursor-pointer">
+
+</div>
+<img class="w-8 h-8 rounded-full border border-outline-variant/30 mt-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO-ujq0ykiv8OCm21wAJh4Oq0MInRM7PFuBquevD9GhJtAy7_Ay63tD02jyLsGhXBpeFahw-bbOOwotuyrWdzw7gk9QQxtkVlvkuYVwXtmL4iLwZuwgPEd7b6GDnvtu6TV5gCyXw6ln4U5h3wRBWBM_6lWgU_f7iKMRlA4sUK2DbWc0KoXarYzYY3Y6vikHUT3SCuHRbwAAuH1J5hTNCqPDDSVUpMoZvRgWZGBRWwfJy6JDYie25Vp">
+</div>
+</div>
+</aside>
+<aside id="ticket-list-sidebar" class="flex flex-col h-full w-[300px] bg-on-background border-r border-outline-variant/20 ml-[64px] transition-all duration-300 overflow-hidden">
+  <div class="flex items-center justify-between p-4 border-b border-outline-variant/20">
+    <h3 class="text-[10px] font-black tracking-widest text-white/70 uppercase">My Tickets</h3>
+    <button class="text-white/70 hover:text-white">
+      <span class="material-symbols-outlined text-lg">chevron_left</span>
+    </button>
+  </div>
+  <div class="px-4 py-3 bg-on-background">
+  <div class="relative flex items-center">
+    <span class="material-symbols-outlined absolute left-2 text-white/50 text-sm">search</span>
+    <input type="text" placeholder="Search tickets..." class="w-full bg-white/10 border border-outline-variant/20 text-white text-xs py-1.5 pl-8 pr-2 focus:ring-1 focus:ring-primary focus:border-primary rounded-none placeholder:text-white/30">
+  </div>
+</div>
+<div class="h-px w-full bg-outline-variant/10"></div><div class="flex-1 overflow-y-auto">
+    <!-- Active Ticket -->
+    <div class="p-4 bg-white/10 border-l-4 border-white cursor-pointer">
+      <div class="flex justify-between items-start mb-1">
+        <span class="text-[10px] font-bold text-primary-fixed-dim">#TK-9021</span>
+        <span class="text-[9px] px-1.5 py-0.5 bg-surface-container-highest text-on-surface-variant font-bold rounded-none">IN PROGRESS</span>
+      </div>
+      <p class="text-sm font-medium text-white leading-tight">SAML Configuration Issue</p>
+    </div>
+    <!-- Other Tickets -->
+    <div class="p-4 border-b border-outline-variant/10 hover:bg-white/5 cursor-pointer">
+      <div class="flex justify-between items-start mb-1">
+        <span class="text-[10px] font-bold text-white/50">#TK-8842</span>
+        <span class="text-[9px] px-1.5 py-0.5 bg-secondary text-white font-bold rounded-none">RESOLVED</span>
+      </div>
+      <p class="text-sm font-medium text-white/70 leading-tight">VPN Connection Timeout</p>
+    </div>
+    <div class="p-4 border-b border-outline-variant/10 hover:bg-white/5 cursor-pointer">
+      <div class="flex justify-between items-start mb-1">
+        <span class="text-[10px] font-bold text-white/50">#TK-8710</span>
+        <span class="text-[9px] px-1.5 py-0.5 bg-amber-500 text-white font-bold rounded-none">PENDING</span>
+      </div>
+      <p class="text-sm font-medium text-white/70 leading-tight">New Laptop Provisioning</p>
+    </div>
+  </div>
+</aside><main class="flex-1 flex flex-col min-w-0 bg-white">
+<!-- TopNavBar with Breadcrumbs -->
+<header class="h-14 border-b border-outline-variant flex items-center justify-between px-6 bg-white">
+<div class="flex items-center gap-2 text-sm">
+<span class="text-on-secondary-container">OmniSupport</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="text-on-secondary-container">Helpdesk</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-bold text-on-background">Ticket Details</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative">
+
+
+</div>
+<button class="p-2 hover:bg-surface-container rounded-full relative">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+</button>
+
+</div>
+</header>
+<!-- Content Area Split -->
+<div class="flex-1 flex overflow-hidden">
+<!-- Left Main Column -->
+<div class="flex-1 flex flex-col overflow-hidden p-6 gap-6">
+<!-- Header Section -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-3">
+<h2 class="text-3xl font-black tracking-tight text-on-background">#TK-9021</h2>
+<span class="text-2xl font-light text-on-secondary-container">/</span>
+<h2 class="text-3xl font-black tracking-tight text-on-background">SAML Configuration Issue</h2>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-3 py-1 bg-surface-container-highest text-on-surface-variant text-[11px] font-bold tracking-wider rounded border border-outline-variant">IN PROGRESS</span>
+<span class="px-3 py-1 bg-error-container text-on-error-container text-[11px] font-bold tracking-wider rounded border border-error/20 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">priority_high</span>
+                                HIGH PRIORITY
+                            </span>
+</div>
+</div>
+<!-- SLA Timeline -->
+<div class="mt-4">
+<div class="flex justify-between items-center mb-1 text-[11px] font-bold text-on-secondary-container uppercase tracking-widest">
+<span class="">Resolution SLA (Standard 4h)</span>
+<span class="text-error">1h 12m Remaining</span>
+</div>
+<div class="h-1.5 w-full bg-surface-container rounded-full overflow-hidden relative">
+<div class="h-full bg-primary sla-progress-bar transition-all duration-1000" style="--progress: 72%; width: 0%;"></div>
+<!-- Animated indicator -->
+<div class="absolute top-0 left-[72%] w-4 h-full bg-white/30 blur-sm pulse"></div>
+</div>
+</div>
+</div>
+<!-- Threaded Discussion -->
+<div class="flex-1 flex flex-col min-h-0 bg-surface-container-low rounded-xl jira-card">
+<div class="conversation-scroll p-6 space-y-6"><div class="mb-8 border-b border-outline-variant pb-4"><div class="bg-white p-6 border border-outline-variant rounded-none shadow-sm"><div class="flex items-center gap-2 mb-3"><span class="font-bold text-xs uppercase tracking-widest text-on-secondary-container">Initial Report</span><span class="text-[10px] text-on-secondary-container">Oct 24, 2023 09:12 AM</span></div><div class="text-sm leading-relaxed text-on-surface">I'm unable to authenticate via SSO. The SAML response seems to be failing validation. Error code: <code class="bg-surface-container px-1 rounded font-mono">ERR_SAML_602</code>. Attached the log export from the console.</div></div></div>
+<!-- Employee Message -->
+<!-- System Notification -->
+<div class="flex justify-center">
+<div class="bg-surface-container-highest/50 border border-outline-variant/30 text-[10px] uppercase font-bold tracking-widest px-4 py-1 rounded-full text-on-secondary-container">
+                                Agent Alpha assigned to ticket
+                            </div>
+</div>
+<!-- Agent Message -->
+<div class="flex flex-col gap-2 max-w-[85%]"><div class="flex items-center gap-2"><span class="font-bold text-xs text-on-background flex items-center gap-1">Agent Alpha <span class="material-symbols-outlined text-sm">verified</span></span><span class="text-[10px] text-on-secondary-container">Oct 24, 2023 10:45 AM</span></div><div class="bg-surface-container-highest p-4 border border-outline-variant text-sm leading-relaxed text-on-background">Hello Alex, I've checked the logs. It appears the certificate fingerprint in our metadata doesn't match the one sent by your identity provider. Have you recently rotated certificates on the IdP side?</div></div>
+<!-- Employee Message -->
+<div class="flex flex-col items-end gap-2 ml-auto max-w-[85%]"><div class="flex items-center gap-2"><span class="text-[10px] text-on-secondary-container">Oct 24, 2023 11:02 AM</span><span class="font-bold text-xs text-primary">Alex Chen</span></div><div class="bg-primary text-white p-4 border border-primary text-sm leading-relaxed">Yes, we did a rotation last night at 11 PM UTC. I thought the metadata update was automatic. Let me check the configuration on our side.</div></div>
+</div>
+<!-- Rich Text Editor Footer -->
+<div class="p-4 bg-white border-t border-outline-variant">
+<div class="border border-outline-variant rounded-lg overflow-hidden flex flex-col">
+<div class="flex items-center gap-1 p-2 bg-surface-container-low border-b border-outline-variant">
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">format_bold</span></button>
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">format_italic</span></button>
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">link</span></button>
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">attachment</span></button>
+<div class="w-px h-4 bg-outline-variant mx-1"></div>
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">format_list_bulleted</span></button>
+<button class="p-1 hover:bg-surface-container-highest rounded"><span class="material-symbols-outlined text-lg">code</span></button>
+</div>
+<textarea class="w-full border-none focus:ring-0 text-sm p-4 h-24 resize-none" placeholder="Type your reply here..."></textarea>
+<div class="flex items-center justify-between p-3 bg-white">
+<div class="flex gap-2">
+
+</div>
+<button class="bg-primary text-white text-xs font-bold px-6 py-2 rounded hover:bg-on-primary-container transition-colors">
+                                    SEND REPLY
+                                </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Sidebar -->
+<div class="w-80 flex-shrink-0 border-l border-outline-variant bg-surface-container-low p-6 overflow-y-auto flex flex-col gap-8">
+<!-- AI Classification -->
+<section>
+<h3 class="text-xs font-black tracking-widest text-on-secondary-container uppercase mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-primary">auto_awesome</span>
+                        AI Classification
+                    </h3>
+<div class="bg-white p-4 rounded jira-card space-y-4">
+<div>
+<div class="flex justify-between text-[11px] mb-1 font-bold">
+<span class="text-on-background">Security</span>
+<span class="text-primary">92% Confidence</span>
+</div>
+<div class="h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-primary w-[92%]"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-[11px] mb-1 font-bold">
+<span class="text-on-secondary-container">IT Support</span>
+<span class="text-on-secondary-container">8% Confidence</span>
+</div>
+<div class="h-1 w-full bg-surface-container rounded-full overflow-hidden">
+<div class="h-full bg-on-secondary-container/30 w-[8%]"></div>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant/30 flex items-center gap-2">
+<span class="material-symbols-outlined text-xs text-on-secondary-container">info</span>
+<span class="text-[10px] text-on-secondary-container">Classified by watsonx.ai L3 model</span>
+</div>
+</div>
+</section>
+<!-- Metadata -->
+<section>
+<h3 class="text-xs font-black tracking-widest text-on-secondary-container uppercase mb-4">Ticket Metadata</h3>
+<div class="space-y-4">
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-secondary-container uppercase tracking-wider">Department</span>
+<span class="text-sm font-medium">Security Infrastructure</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-secondary-container uppercase tracking-wider">Assigned Agent</span>
+<div class="flex items-center gap-2 mt-1">
+<div class="size-6 rounded-full bg-cover bg-center" data-alt="Close-up of a professional IT support agent with a focused expression, wearing high-quality noise-canceling headphones in a modern, brightly lit office environment with sleek technology in the background." style="background-image: url(&quot;https://lh3.googleusercontent.com/aida-public/AB6AXuBVOqVizCbWXCNjcWkhZ9DMqlhHNlbjS897q4iIt77h-OQpdUtz5aZVO_F4hS9ncojRzLPxpptpDnbkr7d-F2xVPSxBlHUe20EQhHh2wIVm1IvewGJUQJmvBK9u2g5CjeKPbCdRSlCol5XeXKExPG-RNRSDwy9yB515yJCDCgnCUMhgPgZCJtM4dy5dKlM2oPWF_Uv9twXIHQBgO3iCOdYLPoqNxQ9U3ZNurHaM6UH9fbUJ3DQDiEQz&quot;);"></div>
+<span class="text-sm font-medium">Agent Alpha</span>
+</div>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-secondary-container uppercase tracking-wider">Date Created</span>
+<span class="text-sm font-medium">Oct 24, 2023 · 09:12 AM</span>
+</div>
+<div class="flex flex-col">
+<span class="text-[10px] font-bold text-on-secondary-container uppercase tracking-wider">Reporter</span>
+<span class="text-sm font-medium">Alex Chen (ID: 10442)</span>
+</div>
+</div>
+</section>
+<!-- Attachments -->
+<section>
+<h3 class="text-xs font-black tracking-widest text-on-secondary-container uppercase mb-4 flex justify-between items-center">
+                        Attachments (2)
+                        <button class="material-symbols-outlined text-sm hover:text-primary">add</button>
+</h3>
+<div class="space-y-2">
+<div class="bg-white p-2 rounded jira-card flex items-center gap-3 cursor-pointer hover:border-primary group transition-all">
+<div class="size-10 bg-surface-container rounded flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-bold truncate group-hover:text-primary">sso_log_export.json</p>
+<p class="text-[10px] text-on-secondary-container">1.2 MB</p>
+</div>
+<button class="material-symbols-outlined text-on-secondary-container text-sm opacity-0 group-hover:opacity-100 transition-opacity">download</button>
+</div>
+<div class="bg-white p-2 rounded jira-card flex items-center gap-3 cursor-pointer hover:border-primary group transition-all">
+<div class="size-10 bg-surface-container rounded flex items-center justify-center text-error">
+<span class="material-symbols-outlined">image</span>
+</div>
+<div class="flex-1 overflow-hidden">
+<p class="text-xs font-bold truncate group-hover:text-primary">error_screenshot.png</p>
+<p class="text-[10px] text-on-secondary-container">450 KB</p>
+</div>
+<button class="material-symbols-outlined text-on-secondary-container text-sm opacity-0 group-hover:opacity-100 transition-opacity">download</button>
+</div>
+</div>
+</section>
+<!-- Tags -->
+<section class="mb-8">
+<h3 class="text-[10px] font-bold tracking-widest text-on-secondary-container uppercase mb-4">RECENT ACTIVITY</h3>
+<div class="relative pl-4 space-y-6">
+<div class="absolute left-[3px] top-1.5 bottom-1.5 w-px bg-outline-variant/30"></div>
+<div class="relative">
+<div class="absolute -left-[17px] top-1.5 size-2 rounded-full bg-blue-500"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-background">Ticket opened by John Doe</span>
+<span class="text-[10px] text-on-secondary-container">Today at 10:42 AM</span>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -left-[17px] top-1.5 size-2 rounded-full bg-secondary"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-background">Agent Alpha assigned</span>
+<span class="text-[10px] text-on-secondary-container">Today at 10:43 AM</span>
+</div>
+</div>
+<div class="relative">
+<div class="absolute -left-[17px] top-1.5 size-2 rounded-full bg-amber-500"></div>
+<div class="flex flex-col">
+<span class="text-xs font-bold text-on-background">Status: Pending Employee</span>
+<span class="text-[10px] text-on-secondary-container">Today at 10:45 AM</span>
+</div>
+</div>
+</div>
+</section><section>
+<h3 class="text-xs font-black tracking-widest text-on-secondary-container uppercase mb-4">Tags</h3>
+<div class="flex flex-wrap gap-1">
+<span class="bg-surface-container px-2 py-0.5 rounded text-[10px] font-bold text-on-secondary-container">SAML</span>
+<span class="bg-surface-container px-2 py-0.5 rounded text-[10px] font-bold text-on-secondary-container">OKTA</span>
+<span class="bg-surface-container px-2 py-0.5 rounded text-[10px] font-bold text-on-secondary-container">SSO-FAULT</span>
+<span class="bg-surface-container px-2 py-0.5 rounded text-[10px] font-bold text-on-secondary-container">Q4-AUDIT</span>
+</div>
+</section>
+</div>
+</div>
+</main>
+</div>
+<script>
+    // Smooth transition for the SLA bar on load
+    window.addEventListener('DOMContentLoaded', () => {
+        const bar = document.querySelector('.sla-progress-bar');
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = '72%';
+        }, 100);
+    });
+
+    // Simple interaction for textarea
+    const textarea = document.querySelector('textarea');
+    textarea.addEventListener('focus', () => {
+        textarea.parentElement.classList.add('ring-1', 'ring-primary', 'border-primary');
+    });
+    textarea.addEventListener('blur', () => {
+        textarea.parentElement.classList.remove('ring-1', 'ring-primary', 'border-primary');
+    });
+</script>
+
+
+
+
+
+
+</body></html>

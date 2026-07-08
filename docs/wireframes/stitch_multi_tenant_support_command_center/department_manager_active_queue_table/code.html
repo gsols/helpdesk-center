@@ -1,0 +1,367 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>ManagerQueueTable - AdminDesk</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "error-container": "#ffdad6",
+                    "on-primary": "#ffffff",
+                    "on-primary-fixed": "#131b2e",
+                    "inverse-primary": "#bec6e0",
+                    "tertiary": "#000000",
+                    "secondary-container": "#e0e3e5",
+                    "surface-bright": "#f8f9ff",
+                    "surface-tint": "#565e74",
+                    "surface-variant": "#d3e4fe",
+                    "outline-variant": "#c6c6cd",
+                    "inverse-surface": "#213145",
+                    "on-background": "#0b1c30",
+                    "inverse-on-surface": "#eaf1ff",
+                    "primary-container": "#131b2e",
+                    "on-secondary-fixed-variant": "#444749",
+                    "secondary": "#5c5f61",
+                    "secondary-fixed": "#e0e3e5",
+                    "on-surface-variant": "#45464d",
+                    "primary": "#000000",
+                    "error": "#ba1a1a",
+                    "tertiary-container": "#271901",
+                    "surface-container-lowest": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#eff4ff",
+                    "primary-fixed-dim": "#bec6e0",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "on-secondary-container": "#626567",
+                    "surface": "#f8f9ff",
+                    "on-tertiary-container": "#98805d",
+                    "surface-container-high": "#dce9ff",
+                    "on-error-container": "#93000a",
+                    "outline": "#76777d",
+                    "on-primary-container": "#7c839b",
+                    "primary-fixed": "#dae2fd",
+                    "tertiary-fixed": "#fcdeb5",
+                    "on-tertiary-fixed": "#271901",
+                    "on-tertiary": "#ffffff",
+                    "surface-dim": "#cbdbf5",
+                    "on-surface": "#0b1c30",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "background": "#f8f9ff",
+                    "on-tertiary-fixed-variant": "#574425",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-secondary": "#ffffff",
+                    "on-secondary-fixed": "#191c1e",
+                    "surface-container": "#e5eeff",
+                    "tertiary-fixed-dim": "#dec29a"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "stack-md": "8px",
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "shell-header-height": "48px",
+                    "stack-sm": "4px",
+                    "sidebar-width": "260px",
+                    "shell-nav-width": "64px"
+            },
+            "fontFamily": {
+                    "label-caps": ["Hanken Grotesk"],
+                    "title-md": ["Hanken Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "display-sm": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "technical-md": ["JetBrains Mono"],
+                    "body-sm": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sidebar-active {
+            border-left: 3px solid #98805d; /* on-tertiary-container fallback */
+            background-color: rgba(211, 228, 254, 0.1);
+        }
+        /* Custom scrollbar for high density */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c6c6cd;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md overflow-hidden h-screen flex">
+<!-- SIDE NAV BAR (Shared Component) -->
+<!-- Fixed SideNavBar: 64px width -->
+<aside class="fixed left-0 top-0 h-full w-[64px] bg-primary-container z-50 flex flex-col items-center py-4 border-r border-outline-variant">
+<div class="mb-8">
+<span class="material-symbols-outlined text-on-primary text-headline-sm font-bold" data-icon="dashboard">dashboard</span>
+</div>
+<nav class="flex flex-col gap-6 flex-1 items-center">
+<!-- Active Tab: Tickets (Implicit for ManagerQueueTable) -->
+<button class="w-full py-2 border-l-[3px] border-on-tertiary-container bg-surface-variant/10 text-on-primary transition-transform active:scale-95" title="Dashboard">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+</button>
+<button class="w-full py-2 border-l-[3px] border-on-tertiary-container bg-surface-variant/10 text-on-primary transition-transform active:scale-95" title="Tickets">
+<span class="material-symbols-outlined" data-icon="confirmation_number">confirmation_number</span>
+</button>
+<button class="w-full py-2 text-on-primary-container/60 hover:text-on-primary hover:bg-surface-variant/20 transition-all active:scale-95" title="Customers">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+</button>
+<button class="w-full py-2 text-on-primary-container/60 hover:text-on-primary hover:bg-surface-variant/20 transition-all active:scale-95" title="Assets">
+<span class="material-symbols-outlined" data-icon="inventory_2">inventory_2</span>
+</button>
+<button class="w-full py-2 text-on-primary-container/60 hover:text-on-primary hover:bg-surface-variant/20 transition-all active:scale-95" title="Settings">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+</button>
+</nav>
+<div class="flex flex-col gap-6 items-center pb-4">
+<button class="text-on-primary-container/60 hover:text-on-primary transition-colors" title="Support">
+<span class="material-symbols-outlined" data-icon="help">help</span>
+</button>
+<button class="text-on-primary-container/60 hover:text-on-primary transition-colors" title="Profile">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+</button>
+</div>
+</aside>
+<!-- MAIN CONTENT WRAPPER -->
+<div class="flex-1 ml-[64px] flex flex-col h-screen">
+<!-- TOP NAV BAR (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-64px)] h-16 bg-surface z-40 border-b border-outline-variant flex justify-between items-center px-gutter">
+<div class="flex items-center gap-4">
+<span class="font-title-md text-title-md font-bold text-primary">Support Portal</span>
+<nav class="hidden md:flex items-center gap-6 ml-8">
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="#">Queue</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">SLA</a>
+<a class="text-on-surface-variant font-medium hover:text-primary transition-colors" href="#">Reports</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined" data-icon="apps">apps</span>
+</button>
+</div>
+<div class="h-8 w-px bg-outline-variant mx-2"></div>
+<button class="bg-primary text-on-primary px-4 py-2 rounded-lg font-label-caps text-label-caps flex items-center gap-2 hover:opacity-90 active:opacity-80 transition-opacity">
+                    New Ticket
+                </button>
+<img class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A professional headshot of a department manager in a modern corporate setting, soft studio lighting, high resolution portrait photography, blurred background of a sleek tech office." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB45jnIa06YgwUzK0duiwkdi8b3VCiTXxGu8y4PQf9-5hwJm7UtRxYH54JxwULuyxKIyKR9FmSaVFfBx-tTYnOnMwIOiczncBIE73Rv4c-s32RunIhGKsgw2R8fyYJEUaFJtUYObVgnT29KOD7l1DEeXeZwplWhLim_TYxB3b49XRuY5YZi0EaYVTbFqq_PKOe7uCBToxfHlAuYeUv9GPkCyw7gQRboNGLiGrUrqQR33bM6uftP0my2">
+</div>
+</header>
+<!-- MAIN WORKSPACE -->
+<main class="mt-16 flex-1 flex flex-col overflow-hidden">
+<!-- SECTION 1: FILTER CONTROL & SEARCH -->
+<section class="bg-slate-50 p-gutter border-b border-outline-variant flex flex-col sm:flex-row items-center gap-4">
+<div class="relative flex-1 w-full">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" data-icon="search">search</span>
+<input class="w-full pl-10 pr-4 py-2 bg-white border border-outline-variant rounded-none focus:border-on-surface-variant focus:ring-0 font-body-md text-on-surface placeholder:text-on-surface-variant/50" placeholder="Filter department queue by keyword or tag..." type="text">
+</div>
+<div class="flex items-center gap-2 w-full sm:w-auto">
+<button class="flex items-center gap-2 bg-white border border-outline-variant px-4 py-2 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-low transition-colors">
+                        Filter Status <span class="material-symbols-outlined text-[14px]" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</button>
+<button class="flex items-center gap-2 bg-white border border-outline-variant px-4 py-2 rounded-md font-label-caps text-label-caps text-on-surface-variant hover:bg-surface-container-low transition-colors">
+                        Filter Agent <span class="material-symbols-outlined text-[14px]" data-icon="keyboard_arrow_down">keyboard_arrow_down</span>
+</button>
+</div>
+</section>
+<!-- SECTION 2: DEPARTMENT MASTER MATRIX TABLE -->
+<section class="flex-1 bg-white overflow-auto">
+<table class="w-full border-collapse">
+<thead class="sticky top-0 bg-slate-50/90 backdrop-blur-sm z-10 border-b border-outline-variant">
+<tr>
+<th class="px-gutter py-3 text-left font-label-caps text-label-caps text-on-surface-variant/70 tracking-wider">TICKET ID</th>
+<th class="px-gutter py-3 text-left font-label-caps text-label-caps text-on-surface-variant/70 tracking-wider">SUBJECT</th>
+<th class="px-gutter py-3 text-left font-label-caps text-label-caps text-on-surface-variant/70 tracking-wider">STATUS</th>
+<th class="px-gutter py-3 text-left font-label-caps text-label-caps text-on-surface-variant/70 tracking-wider">ASSIGNED AGENT</th>
+<th class="px-gutter py-3 text-left font-label-caps text-label-caps text-on-surface-variant/70 tracking-wider">SLA TRACKING</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- ROW 1 -->
+<tr class="hover:bg-slate-50 transition-colors group">
+<td class="px-gutter py-4 font-technical-md text-blue-600 whitespace-nowrap">TCK-1024</td>
+<td class="px-gutter py-4 font-title-md text-on-surface">VPN access token failing for external contractors</td>
+<td class="px-gutter py-4">
+<span class="inline-flex items-center px-3 py-0.5 rounded-full bg-blue-100 text-blue-700 font-label-caps text-[10px] font-bold">IN_PROGRESS</span>
+</td>
+<td class="px-gutter py-4">
+<div class="relative inline-block">
+<button class="flex items-center justify-between w-40 px-3 py-1.5 border border-outline-variant rounded-md bg-white font-body-sm text-on-surface-variant hover:bg-surface-container transition-colors" onclick="toggleDropdown('dropdown-1')">
+                                        Alex Rivera <span class="material-symbols-outlined text-[14px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+<div class="hidden absolute top-full left-0 mt-1 w-48 bg-white border border-outline-variant rounded-md shadow-lg z-20 overflow-hidden" id="dropdown-1">
+<div class="py-1">
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Unassigned</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Sarah Jenkins</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface bg-slate-50 font-bold" href="#">Alex Rivera</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Daniel Park</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Fatima Al Zahra</a>
+</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-4">
+<div class="flex flex-col gap-1 w-48">
+<div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500" style="width: 35%"></div>
+</div>
+<span class="font-technical-md text-[11px] text-amber-700">1h 12m remaining</span>
+</div>
+</td>
+</tr>
+<!-- ROW 2 -->
+<tr class="hover:bg-slate-50 transition-colors group">
+<td class="px-gutter py-4 font-technical-md text-blue-600 whitespace-nowrap">TCK-1031</td>
+<td class="px-gutter py-4 font-title-md text-on-surface">Active Directory sync failing across regional nodes</td>
+<td class="px-gutter py-4">
+<span class="inline-flex items-center px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-label-caps text-[10px] font-bold">OPEN</span>
+</td>
+<td class="px-gutter py-4">
+<div class="relative inline-block">
+<button class="flex items-center justify-between w-40 px-3 py-1.5 border border-error bg-error-container/10 rounded-md font-body-sm text-error hover:bg-error-container/20 transition-colors" onclick="toggleDropdown('dropdown-2')">
+                                        Unassigned <span class="material-symbols-outlined text-[14px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+<div class="hidden absolute top-full left-0 mt-1 w-48 bg-white border border-outline-variant rounded-md shadow-lg z-20 overflow-hidden" id="dropdown-2">
+<div class="py-1">
+<a class="block px-4 py-2 text-body-sm text-on-surface bg-slate-50 font-bold" href="#">Unassigned</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Sarah Jenkins</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Alex Rivera</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Daniel Park</a>
+<a class="block px-4 py-2 text-body-sm text-on-surface hover:bg-slate-100" href="#">Fatima Al Zahra</a>
+</div>
+</div>
+</div>
+</td>
+<td class="px-gutter py-4">
+<div class="flex flex-col gap-1 w-48">
+<div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-error" style="width: 100%"></div>
+</div>
+<span class="font-technical-md text-[11px] text-error flex items-center gap-1 uppercase">
+<span class="material-symbols-outlined text-[14px]" data-icon="warning">warning</span> BREACHED EXPIRED BY 42m
+                                    </span>
+</div>
+</td>
+</tr>
+<!-- ADDING MORE HIGH DENSITY CONTENT TO DEMONSTRATE SCALE -->
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50 transition-colors group">
+<td class="px-gutter py-4 font-technical-md text-blue-600 whitespace-nowrap">TCK-1045</td>
+<td class="px-gutter py-4 font-title-md text-on-surface">Cloudflare WAF policy update required for new API endpoints</td>
+<td class="px-gutter py-4">
+<span class="inline-flex items-center px-3 py-0.5 rounded-full border border-outline-variant text-on-surface-variant font-label-caps text-[10px] font-bold">RESOLVED</span>
+</td>
+<td class="px-gutter py-4">
+<button class="flex items-center justify-between w-40 px-3 py-1.5 border border-outline-variant rounded-md bg-white font-body-sm text-on-surface-variant hover:bg-surface-container transition-colors">
+                                    Sarah Jenkins <span class="material-symbols-outlined text-[14px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</td>
+<td class="px-gutter py-4">
+<div class="flex flex-col gap-1 w-48">
+<div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-emerald-500" style="width: 100%"></div>
+</div>
+<span class="font-technical-md text-[11px] text-emerald-700">Met (Resolved in 4h)</span>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50 transition-colors group">
+<td class="px-gutter py-4 font-technical-md text-blue-600 whitespace-nowrap">TCK-1052</td>
+<td class="px-gutter py-4 font-title-md text-on-surface">Emergency: Payroll database instance unresponsive</td>
+<td class="px-gutter py-4">
+<span class="inline-flex items-center px-3 py-0.5 rounded-full bg-error-container text-on-error-container font-label-caps text-[10px] font-bold">CRITICAL</span>
+</td>
+<td class="px-gutter py-4">
+<button class="flex items-center justify-between w-40 px-3 py-1.5 border border-outline-variant rounded-md bg-white font-body-sm text-on-surface-variant hover:bg-surface-container transition-colors">
+                                    Daniel Park <span class="material-symbols-outlined text-[14px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</button>
+</td>
+<td class="px-gutter py-4">
+<div class="flex flex-col gap-1 w-48">
+<div class="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-error" style="width: 85%"></div>
+</div>
+<span class="font-technical-md text-[11px] text-error">9m remaining (High Urgency)</span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- FOOTER STATS (Contextual Addition) -->
+<footer class="bg-surface-container h-8 border-t border-outline-variant px-gutter flex items-center justify-between">
+<div class="flex items-center gap-4 text-[10px] font-label-caps text-on-surface-variant">
+<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 12 Open</div>
+<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> 5 In Progress</div>
+<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-error"></span> 2 Breached</div>
+</div>
+<div class="text-[10px] font-technical-md text-on-surface-variant/50">
+                    Last sync: 24s ago
+                </div>
+</footer>
+</main>
+</div>
+<script>
+        function toggleDropdown(id) {
+            const dropdown = document.getElementById(id);
+            const allDropdowns = document.querySelectorAll('[id^="dropdown-"]');
+            
+            allDropdowns.forEach(d => {
+                if(d.id !== id) d.classList.add('hidden');
+            });
+
+            dropdown.classList.toggle('hidden');
+        }
+
+        // Close dropdowns on outside click
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.relative')) {
+                document.querySelectorAll('[id^="dropdown-"]').forEach(d => d.classList.add('hidden'));
+            }
+        });
+
+        // Interactive states for rows
+        document.querySelectorAll('tr').forEach(row => {
+            row.addEventListener('mouseenter', () => {
+                // Potential for adding quick actions icons on hover
+            });
+        });
+    </script>
+</body></html>

@@ -1,0 +1,464 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OmniSupport | Agent Command Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "primary-fixed-dim": "#bec6e0",
+                    "secondary": "#5c5f61",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed": "#131b2e",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed-variant": "#574425",
+                    "error-container": "#ffdad6",
+                    "tertiary-fixed-dim": "#dec29a",
+                    "tertiary-fixed": "#fcdeb5",
+                    "surface-variant": "#d3e4fe",
+                    "outline": "#76777d",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "secondary-fixed": "#e0e3e5",
+                    "on-surface": "#0b1c30",
+                    "surface-container-high": "#dce9ff",
+                    "on-secondary": "#ffffff",
+                    "on-tertiary": "#ffffff",
+                    "secondary-container": "#e0e3e5",
+                    "surface-tint": "#565e74",
+                    "error": "#ba1a1a",
+                    "primary-container": "#131b2e",
+                    "background": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "surface-dim": "#cbdbf5",
+                    "tertiary-container": "#271901",
+                    "outline-variant": "#c6c6cd",
+                    "on-secondary-container": "#626567",
+                    "on-primary": "#ffffff",
+                    "inverse-primary": "#bec6e0",
+                    "on-background": "#0b1c30",
+                    "on-secondary-fixed-variant": "#444749",
+                    "primary": "#000000",
+                    "surface-container-highest": "#d3e4fe",
+                    "on-surface-variant": "#45464d",
+                    "on-tertiary-container": "#98805d",
+                    "inverse-on-surface": "#eaf1ff",
+                    "surface-container": "#e5eeff",
+                    "surface": "#f8f9ff",
+                    "on-secondary-fixed": "#191c1e",
+                    "inverse-surface": "#213145",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "on-error": "#ffffff",
+                    "surface-container-low": "#eff4ff",
+                    "on-tertiary-fixed": "#271901",
+                    "tertiary": "#000000",
+                    "primary-fixed": "#dae2fd",
+                    "on-primary-container": "#7c839b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "stack-md": "8px",
+                    "sidebar-width": "260px",
+                    "shell-nav-width": "64px",
+                    "stack-sm": "4px",
+                    "shell-header-height": "48px"
+            },
+            "fontFamily": {
+                    "title-md": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "display-sm": ["Hanken Grotesk"],
+                    "label-caps": ["Hanken Grotesk"],
+                    "technical-md": ["JetBrains Mono"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "body-sm": ["Hanken Grotesk"]
+            },
+            "fontSize": {
+                    "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #76777d; }
+    </style>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-surface-container-highest">
+<!-- App Shell Container -->
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar (Mandatory Shell) -->
+<aside class="flex flex-col h-full w-[64px] overflow-hidden bg-primary-container border-r border-outline-variant fixed left-0 top-0 z-50">
+<div class="flex flex-col items-center py-4 gap-6 h-full">
+<div class="font-headline-sm text-headline-sm text-on-primary-container px-2">
+<span class="material-symbols-outlined text-primary-fixed-dim" style="font-variation-settings: &quot;FILL&quot; 1;">terminal</span>
+</div>
+<nav class="flex flex-col w-full items-center gap-2">
+<div class="w-full flex justify-center py-3 border-l-4 border-primary text-on-primary-fixed bg-surface-variant/10 cursor-pointer">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 1;">dashboard</span>
+</div>
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container hover:bg-surface-variant/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined">confirmation_number</span>
+</div>
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container hover:bg-surface-variant/5 transition-colors cursor-pointer" style="opacity: 1;">
+<span class="material-symbols-outlined">group</span>
+</div>
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container hover:bg-surface-variant/5 transition-colors cursor-pointer" style="opacity: 1;">
+<span class="material-symbols-outlined">book</span>
+</div>
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container hover:bg-surface-variant/5 transition-colors cursor-pointer" style="opacity: 1;">
+<span class="material-symbols-outlined">analytics</span>
+</div>
+</nav>
+<div class="mt-auto flex flex-col w-full items-center gap-2 pb-4">
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<div class="w-full flex justify-center py-3 text-on-primary-container/70 hover:text-on-primary-container cursor-pointer">
+<span class="material-symbols-outlined">help</span>
+</div>
+<img class="w-8 h-8 rounded-full border border-outline-variant mt-2" data-alt="A high-quality studio portrait of a professional female support agent with a friendly expression, wearing a sleek black blazer. The lighting is crisp and modern, reflecting a corporate professional environment with a soft bokeh background that hints at a high-tech office." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO-ujq0ykiv8OCm21wAJh4Oq0MInRM7PFuBquevD9GhJtAy7_Ay63tD02jyLsGhXBpeFahw-bbOOwotuyrWdzw7gk9QQxtkVlvkuYVwXtmL4iLwZuwgPEd7b6GDnvtu6TV5gCyXw6ln4U5h3wRBWBM_6lWgU_f7iKMRlA4sUK2DbWc0KoXarYzYY3Y6vikHUT3SCuHRbwAAuH1J5hTNCqPDDSVUpMoZvRgWZGBRWwfJy6JDYie25Vp">
+</div>
+</div>
+</aside>
+<!-- Main Content Area (Fluid) -->
+<main class="ml-[64px] flex flex-col flex-1 overflow-hidden">
+<!-- TopNavBar (Mandatory Shell) -->
+<header class="fixed top-0 right-0 w-[calc(100%-64px)] h-shell-header-height bg-surface border-b border-outline-variant flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-6">
+<h1 class="font-headline-sm text-headline-sm font-bold text-on-surface">OmniSupport</h1>
+<nav class="flex items-center gap-4"><div class="flex items-center gap-2 text-body-sm text-on-surface-variant"><span class="hover:text-primary cursor-pointer">Helpdesk</span><span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="hover:text-primary cursor-pointer">Agent Workspace</span><span class="material-symbols-outlined text-[14px]">chevron_right</span><span class="text-primary font-bold">Open Queue</span></div></nav>
+</div>
+<div class="flex items-center gap-4"><div class="flex items-center gap-4 text-body-sm font-technical-md text-on-surface-variant"><span class="font-bold text-on-surface">CloudScale Inc.</span><span class="bg-slate-100 px-2 py-0.5 rounded border border-outline-variant">11:05:42</span><button class="flex items-center justify-center p-1 hover:bg-slate-100 rounded transition-colors text-on-surface-variant hover:text-primary cursor-pointer"><span class="material-symbols-outlined text-[20px]">notifications</span></button></div></div>
+</header>
+<!-- Three-Pane Content Layout -->
+<div class="mt-shell-header-height flex flex-1 overflow-hidden">
+<!-- Pane 1: Master List (Middle) -->
+<section class="w-[380px] flex flex-col border-r border-outline-variant bg-white"><div class="p-2 border-b border-outline-variant bg-slate-50/50"><div class="flex items-center bg-white border border-outline-variant rounded px-2 py-1 focus-within:border-primary transition-all"><span class="material-symbols-outlined text-on-surface-variant text-[16px]">search</span><input class="bg-transparent border-none focus:ring-0 text-body-sm w-full py-0" placeholder="Search tickets..." type="text"></div></div>
+<div class="flex flex-col bg-slate-50/80 border-b border-outline-variant">
+<div class="flex p-2 gap-1">
+<button class="flex-1 py-1.5 px-3 bg-white border border-outline-variant rounded text-label-caps font-label-caps text-on-surface shadow-sm">My Queue</button>
+<button class="flex-1 py-1.5 px-3 hover:bg-white/50 text-label-caps font-label-caps text-on-surface-variant transition-colors">Dept Pool</button>
+<button class="flex-1 py-1.5 px-3 hover:bg-white/50 text-label-caps font-label-caps text-on-surface-variant transition-colors">Archive</button>
+</div>
+<div class="px-gutter pb-2 flex justify-between items-center">
+<span class="text-label-caps font-label-caps text-on-surface-variant">24 TICKETS</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] cursor-pointer" style="opacity: 1;">filter_list</span>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto">
+<!-- Ticket Card 1 (Active) -->
+<div class="p-4 border-b border-slate-100 bg-slate-50 border-l-4 border-blue-500 cursor-pointer" style="opacity: 1;">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical-md text-technical-md text-primary bg-slate-200/50 px-1.5 rounded">#SR-9421</span>
+<span class="text-label-caps font-label-caps text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">HIGH</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface truncate">VPN connection drops every 20 minutes in Berlin region</h3>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[10px] text-white font-bold">JD</div>
+<span class="text-body-sm text-on-surface-variant">John Doe</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">4m ago</span>
+</div>
+</div>
+<!-- Ticket Card 2 -->
+<div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer group" style="opacity: 1;">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical-md text-technical-md text-on-surface-variant">#SR-9420</span>
+<span class="text-label-caps font-label-caps text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md">MEDIUM</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface-variant truncate">License renewal failure for Tenant Alpha</h3>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<img class="w-5 h-5 rounded-full" data-alt="A professional headshot of a corporate employee with a clean, professional look, styled for a modern support dashboard interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxxbH7XEGZiLJqXQ78DxeG48R42zfcS2J6qbsvOn0pCl53zrsbJZmxaHqnuwEtGi_V0VJo4phreWEkoy4YVaiyBfB7GSzAEvzLbIaIVpxA2iztvrwUfynE3M_zFJ2bmaM6B0T_nDQyVFT2tIFE3o5sVgEN8RHVR2SHc-DA0RVfo_mdT3dmY9x5TVTebekvSdtZwXfYSktBBqoCnT31QSB4q-0dtN7ifts332xrcXffeMoiHqCSOoRI">
+<span class="text-body-sm text-on-surface-variant">Sarah Chen</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">12m ago</span>
+</div>
+</div>
+<!-- Ticket Card 3 -->
+<div class="p-4 border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer" style="opacity: 1;">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical-md text-technical-md text-on-surface-variant">#SR-9419</span>
+<span class="text-label-caps font-label-caps text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">LOW</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface-variant truncate">Update billing address for Q3 invoices</h3>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<div class="w-5 h-5 rounded-full bg-slate-400 flex items-center justify-center text-[10px] text-white font-bold">MK</div>
+<span class="text-body-sm text-on-surface-variant">Marcus Kane</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">1h ago</span>
+</div>
+</div>
+<!-- More cards... -->
+<div class="p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer" style="opacity: 1;">
+<div class="flex justify-between items-start mb-1">
+<span class="font-technical-md text-technical-md text-on-surface-variant">#SR-9418</span>
+<span class="text-label-caps font-label-caps text-red-700 bg-red-50 px-2 py-0.5 rounded-md">CRITICAL</span>
+</div>
+<h3 class="font-title-md text-title-md text-on-surface-variant truncate">Database deadlock detected on Cluster 4</h3>
+<div class="mt-2 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-red-500">warning</span>
+<span class="text-body-sm text-on-surface-variant">System Alert</span>
+</div>
+<span class="text-body-sm text-on-surface-variant">2h ago</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Pane 2: Detail View (Right) -->
+<section class="flex-1 flex flex-col bg-white overflow-hidden">
+<!-- Ticket Detail Header -->
+<div class="px-4 py-3 border-b border-outline-variant bg-white"><div class="flex flex-col gap-2">
+<!-- Row 1: ID and Department -->
+<div class="flex items-center gap-2">
+<span class="font-technical-md text-technical-md text-slate-500">TCK-1042</span>
+<span class="text-slate-300">/</span>
+<span class="text-body-sm font-semibold text-on-surface-variant">Finance Department</span>
+</div>
+<!-- Row 2: Status and Priority Badges -->
+<div class="flex items-center gap-2">
+<span class="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded uppercase">OPEN</span>
+<span class="text-[10px] font-bold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded uppercase">CRITICAL</span>
+<span class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded uppercase">PENDING_EMPLOYEE</span>
+</div>
+<!-- Row 3: Title and Metadata -->
+<div class="mt-1">
+<h2 class="font-headline-sm text-headline-sm font-bold text-on-surface"></h2><h2 class="font-headline-sm text-headline-sm text-on-surface" style="--tw-border-spacing-y: 0; --tw-translate-x: 0; --tw-translate-y: 0; --tw-rotate: 0; --tw-skew-x: 0; --tw-skew-y: 0; --tw-scale-x: 1; --tw-scale-y: 1; --tw-pan-x: ; --tw-pan-y: ; --tw-pinch-zoom: ; --tw-scroll-snap-strictness: proximity; --tw-gradient-from-position: ; --tw-gradient-via-position: ; --tw-gradient-to-position: ; --tw-ordinal: ; --tw-slashed-zero: ; --tw-numeric-figure: ; --tw-numeric-spacing: ; --tw-numeric-fraction: ; --tw-ring-inset: ; --tw-ring-offset-width: 0px; --tw-ring-offset-color: #fff; --tw-ring-color: rgb(59 130 246 / 0.5); --tw-ring-offset-shadow: 0 0 #0000; --tw-ring-shadow: 0 0 #0000; --tw-shadow: 0 0 #0000; --tw-shadow-colored: 0 0 #0000; --tw-blur: ; --tw-brightness: ; --tw-contrast: ; --tw-grayscale: ; --tw-hue-rotate: ; --tw-invert: ; --tw-saturate: ; --tw-sepia: ; --tw-drop-shadow: ; --tw-backdrop-blur: ; --tw-backdrop-brightness: ; --tw-backdrop-contrast: ; --tw-backdrop-grayscale: ; --tw-backdrop-hue-rotate: ; --tw-backdrop-invert: ; --tw-backdrop-opacity: ; --tw-backdrop-saturate: ; --tw-backdrop-sepia: ; --tw-contain-size: ; --tw-contain-layout: ; --tw-contain-paint: ; --tw-contain-style: ; --tw-text-opacity: 1; color: rgb(11, 28, 48); outline: none !important; box-shadow: none !important;">VPN connection drops every 20 minutes in Berlin region</h2>
+<div class="flex items-center gap-2 text-body-sm text-on-surface-variant mt-1">
+<span class="">Reported by <span class="font-semibold text-on-surface">Maria Santos (Finance)</span></span>
+<span class="">·</span>
+<span class="">Created Jul 5, 2026</span>
+</div>
+</div>
+</div></div>
+<!-- SLA Bar -->
+<div class="bg-slate-50/50 border-b border-outline-variant px-4 py-1.5 flex items-center gap-4"><div class="flex-1"><div class="flex justify-between text-[10px] font-bold uppercase mb-1"><span class="text-emerald-700">SLA — First Response met</span><span class="text-amber-600">32m remaining</span></div><div class="h-1.5 bg-slate-200 w-full overflow-hidden rounded-full"><div class="h-full bg-amber-500 w-3/4"></div></div></div><span class="material-symbols-outlined text-amber-600 text-[18px] cursor-help">timer</span></div>
+<!-- Comment Section / Conversation Thread -->
+<div class="flex-1 overflow-y-auto bg-white p-container-padding space-y-6"><div class="mb-6 border border-slate-200 rounded bg-slate-50/50 overflow-hidden">
+    <div class="flex items-center justify-between px-3 py-2 bg-slate-100 border-b border-slate-200">
+        <div class="flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-slate-600">description</span>
+            <span class="text-label-caps font-label-caps text-slate-700 uppercase">Ticket Description</span>
+        </div>
+        <button class="flex items-center gap-1 text-body-sm text-slate-500 hover:text-slate-900 transition-colors">
+            <span class="text-[11px] font-bold uppercase">Minimize</span>
+            <span class="material-symbols-outlined text-[18px]">expand_less</span>
+        </button>
+    </div>
+    <div class="p-3 text-body-md text-on-surface-variant leading-relaxed">
+        I'm using the corporate VPN client version 4.9.2. Every time I connect to the Berlin gateway, the connection drops after exactly 20 minutes. This is severely impacting my ability to access the internal staging environment. I've tried flushing my DNS and restarting my router.
+    </div>
+</div>
+<!-- Employee Message (Left) -->
+
+<!-- Agent Message (Right) -->
+<div class="flex flex-row-reverse gap-4 max-w-[85%] ml-auto">
+<img class="w-8 h-8 rounded-full border border-outline-variant" data-alt="A close-up shot of a modern, sleek mechanical keyboard in a professional workspace, with glowing blue and white backlighting, symbolizing high-density technical work." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDo0zt-QYhNTOQ0_n4-wANNNsH_UG5dGBnJhsbKVyKeaxe5H5mlowJB56JsMwwiaDsLFMguRFCAzbZMM7SlrGrJMrfV29tYeLyMoK-sbztbAPGJtnr1EuGOCh1CvGsidBoDToPJoheSJpygMJnm1E7zmVh8oidBZkPvglOI0hg0U1V7Gv-pdoaqkGhZQIWpRRD7r6qzNGJv-Kk0Oedk5W-uT0P9c4-B3pKXou01nGTy4BPLHfOVbLhW">
+<div class="flex flex-col items-end">
+<div class="flex items-center gap-3 mb-1">
+<span class="text-body-sm text-on-surface-variant">Today at 10:45 AM</span>
+<span class="font-title-md text-title-md text-primary">Agent Alpha</span>
+</div>
+<div class="bg-slate-950 text-white p-3 rounded-tl-xl rounded-b-xl text-body-md shadow-sm">
+                                    Hello John, I'm checking the logs for the Berlin gateway now. It looks like a timeout issue on the load balancer side. Could you please provide your public IP address so I can filter the specific logs for your session?
+                                </div>
+</div>
+</div>
+<!-- Status Update (System) -->
+<div class="flex justify-center">
+<div class="text-label-caps font-label-caps text-on-surface-variant bg-slate-100 px-3 py-1 rounded-full">
+                                STATUS CHANGED TO <span class="font-bold">PENDING_EMPLOYEE</span> · 10:45 AM
+                            </div>
+</div>
+<!-- Employee Message (Left) -->
+<div class="flex gap-4 max-w-[85%]">
+<div class="flex-shrink-0 w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-bold text-slate-500 text-xs">JD</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-3 mb-1">
+<span class="font-title-md text-title-md">John Doe</span>
+<span class="text-body-sm text-on-surface-variant">Today at 11:02 AM</span>
+</div>
+<div class="bg-slate-50 border border-slate-200 p-3 rounded-tr-xl rounded-b-xl text-body-md text-on-surface">
+                                    Sure, my public IP is <code class="bg-slate-200 px-1 rounded font-technical-md text-technical-md">82.165.12.44</code>. Let me know if you need anything else.
+                                </div>
+</div>
+</div>
+</div>
+<!-- Input Area -->
+<div class="p-container-padding border-t border-outline-variant bg-slate-50/50">
+<div class="bg-white border border-slate-300 rounded-lg focus-within:border-blue-500 transition-all overflow-hidden shadow-sm">
+<div class="flex items-center gap-2 p-2 bg-slate-50 border-b border-slate-200">
+<button class="p-1 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[18px]">format_bold</span></button>
+<button class="p-1 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[18px]">format_italic</span></button>
+<button class="p-1 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[18px]">link</span></button>
+<div class="h-4 w-px bg-slate-300 mx-1"></div>
+<button class="p-1 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[18px]">attach_file</span></button>
+<button class="p-1 hover:bg-slate-200 rounded"><span class="material-symbols-outlined text-[18px]">image</span></button>
+<div class="ml-auto flex items-center gap-2">
+<span class="text-label-caps font-label-caps text-on-surface-variant">REPLYING AS <span class="text-primary">AGENT ALPHA</span></span>
+</div>
+</div>
+<textarea class="w-full border-none focus:ring-0 text-body-md p-4 min-h-[100px] resize-none" placeholder="Type your response..."></textarea>
+<div class="flex justify-between items-center p-3 border-t border-slate-100 bg-white">
+<div class="flex gap-2">
+<label class="flex items-center gap-2 cursor-pointer text-body-sm text-on-surface-variant">
+<input class="rounded border-slate-300 text-slate-900 focus:ring-0" type="checkbox">
+                                        Internal Note
+                                    </label>
+</div>
+<button class="bg-slate-950 text-white px-6 py-2 rounded font-bold text-body-sm flex items-center gap-2 hover:bg-slate-800 transition-all">
+                                    Send Reply
+                                    <span class="material-symbols-outlined text-[18px]">send</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Pane 3: Side Details / Context (Rightmost) -->
+<section class="w-[280px] bg-slate-50/50 border-l border-outline-variant flex flex-col overflow-y-auto"><div class="p-4 border-b border-outline-variant bg-white">
+<h4 class="text-label-caps font-label-caps text-on-surface-variant mb-4 uppercase">PRIMARY ACTIONS</h4>
+<div class="space-y-3">
+<button class="w-full flex items-center justify-between px-4 py-3 border border-slate-950 rounded hover:bg-slate-50 transition-colors group">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-slate-900">alt_route</span>
+<span class="font-title-md text-title-md text-slate-900">Re-Route Ticket</span>
+</div>
+<span class="material-symbols-outlined text-slate-400 group-hover:text-slate-600">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between px-4 py-3 bg-slate-950 text-white rounded hover:bg-slate-800 transition-colors">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined">check_circle</span>
+<span class="font-title-md text-title-md">Mark Resolved</span>
+</div>
+<span class="material-symbols-outlined text-slate-400">done_all</span>
+</button>
+</div>
+</div>
+<div class="p-4 border-b border-outline-variant">
+<h4 class="text-label-caps font-label-caps text-on-surface-variant mb-4">CUSTOMER INSIGHTS</h4>
+<div class="flex items-center gap-3 mb-4">
+<div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600">JD</div>
+<div>
+<div class="font-title-md text-title-md">John Doe</div>
+<div class="text-body-sm text-on-surface-variant">Software Architect</div>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex justify-between">
+<span class="text-body-sm text-on-surface-variant">Organization</span>
+<span class="text-body-sm font-bold">CloudScale Inc.</span>
+</div>
+<div class="flex justify-between">
+<span class="text-body-sm text-on-surface-variant">Location</span>
+<span class="text-body-sm font-bold">Berlin, DE</span>
+</div>
+</div>
+</div>
+<div class="p-4 border-b border-outline-variant">
+<h4 class="text-label-caps font-label-caps text-on-surface-variant mb-4">TICKET METADATA</h4>
+<div class="space-y-4">
+<div>
+<label class="text-label-caps font-label-caps text-on-surface-variant block mb-1">ASSIGNED AGENT</label>
+<select class="w-full bg-white border border-slate-300 text-body-sm rounded p-1.5 focus:ring-0 focus:border-primary">
+<option>Agent Alpha (Me)</option>
+<option>Agent Beta</option>
+<option>Unassigned</option>
+</select>
+</div>
+<div>
+<label class="text-label-caps font-label-caps text-on-surface-variant block mb-1">DEPARTMENT</label>
+<div class="bg-white border border-slate-200 p-2 rounded text-body-sm">
+                                    Network Infrastructure
+                                </div>
+</div>
+<div>
+<label class="text-label-caps font-label-caps text-on-surface-variant block mb-1">TAGS</label>
+<div class="flex flex-wrap gap-1">
+<span class="text-[10px] font-bold bg-slate-200 px-1.5 py-0.5 rounded uppercase">VPN</span>
+<span class="text-[10px] font-bold bg-slate-200 px-1.5 py-0.5 rounded uppercase">Connectivity</span>
+<span class="text-[10px] font-bold bg-slate-200 px-1.5 py-0.5 rounded uppercase">Berlin</span>
+<button class="text-[10px] font-bold border border-slate-300 px-1.5 py-0.5 rounded hover:bg-slate-100">+ ADD</button>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4">
+<h4 class="text-label-caps font-label-caps text-on-surface-variant mb-4">RECENT ACTIVITY</h4>
+<div class="space-y-4 relative before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-slate-200">
+<div class="pl-6 relative">
+<div class="absolute left-[5px] top-1.5 w-1.5 h-1.5 rounded-full bg-blue-500"></div>
+<div class="text-body-sm font-bold">Ticket opened by John Doe</div>
+<div class="text-body-sm text-on-surface-variant">Today at 10:42 AM</div>
+</div>
+<div class="pl-6 relative">
+<div class="absolute left-[5px] top-1.5 w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+<div class="text-body-sm font-bold">Agent Alpha assigned</div>
+<div class="text-body-sm text-on-surface-variant">Today at 10:43 AM</div>
+</div>
+<div class="pl-6 relative">
+<div class="absolute left-[5px] top-1.5 w-1.5 h-1.5 rounded-full bg-amber-500"></div>
+<div class="text-body-sm font-bold">Status: Pending Employee</div>
+<div class="text-body-sm text-on-surface-variant">Today at 10:45 AM</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+<script>
+        // Simple Micro-interactions
+        document.querySelectorAll('.cursor-pointer').forEach(el => {
+            el.addEventListener('mousedown', () => el.style.opacity = '0.8');
+            el.addEventListener('mouseup', () => el.style.opacity = '1');
+            el.addEventListener('mouseleave', () => el.style.opacity = '1');
+        });
+
+        // Tab Switching Simulation
+        const tabs = document.querySelectorAll('button[class*="text-label-caps"]');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('bg-white', 'border', 'shadow-sm', 'text-on-surface');
+                    t.classList.add('text-on-surface-variant', 'hover:bg-white/50');
+                });
+                tab.classList.add('bg-white', 'border', 'shadow-sm', 'text-on-surface');
+                tab.classList.remove('text-on-surface-variant', 'hover:bg-white/50');
+            });
+        });
+    </script>
+
+
+
+
+
+
+</body></html>

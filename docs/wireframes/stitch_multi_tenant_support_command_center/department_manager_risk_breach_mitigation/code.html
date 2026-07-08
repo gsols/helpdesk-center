@@ -1,0 +1,355 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>OmniSupport - ManagerRiskQueue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+                  "on-tertiary": "#ffffff",
+                  "surface-container-low": "#eff4ff",
+                  "secondary-container": "#e0e3e5",
+                  "tertiary-container": "#271901",
+                  "secondary-fixed-dim": "#c4c7c9",
+                  "on-error": "#ffffff",
+                  "surface-container": "#e5eeff",
+                  "on-surface-variant": "#45464d",
+                  "outline-variant": "#c6c6cd",
+                  "inverse-primary": "#bec6e0",
+                  "secondary-fixed": "#e0e3e5",
+                  "error-container": "#ffdad6",
+                  "on-secondary-container": "#626567",
+                  "tertiary-fixed-dim": "#dec29a",
+                  "on-tertiary-fixed": "#271901",
+                  "inverse-on-surface": "#eaf1ff",
+                  "primary-fixed": "#dae2fd",
+                  "tertiary-fixed": "#fcdeb5",
+                  "primary-fixed-dim": "#bec6e0",
+                  "on-tertiary-container": "#98805d",
+                  "on-primary": "#ffffff",
+                  "secondary": "#5c5f61",
+                  "on-primary-container": "#7c839b",
+                  "on-background": "#0b1c30",
+                  "on-secondary-fixed": "#191c1e",
+                  "error": "#ba1a1a",
+                  "on-secondary-fixed-variant": "#444749",
+                  "surface-container-high": "#dce9ff",
+                  "surface-tint": "#565e74",
+                  "on-secondary": "#ffffff",
+                  "primary-container": "#131b2e",
+                  "on-error-container": "#93000a",
+                  "on-primary-fixed": "#131b2e",
+                  "outline": "#76777d",
+                  "surface": "#f8f9ff",
+                  "inverse-surface": "#213145",
+                  "surface-bright": "#f8f9ff",
+                  "on-primary-fixed-variant": "#3f465c",
+                  "background": "#f8f9ff",
+                  "tertiary": "#000000",
+                  "surface-container-lowest": "#ffffff",
+                  "on-surface": "#0b1c30",
+                  "on-tertiary-fixed-variant": "#574425",
+                  "surface-dim": "#cbdbf5",
+                  "surface-variant": "#d3e4fe",
+                  "surface-container-highest": "#d3e4fe",
+                  "primary": "#000000"
+          },
+          "borderRadius": {
+                  "DEFAULT": "0px",
+                  "lg": "0px",
+                  "xl": "0px",
+                  "full": "0.75rem",
+                  "md": "0.25rem",
+                  "rounded": "0.125rem"
+          },
+          "spacing": {
+                  "gutter": "16px",
+                  "shell-header-height": "48px",
+                  "shell-nav-width": "64px",
+                  "stack-md": "8px",
+                  "sidebar-width": "260px",
+                  "stack-sm": "4px",
+                  "container-padding": "24px"
+          },
+          "fontFamily": {
+                  "body-md": ["Hanken Grotesk"],
+                  "title-md": ["Hanken Grotesk"],
+                  "technical-md": ["JetBrains Mono"],
+                  "label-caps": ["Hanken Grotesk"],
+                  "headline-sm": ["Hanken Grotesk"],
+                  "body-sm": ["Hanken Grotesk"],
+                  "display-sm": ["Hanken Grotesk"]
+          },
+          "fontSize": {
+                  "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                  "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                  "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                  "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                  "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                  "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                  "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .breached-flash {
+      animation: pulse-danger 1.5s infinite;
+    }
+    @keyframes pulse-danger {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .sla-progress-amber {
+      background: linear-gradient(90deg, #f59e0b 90%, #e2e8f0 90%);
+    }
+  </style>
+</head>
+<body class="bg-white font-body-md text-on-surface">
+<!-- Side Navigation Rail -->
+<aside class="fixed left-0 top-0 h-full w-[64px] bg-primary-container flex flex-col items-center py-4 border-r border-outline-variant z-50">
+<div class="mb-8">
+<span class="material-symbols-outlined text-white text-[24px]">confirmation_number</span>
+</div>
+<nav class="flex flex-col gap-6 flex-1">
+<div class="cursor-pointer group flex flex-col items-center">
+<span class="material-symbols-outlined text-on-primary-container/70 group-hover:text-white transition-colors">dashboard</span>
+</div>
+<div class="cursor-pointer border-l-4 border-primary bg-surface-variant/10 w-full py-2 flex flex-col items-center">
+<span class="material-symbols-outlined text-on-primary-fixed">confirmation_number</span>
+</div>
+<div class="cursor-pointer group flex flex-col items-center">
+<span class="material-symbols-outlined text-on-primary-container/70 group-hover:text-white transition-colors">group</span>
+</div>
+<div class="cursor-pointer group flex flex-col items-center">
+<span class="material-symbols-outlined text-on-primary-container/70 group-hover:text-white transition-colors">book</span>
+</div>
+<div class="cursor-pointer group flex flex-col items-center">
+<span class="material-symbols-outlined text-on-primary-container/70 group-hover:text-white transition-colors">analytics</span>
+</div>
+</nav>
+<div class="mt-auto flex flex-col gap-6 pb-4">
+<span class="material-symbols-outlined text-on-primary-container/70 cursor-pointer">settings</span>
+<span class="material-symbols-outlined text-on-primary-container/70 cursor-pointer">help</span>
+</div>
+</aside>
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 right-0 w-[calc(100%-64px)] h-shell-header-height bg-white border-b border-outline-variant flex justify-between items-center px-gutter z-40">
+<div class="flex items-center gap-8">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">OmniSupport</span>
+<nav class="flex gap-6 items-center">
+<a class="text-on-surface-variant font-body-md text-body-md hover:text-primary transition-all" href="#">My Work</a>
+<a class="text-on-surface-variant font-body-md text-body-md hover:text-primary transition-all" href="#">Unassigned</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1 font-title-md text-title-md" href="#">Risk Queue</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="relative group">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-error rounded-full"></span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">history</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer">apps</span>
+<div class="w-8 h-8 rounded-full bg-slate-200 overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a department manager, focused and calm, in a modern bright office environment with soft lighting and neutral professional tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4-EvQoRAznb-jghqm1rkNI4dwm1Y_xY50xmSzCKzEO79jlx58KwvN-wFyXtBGV4l2E54C8btIsO2F_R6hy0RY65J1aJA1InBJanAJUvu3wTJXI-X3RkEpD_TQTKnWYYlA_5hFs4OeMBMoWBVwHXwocy0ZDTnDhqYA7n7qug5DBbz2LJhHttxT-yh87zZi_T8x80XV1aGqpR0IUWmwjc6hfCnLpWyPecv11QJDIpzrrxqsxhCVG9Mv">
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[64px] pt-shell-header-height min-h-screen">
+<!-- Critical System Warning Banner -->
+<section class="bg-[#FFFBEB] border-b border-amber-200 px-container-padding py-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-error font-bold">warning</span>
+<p class="font-title-md text-title-md text-error">
+          CRITICAL SYSTEM MONITOR: Displaying active department tickets within 1 hour of breach threshold or currently in violation.
+        </p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</section>
+<!-- Sort and Metrics Bar -->
+<section class="bg-slate-100 px-container-padding py-2 flex items-center justify-between border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Sorted chronologically by:</span>
+<span class="font-title-md text-title-md text-on-surface">Due Date (Ascending)</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 px-3 py-1 bg-white border border-outline-variant rounded-md shadow-sm">
+<span class="w-2 h-2 bg-error rounded-full"></span>
+<span class="font-title-md text-title-md font-bold text-on-surface">4 Urgent High Risk Targets</span>
+</div>
+<button class="flex items-center gap-1 font-body-sm text-body-sm text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-[16px]">filter_list</span>
+          Filters
+        </button>
+</div>
+</section>
+<!-- High Density Risk Matrix -->
+<section class="bg-white">
+<!-- Headers -->
+<div class="grid grid-cols-[120px_140px_180px_1fr_200px] gap-gutter px-container-padding py-3 bg-slate-50 border-b border-outline-variant sticky top-shell-header-height z-30">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Ticket ID</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Priority Tier</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Assigned Agent</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest">Re-routing Deadline</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest text-right">Escalation Target</span>
+</div>
+<!-- Rows -->
+<div class="divide-y divide-slate-200">
+<!-- Row 1 (Near Breach) -->
+<div class="grid grid-cols-[120px_140px_180px_1fr_200px] gap-gutter px-container-padding py-4 items-center hover:bg-slate-50 transition-colors">
+<div class="font-technical-md text-technical-md text-blue-600 font-bold select-all">TCK-1045</div>
+<div>
+<span class="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-md font-label-caps text-label-caps">HIGH</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young male support agent in a professional setting, neutral lighting, corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCiprdNF0fHa6huW-ZLTkEghE9TxQ8MRoJ2p9XON06HZXsNdXUzqCWMOtuJ6Ip384Sijs7_e8F7Umc4lSTi6J3pHLgQvZRxR4sqV7Vi2tRwsWw6KpFsFN55PF5AxaULbUhH9W5W9tsfFNJNdjQtu87rEumYQlRxDSqbu-7W8IPQ5LCfMmH-kzZgZDJroDwD52Xy1uZaWnHdmfhoHWAsgK6gUDqn3e4FyYH5IFtLD259BPHnFI4bDScv">
+</div>
+<span class="font-body-md text-body-md">Daniel Park</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center">
+<span class="font-title-md text-title-md text-amber-600 font-bold">14 minutes remaining</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">90% ELAPSED</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-500 w-[90%]"></div>
+</div>
+</div>
+<div class="text-right">
+<button class="px-3 py-1.5 bg-slate-900 text-white rounded-md font-title-md text-title-md hover:bg-black active:opacity-80 transition-all">
+              Escalate &amp; Reassign
+            </button>
+</div>
+</div>
+<!-- Row 2 (Breached) -->
+<div class="grid grid-cols-[120px_140px_180px_1fr_200px] gap-gutter px-container-padding py-4 items-center hover:bg-red-50 transition-colors bg-red-50/20">
+<div class="font-technical-md text-technical-md text-blue-600 font-bold">TCK-1022</div>
+<div>
+<span class="px-2 py-0.5 bg-red-600 text-white font-label-caps text-label-caps rounded-md">CRITICAL</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-300 flex items-center justify-center">
+<span class="material-symbols-outlined text-[14px]">person_off</span>
+</div>
+<span class="font-body-md text-body-md italic text-on-surface-variant">Unassigned</span>
+</div>
+<div class="bg-red-600 text-white px-3 py-2 flex items-center justify-between breached-flash">
+<span class="font-title-md text-title-md font-bold uppercase tracking-tight">EXPIRED / BREACHED BY 2h 15m</span>
+<span class="material-symbols-outlined">timer_off</span>
+</div>
+<div class="text-right">
+<button class="px-3 py-1.5 bg-slate-900 text-white rounded-md font-title-md text-title-md hover:bg-black active:opacity-80 transition-all">
+              Escalate &amp; Reassign
+            </button>
+</div>
+</div>
+<!-- Row 3 (Near Breach - Multi-agent context) -->
+<div class="grid grid-cols-[120px_140px_180px_1fr_200px] gap-gutter px-container-padding py-4 items-center hover:bg-slate-50 transition-colors">
+<div class="font-technical-md text-technical-md text-blue-600 font-bold">TCK-1089</div>
+<div>
+<span class="px-2 py-0.5 bg-red-50 text-red-700 border border-red-200 rounded-md font-label-caps text-label-caps">HIGH</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Headshot of an experienced female customer service lead, clean modern background, high key lighting, professional." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbg7N9c55LbOEEZL7l6xNhV2jxzwmR0Kstlb9AdXDar-L3qHcQ28ih6tY5ChIKc-FxR4FG3bdYFdKBXFVWzhKcgoBdGYZJXx_3reUTJGkORJsZftbMMk2LqtP6Vzo1fmB9KeBqnq0WL82ymeF4PkZcM9eJTIrFxACDEzcK3vvHRUIqkLYKJaOZkNn53x7vaSb8i3XIgtqVU_hUGPUeauKA5QP1sCWzI7_lW_V15utEbF-N7i8-ZZwB">
+</div>
+<span class="font-body-md text-body-md">Sarah Jenkins</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center">
+<span class="font-title-md text-title-md text-amber-600 font-bold">38 minutes remaining</span>
+<span class="font-label-caps text-label-caps text-on-surface-variant">75% ELAPSED</span>
+</div>
+<div class="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-amber-400 w-[75%]"></div>
+</div>
+</div>
+<div class="text-right">
+<button class="px-3 py-1.5 bg-slate-900 text-white rounded-md font-title-md text-title-md hover:bg-black transition-all">
+              Escalate &amp; Reassign
+            </button>
+</div>
+</div>
+<!-- Row 4 (Breached - Tier 1) -->
+<div class="grid grid-cols-[120px_140px_180px_1fr_200px] gap-gutter px-container-padding py-4 items-center hover:bg-red-50 transition-colors bg-red-50/20">
+<div class="font-technical-md text-technical-md text-blue-600 font-bold">TCK-0912</div>
+<div>
+<span class="px-2 py-0.5 bg-red-600 text-white font-label-caps text-label-caps rounded-md">CRITICAL</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-slate-200 overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Middle-aged male support engineer, corporate headshot, systematic and focused expression, bright studio lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD0JzaVOEBOyd94WH5rZtwyfjKD0xm6M6hmepNNFv4yJhcGZ1yWEDNBAtmNvm11oY4w2Z33IPbeKxLry140GwhhvFHgtgWioyiLyFkvISHb6LFXVEOxkIOg6bFQ1r-Gg574SXVfaW5ctK1dCNxEBKIBrbVV-dSLtoqJZc_QRK_9fYDDI9rt4ua0vK-dxoRwklMPw0VXaP9q0OKPP0e4aN1-HeQbBHyZIOX7Z6tgHRwu51diI4hf08PY">
+</div>
+<span class="font-body-md text-body-md">Marcus Thorne</span>
+</div>
+<div class="bg-red-600 text-white px-3 py-2 flex items-center justify-between breached-flash">
+<span class="font-title-md text-title-md font-bold uppercase tracking-tight">EXPIRED / BREACHED BY 14m</span>
+<span class="material-symbols-outlined">timer_off</span>
+</div>
+<div class="text-right">
+<button class="px-3 py-1.5 bg-slate-900 text-white rounded-md font-title-md text-title-md hover:bg-black transition-all">
+              Escalate &amp; Reassign
+            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Bottom Actions / Pagination -->
+<footer class="p-container-padding flex justify-between items-center border-t border-outline-variant bg-white mt-12">
+<div class="flex gap-4">
+<button class="px-4 py-2 bg-white border border-slate-200 rounded-md font-title-md text-title-md hover:bg-slate-50 transition-colors">
+          Download Risk Report
+        </button>
+<button class="px-4 py-2 bg-white border border-slate-200 rounded-md font-title-md text-title-md hover:bg-slate-50 transition-colors">
+          Bulk Reassign
+        </button>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<span class="font-body-sm text-body-sm px-4 text-on-surface-variant">Page 1 of 1</span>
+<button class="p-2 border border-slate-200 rounded-md hover:bg-slate-50 disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</footer>
+</main>
+<script>
+    // Micro-interactions for button active states
+    document.querySelectorAll('button').forEach(button => {
+      button.addEventListener('mousedown', () => {
+        button.style.transform = 'scale(0.98)';
+      });
+      button.addEventListener('mouseup', () => {
+        button.style.transform = 'scale(1)';
+      });
+      button.addEventListener('mouseleave', () => {
+        button.style.transform = 'scale(1)';
+      });
+    });
+
+    // Simple poll simulation for data freshness
+    setInterval(() => {
+      console.log('Refreshing Risk Queue data...');
+      // In a real app, this would fetch new SLA statuses
+    }, 15000);
+  </script>
+</body></html>
