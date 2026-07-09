@@ -151,14 +151,7 @@ function IntegrationsPanel() {
           using an Incoming Webhook URL.
         </p>
         <Field label="Incoming Webhook URL">
-          <input
-            type="url"
-            value={slackUrl}
-            onChange={e => setSlackUrl(e.target.value)}
-            className={inputCls}
-            placeholder="https://hooks.slack.com/"
-            style={{ borderRadius: 0 }}
-          />
+      
         </Field>
       </div>
 
