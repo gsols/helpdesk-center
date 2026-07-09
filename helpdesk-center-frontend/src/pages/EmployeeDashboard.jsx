@@ -1,49 +1,39 @@
 /**
  * EmployeeDashboard — "my_tickets" + "my_tickets_ai_triage_breakdown" wireframes
  *
- * Layout (matches wireframe exactly):
- *  • 260px labeled sidebar (Support Engine ALPHA header, Main Menu nav items, user profile at bottom)
- *  • Top bar: OmniSupport breadcrumb + tenant + clock + bell
- *  • Main content: "The Ticket Dropper Form" + "The Employee Personal Grid"
- *
- * Form layout:
- *  • Left col (fluid): REQUEST TITLE input + MARKDOWN DESCRIPTION textarea
- *  • Center col (fluid): DEPARTMENT select + ATTACHMENT DROPZONE
- *  • Right col (220px): AI CONFIDENCE BREAKDOWN panel
- *  • Top-right: Save Draft + Submit Ticket buttons
+ * Form layout (revised):
+ *  • Left col (3/4): REQUEST TITLE + MARKDOWN DESCRIPTION
+ *  • Right col (1/4): ATTACHMENT DROPZONE + AI CONFIDENCE BREAKDOWN
+ *  • Department selector removed — routing determined by watsonx.ai NLU
  */
 import { useState } from 'react';
 import AppShell from '../components/AppShell';
 import { useTickets, useCreateTicket } from '../hooks/useTickets';
 import { useAuth }                     from '../context/AuthContext';
 import StatusBadge                     from '../components/StatusBadge';
+import { useNavigate }                 from 'react-router-dom';
 import {
   Bold, Italic, List, Code, UploadCloud,
   Filter, RefreshCw, ExternalLink, ChevronLeft, ChevronRight,
   Cpu,
 } from 'lucide-react';
 
-const DEPARTMENTS = [
-  'Technical Support', 'Security', 'Internal IT', 'Network',
-  'Engineering', 'Finance & Payroll', 'HR',
-];
-
 const AI_BREAKDOWN = [
-  { label: 'Technical Support',    pct: 88, color: '#3b82f6' },
-  { label: 'Security',             pct: 7,  color: '#64748b' },
-  { label: 'IT Infrastructure',    pct: 5,  color: '#94a3b8' },
+  { label: 'Technical Support', pct: 88, color: '#3b82f6', primary: true  },
+  { label: 'Security',          pct: 7,  color: '#64748b', primary: false },
+  { label: 'IT Infrastructure', pct: 5,  color: '#94a3b8', primary: false },
 ];
 
 const PAGE_SIZE = 10;
 
 export default function EmployeeDashboard() {
-  const { user } = useAuth();
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
   const { data: tickets = [] }   = useTickets();
   const { mutateAsync: createTicket, isPending: isCreating } = useCreateTicket();
 
   const [title,      setTitle]      = useState('');
   const [desc,       setDesc]       = useState('');
-  const [dept,       setDept]       = useState(DEPARTMENTS[0]);
   const [submitDone, setSubmitDone] = useState(false);
   const [page,       setPage]       = useState(1);
 
@@ -58,7 +48,7 @@ export default function EmployeeDashboard() {
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      await createTicket({ title, description: desc, departmentName: dept });
+      await createTicket({ title, description: desc });
       setTitle(''); setDesc(''); setSubmitDone(true);
       setTimeout(() => setSubmitDone(false), 3000);
     } catch { /* API error — ignored */ }
@@ -110,12 +100,13 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* Form grid — 3 columns */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 220px', gap: 20 }}>
+        {/* Form grid — 2 columns: left 3fr, right 1fr */}
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 24 }}>
+
           {/* Left: Title + Markdown Description */}
-          <div style={{ gridColumn: '1' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Request Title */}
-            <div style={{ marginBottom: 16 }}>
+            <div>
               <label style={labelStyle}>Request Title</label>
               <input
                 type="text"
@@ -129,93 +120,84 @@ export default function EmployeeDashboard() {
             {/* Markdown Description */}
             <div>
               <label style={labelStyle}>Markdown Description</label>
-              {/* Toolbar */}
               <div style={{
-                display: 'flex', gap: 2, padding: '6px 8px',
-                border: '1px solid #e2e8f0', borderBottom: 'none', borderRadius: '6px 6px 0 0',
-                background: '#f8fafc',
+                border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden',
               }}>
-                {[Bold, Italic, List, Code].map((Icon, i) => (
-                  <button key={i} type="button" style={{
-                    background: 'transparent', border: 'none', color: '#64748b',
-                    cursor: 'pointer', padding: '3px 6px', borderRadius: 4,
-                  }}>
-                    <Icon size={14} />
-                  </button>
-                ))}
+                {/* Toolbar */}
+                <div style={{
+                  display: 'flex', gap: 2, padding: '6px 10px',
+                  background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+                }}>
+                  {[Bold, Italic, List, Code].map((Icon, i) => (
+                    <button key={i} type="button" style={{
+                      background: 'transparent', border: 'none', color: '#64748b',
+                      cursor: 'pointer', padding: '3px 6px', borderRadius: 4,
+                    }}>
+                      <Icon size={14} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Describe the issue... Use markdown for formatting."
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  rows={7}
+                  style={{
+                    width: '100%', padding: '10px 12px',
+                    border: 'none', outline: 'none',
+                    fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+                    color: '#0f172a', resize: 'vertical',
+                    background: '#ffffff', boxSizing: 'border-box',
+                    lineHeight: 1.6,
+                  }}
+                />
               </div>
-              <textarea
-                placeholder="Describe the issue... Use markdown for formatting."
-                value={desc}
-                onChange={(e) => setDesc(e.target.value)}
-                rows={8}
-                style={{
-                  width: '100%', padding: '10px 12px',
-                  border: '1px solid #e2e8f0', borderRadius: '0 0 6px 6px',
-                  fontSize: 14, fontFamily: "'JetBrains Mono', monospace",
-                  color: '#0f172a', resize: 'vertical', outline: 'none',
-                  background: '#ffffff', boxSizing: 'border-box',
-                  lineHeight: 1.6,
-                }}
-              />
             </div>
           </div>
 
-          {/* Center: Department + Dropzone */}
-          <div style={{ gridColumn: '2' }}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelStyle}>Department</label>
-              <div style={{ position: 'relative' }}>
-                <select
-                  value={dept}
-                  onChange={(e) => setDept(e.target.value)}
-                  style={{ ...inputStyle, appearance: 'none', paddingRight: 32 }}
-                >
-                  {DEPARTMENTS.map(d => <option key={d}>{d}</option>)}
-                </select>
-                <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#94a3b8' }}>▾</span>
-              </div>
-            </div>
-
+          {/* Right: Attachment Dropzone + AI Confidence Breakdown */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {/* Attachment Dropzone */}
             <div>
               <label style={labelStyle}>Attachment Dropzone</label>
-              <div
-                style={{
-                  border: '1.5px dashed #cbd5e1', borderRadius: 6,
-                  minHeight: 160, display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 6,
-                  background: '#f8fafc', cursor: 'pointer', padding: 16,
-                }}
-              >
+              <div style={{
+                border: '1.5px dashed #cbd5e1', borderRadius: 8,
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center', justifyContent: 'center', gap: 4,
+                background: '#f8fafc', cursor: 'pointer', padding: '28px 16px',
+                textAlign: 'center',
+              }}>
                 <UploadCloud size={28} color="#94a3b8" />
-                <span style={{ fontSize: 13, color: '#64748b' }}>Drag files here or</span>
-                <span style={{ fontSize: 13, color: '#3b82f6', fontWeight: 600, cursor: 'pointer' }}>browse</span>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>MAX 25MB (PNG, JPG, PDF, ZIP)</span>
+                <span style={{ fontSize: 13, color: '#64748b' }}>
+                  Drag files here or{' '}
+                  <span style={{ color: '#3b82f6', fontWeight: 600 }}>browse</span>
+                </span>
+                <span style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.04em' }}>
+                  MAX 25MB (PNG, JPG, PDF, ZIP)
+                </span>
               </div>
             </div>
-          </div>
 
-          {/* Right: AI Confidence Breakdown */}
-          <div style={{ gridColumn: '3' }}>
-            <label style={labelStyle}>AI Confidence Breakdown</label>
-            <div style={{
-              background: '#f8fafc', border: '1px solid #e2e8f0',
-              borderRadius: 6, padding: '12px 14px',
-            }}>
-              {AI_BREAKDOWN.map(({ label, pct, color }) => (
-                <div key={label} style={{ marginBottom: 12 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: '#374151', fontWeight: 500 }}>{label}</span>
-                    <span style={{ fontSize: 13, fontWeight: 700, color }}>{pct}%</span>
+            {/* AI Confidence Breakdown */}
+            <div>
+              <label style={labelStyle}>AI Confidence Breakdown</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                {AI_BREAKDOWN.map(({ label, pct, color, primary }) => (
+                  <div key={label} style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '5px 10px',
+                    background: primary ? '#f8fafc' : 'rgba(248,250,252,0.5)',
+                    border: primary ? '1px solid #e2e8f0' : '1px solid #f1f5f9',
+                    borderRadius: 4,
+                  }}>
+                    <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: primary ? '#0f172a' : '#64748b' }}>
+                      {label}
+                    </span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: primary ? color : '#94a3b8' }}>
+                      {pct}%
+                    </span>
                   </div>
-                  <div style={{ height: 4, background: '#e2e8f0', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: 2 }} />
-                  </div>
-                </div>
-              ))}
-              <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
-                Classified by watsonx.ai
+                ))}
               </div>
             </div>
           </div>
