@@ -10,6 +10,7 @@ import {
   getTriageQueue,
   assignToMe,
   rerouteTicket,
+  previewTicket,
 } from '../api/ticketsApi';
 
 export function useTickets() {
@@ -90,5 +91,11 @@ export function useRerouteTicket() {
   return useMutation({
     mutationFn: ({ id, targetDepartmentId }) => rerouteTicket(id, targetDepartmentId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['tickets'] }),
+  });
+}
+
+export function usePreviewTicket() {
+  return useMutation({
+    mutationFn: (data) => previewTicket(data).then(r => r.data),
   });
 }

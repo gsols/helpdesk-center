@@ -1,5 +1,7 @@
 package com.helpdeskcenter.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.helpdeskcenter.enums.Priority;
 import com.helpdeskcenter.enums.TicketStatus;
 import jakarta.persistence.CascadeType;
@@ -31,6 +33,7 @@ import lombok.NoArgsConstructor;
     @Index(name = "idx_tickets_assignee", columnList = "assignee_id"),
     @Index(name = "idx_tickets_status", columnList = "status")
 })
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 public class Ticket {
@@ -61,6 +64,7 @@ public class Ticket {
     @JoinColumn(name = "parent_id")
     private Ticket parent;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Ticket> children = new ArrayList<>();
 
@@ -69,8 +73,7 @@ public class Ticket {
     @Column(nullable = false)
     private String title;
 
-    @NotBlank
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @NotNull

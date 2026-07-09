@@ -1,5 +1,7 @@
 package com.helpdeskcenter.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.helpdeskcenter.enums.UserRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,6 +24,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 public class User {
@@ -49,6 +52,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
+    @JsonIgnore
     @NotBlank
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;

@@ -1,63 +1,388 @@
 /**
  * EmployeeDashboard — "my_tickets" + "my_tickets_ai_triage_breakdown" wireframes
  *
- * Form layout (revised):
- *  • Left col (3/4): REQUEST TITLE + MARKDOWN DESCRIPTION
- *  • Right col (1/4): ATTACHMENT DROPZONE + AI CONFIDENCE BREAKDOWN
+ * Form layout:
+ *  • Left col (3fr): REQUEST TITLE + MARKDOWN DESCRIPTION
+ *  • Right col (1fr): ATTACHMENT DROPZONE (functional) + AI CONFIDENCE BREAKDOWN (live)
  *  • Department selector removed — routing determined by watsonx.ai NLU
+ *
+ * Submit flow:
+ *  1. POST /api/tickets  → returns ticket with id
+ *  2. POST /api/tickets/{id}/attachments (multipart) for each queued file
+ *  3. Invalidate tickets query → grid refreshes automatically
  */
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AppShell from '../components/AppShell';
-import { useTickets, useCreateTicket } from '../hooks/useTickets';
-import { useAuth }                     from '../context/AuthContext';
-import StatusBadge                     from '../components/StatusBadge';
-import { useNavigate }                 from 'react-router-dom';
+import { useTickets, useCreateTicket, usePreviewTicket } from '../hooks/useTickets';
+import { useUploadAttachment }  from '../hooks/useAttachments';
+import { useAuth }              from '../context/AuthContext';
+import StatusBadge              from '../components/StatusBadge';
+import { useNavigate }          from 'react-router-dom';
 import {
   Bold, Italic, List, Code, UploadCloud,
   Filter, RefreshCw, ExternalLink, ChevronLeft, ChevronRight,
-  Cpu,
+  Cpu, X, FileText, Image, FileArchive,
 } from 'lucide-react';
 
-const AI_BREAKDOWN = [
-  { label: 'Technical Support', pct: 88, color: '#3b82f6', primary: true  },
-  { label: 'Security',          pct: 7,  color: '#64748b', primary: false },
-  { label: 'IT Infrastructure', pct: 5,  color: '#94a3b8', primary: false },
-];
+// Maps Watson category keys → display department names (must match DataSeeder exactly)
+const CATEGORY_DISPLAY = {
+  hardware: 'IT Hardware',
+  software: 'IT Software',
+  hr:       'HR',
+};
+
+// Allowed MIME types (must match backend FileStorageUtil)
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain'];
+const MAX_BYTES     = 10 * 1024 * 1024; // 10 MB
 
 const PAGE_SIZE = 10;
 
+/* ── File type icon ─────────────────────────────────────────────────────────── */
+function FileIcon({ type }) {
+  if (type?.startsWith('image/')) return <Image size={14} color="#3b82f6" />;
+  if (type === 'application/pdf') return <FileText size={14} color="#dc2626" />;
+  return <FileArchive size={14} color="#64748b" />;
+}
+
+/* ── Attachment Dropzone ────────────────────────────────────────────────────── */
+function AttachmentDropzone({ files, onAdd, onRemove }) {
+  const inputRef  = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [errors,   setErrors]   = useState([]);
+
+  const validate = (fileList) => {
+    const valid = [];
+    const errs  = [];
+    Array.from(fileList).forEach(f => {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errs.push(`${f.name}: unsupported type (PNG, JPG, GIF, PDF, TXT only)`);
+      } else if (f.size > MAX_BYTES) {
+        errs.push(`${f.name}: exceeds 10 MB limit`);
+      } else {
+        valid.push(f);
+      }
+    });
+    if (errs.length) setErrors(errs);
+    else setErrors([]);
+    if (valid.length) onAdd(valid);
+  };
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    validate(e.dataTransfer.files);
+  }, []);
+
+  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const onDragLeave = () => setDragging(false);
+
+  return (
+    <div>
+      {/* Drop area */}
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        style={{
+          border: `1.5px dashed ${dragging ? '#3b82f6' : '#cbd5e1'}`,
+          borderRadius: 8,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 4,
+          background: dragging ? '#eff6ff' : '#f8fafc',
+          cursor: 'pointer', padding: '20px 16px',
+          textAlign: 'center',
+          transition: 'border-color 150ms, background 150ms',
+        }}
+      >
+        <UploadCloud size={24} color={dragging ? '#3b82f6' : '#94a3b8'} />
+        <span style={{ fontSize: 12, color: '#64748b' }}>
+          Drag files here or{' '}
+          <span style={{ color: '#3b82f6', fontWeight: 600 }}>browse</span>
+        </span>
+        <span style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.04em' }}>
+          PNG, JPG, GIF, PDF, TXT · max 10 MB
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={ALLOWED_TYPES.join(',')}
+          style={{ display: 'none' }}
+          onChange={(e) => { validate(e.target.files); e.target.value = ''; }}
+        />
+      </div>
+
+      {/* Validation errors */}
+      {errors.map((err, i) => (
+        <div key={i} style={{ marginTop: 4, fontSize: 11, color: '#dc2626' }}>{err}</div>
+      ))}
+
+      {/* Queued file list */}
+      {files.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {files.map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 8px',
+              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
+            }}>
+              <FileIcon type={f.type} />
+              <span style={{ fontSize: 11, color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {f.name}
+              </span>
+              <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
+                {(f.size / 1024).toFixed(0)} KB
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2, display: 'flex', alignItems: 'center' }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Watson keyword chips ───────────────────────────────────────────────────── */
+function KeywordChips({ keywords, source }) {
+  if (!keywords?.length) {
+    // Fallback source — show a single badge instead of chips
+    if (source === 'fallback') {
+      return (
+        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            padding: '1px 6px', borderRadius: 3,
+            background: '#f1f5f9', border: '1px solid #e2e8f0',
+            fontSize: 9, fontWeight: 700, color: '#94a3b8',
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            fallback · no watson keywords
+          </span>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+      {source === 'fallback' && (
+        <span style={{
+          padding: '1px 5px', borderRadius: 3,
+          background: '#f1f5f9', border: '1px solid #e2e8f0',
+          fontSize: 9, fontWeight: 700, color: '#94a3b8',
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          fallback
+        </span>
+      )}
+      {keywords.map((kw, i) => {
+        const matched = !!kw.matchedCategory;
+        return (
+          <span
+            key={i}
+            title={matched ? `matched: ${kw.matchedCategory} · ${kw.relevance}%` : `relevance: ${kw.relevance}%`}
+            style={{
+              padding: '1px 6px', borderRadius: 3,
+              background: matched ? '#eff6ff' : '#f8fafc',
+              border:     matched ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+              fontSize: 10,
+              fontWeight: matched ? 700 : 400,
+              color:      matched ? '#1d4ed8' : '#64748b',
+              fontFamily: "'JetBrains Mono', monospace",
+              cursor: 'default',
+            }}
+          >
+            {kw.text}
+            <span style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>{kw.relevance}%</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── AI Confidence Breakdown Panel ─────────────────────────────────────────── */
+function AiBreakdownPanel({ previewData, isLoading, hasInput }) {
+  if (!hasInput) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 8,
+        padding: '20px 12px',
+        border: '1px solid #f1f5f9', borderRadius: 6,
+        background: 'rgba(248,250,252,0.5)',
+        textAlign: 'center',
+        minHeight: 80,
+      }}>
+        <Cpu size={18} color="#cbd5e1" />
+        <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: '18px', fontStyle: 'italic' }}>
+          Describe your issue and our AI will classify it for you.
+        </span>
+      </div>
+    );
+  }
+
+  if (isLoading || !previewData) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '10px 12px',
+        border: '1px solid #f1f5f9', borderRadius: 6,
+        background: 'rgba(248,250,252,0.5)',
+        minHeight: 40,
+      }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: '#3b82f6', display: 'inline-block',
+          animation: 'pulse 1.4s ease-in-out infinite',
+        }} />
+        <span style={{ fontSize: 11, color: '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>
+          Analysing…
+        </span>
+      </div>
+    );
+  }
+
+  const { category, confidence, allowed, watsonKeywords = [], source } = previewData;
+
+  if (!allowed || !category) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '5px 10px',
+          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 4,
+        }}>
+          <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#92400e' }}>
+            Routing to triage (low confidence)
+          </span>
+          {confidence > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706' }}>
+              {Math.round(confidence)}%
+            </span>
+          )}
+        </div>
+        <KeywordChips keywords={watsonKeywords} source={source} />
+      </div>
+    );
+  }
+
+  const displayName = CATEGORY_DISPLAY[category] ?? category;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 10px',
+        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
+      }}>
+        <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#0f172a' }}>
+          {displayName}
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6' }}>
+          {Math.round(confidence)}%
+        </span>
+      </div>
+      <KeywordChips keywords={watsonKeywords} source={source} />
+    </div>
+  );
+}
+
+/* ── EmployeeDashboard ──────────────────────────────────────────────────────── */
 export default function EmployeeDashboard() {
   const { user }   = useAuth();
   const navigate   = useNavigate();
-  const { data: tickets = [] }   = useTickets();
+  const { data: tickets = [], refetch } = useTickets();
   const { mutateAsync: createTicket, isPending: isCreating } = useCreateTicket();
+  const uploadAttachment = useUploadAttachment();
+  const previewMutation  = usePreviewTicket();
 
   const [title,      setTitle]      = useState('');
   const [desc,       setDesc]       = useState('');
+  const [files,      setFiles]      = useState([]);   // queued File objects
   const [submitDone, setSubmitDone] = useState(false);
+  const [uploadErr,  setUploadErr]  = useState(null);
   const [page,       setPage]       = useState(1);
 
+  // Derived flag — true when either field has content
+  const hasInput = title.trim().length > 0 || desc.trim().length > 0;
+
+  // 500ms debounced AI preview call
+  useEffect(() => {
+    if (!hasInput) {
+      previewMutation.reset();
+      return;
+    }
+    const timer = setTimeout(() => {
+      previewMutation.mutate({ title, description: desc });
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, desc]);
+
+  // Filter to this user's tickets using the nested creator object
   const myTickets = tickets
-    .filter(t => !user?.id || t.reporterId === user.id || t.createdById === user.id)
+    .filter(t => t.creator?.id === user?.id)
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const totalPages = Math.max(1, Math.ceil(myTickets.length / PAGE_SIZE));
   const pageItems  = myTickets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const handleAddFiles = (newFiles) => {
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleRemoveFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
+    setUploadErr(null);
     try {
-      await createTicket({ title, description: desc });
-      setTitle(''); setDesc(''); setSubmitDone(true);
+      // Step 1: create the ticket
+      const res    = await createTicket({ title, description: desc });
+      const ticket = res.data;
+      const ticketId = ticket.id;
+
+      // Step 2: upload each queued file sequentially
+      for (const file of files) {
+        try {
+          await uploadAttachment.mutateAsync({ ticketId, file });
+        } catch {
+          setUploadErr(`Failed to upload "${file.name}" — ticket was saved, try re-attaching later.`);
+        }
+      }
+
+      // Step 3: reset form
+      setTitle('');
+      setDesc('');
+      setFiles([]);
+      previewMutation.reset();
+      setSubmitDone(true);
       setTimeout(() => setSubmitDone(false), 3000);
-    } catch { /* API error — ignored */ }
+
+      // Grid refreshes automatically via useCreateTicket onSuccess invalidation
+    } catch {
+      setUploadErr('Failed to submit ticket. Please try again.');
+    }
   };
 
   const fmtDate = (d) => {
     if (!d) return '—';
     return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
+
+  const isSubmitting = isCreating || uploadAttachment.isPending;
 
   return (
     <AppShell title="Dashboard">
@@ -85,20 +410,47 @@ export default function EmployeeDashboard() {
           </div>
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button style={btnSecondary}>Save Draft</button>
+            <button
+              type="button"
+              onClick={() => { setTitle(''); setDesc(''); setFiles([]); previewMutation.reset(); }}
+              style={btnSecondary}
+            >
+              Clear
+            </button>
             <button
               onClick={handleSubmit}
-              disabled={isCreating}
+              disabled={isSubmitting || !title.trim()}
               style={{
                 ...btnPrimary,
-                background: isCreating ? '#374151' : '#0f172a',
-                cursor: isCreating ? 'not-allowed' : 'pointer',
+                background: isSubmitting ? '#374151' : '#0f172a',
+                cursor: (isSubmitting || !title.trim()) ? 'not-allowed' : 'pointer',
+                opacity: !title.trim() ? 0.6 : 1,
               }}
             >
-              {submitDone ? '✓ Submitted' : isCreating ? 'Submitting…' : 'Submit Ticket'}
+              {submitDone
+                ? '✓ Submitted'
+                : isCreating
+                  ? 'Submitting…'
+                  : uploadAttachment.isPending
+                    ? `Uploading files…`
+                    : 'Submit Ticket'}
             </button>
           </div>
         </div>
+
+        {/* Error banner */}
+        {uploadErr && (
+          <div style={{
+            marginBottom: 12, padding: '8px 12px',
+            background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 4,
+            fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            {uploadErr}
+            <button type="button" onClick={() => setUploadErr(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 2 }}>
+              <X size={13} />
+            </button>
+          </div>
+        )}
 
         {/* Form grid — 2 columns: left 3fr, right 1fr */}
         <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 24 }}>
@@ -120,9 +472,7 @@ export default function EmployeeDashboard() {
             {/* Markdown Description */}
             <div>
               <label style={labelStyle}>Markdown Description</label>
-              <div style={{
-                border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden',
-              }}>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
                 {/* Toolbar */}
                 <div style={{
                   display: 'flex', gap: 2, padding: '6px 10px',
@@ -157,48 +507,35 @@ export default function EmployeeDashboard() {
 
           {/* Right: Attachment Dropzone + AI Confidence Breakdown */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            {/* Attachment Dropzone */}
+            {/* Functional Attachment Dropzone */}
             <div>
-              <label style={labelStyle}>Attachment Dropzone</label>
-              <div style={{
-                border: '1.5px dashed #cbd5e1', borderRadius: 8,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center', gap: 4,
-                background: '#f8fafc', cursor: 'pointer', padding: '28px 16px',
-                textAlign: 'center',
-              }}>
-                <UploadCloud size={28} color="#94a3b8" />
-                <span style={{ fontSize: 13, color: '#64748b' }}>
-                  Drag files here or{' '}
-                  <span style={{ color: '#3b82f6', fontWeight: 600 }}>browse</span>
-                </span>
-                <span style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.04em' }}>
-                  MAX 25MB (PNG, JPG, PDF, ZIP)
-                </span>
-              </div>
+              <label style={labelStyle}>
+                Attachment Dropzone
+                {files.length > 0 && (
+                  <span style={{
+                    marginLeft: 6, padding: '1px 6px',
+                    background: '#dbeafe', borderRadius: 10,
+                    fontSize: 10, fontWeight: 700, color: '#1d4ed8',
+                  }}>
+                    {files.length}
+                  </span>
+                )}
+              </label>
+              <AttachmentDropzone
+                files={files}
+                onAdd={handleAddFiles}
+                onRemove={handleRemoveFile}
+              />
             </div>
 
-            {/* AI Confidence Breakdown */}
+            {/* AI Confidence Breakdown — live, debounced */}
             <div>
               <label style={labelStyle}>AI Confidence Breakdown</label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {AI_BREAKDOWN.map(({ label, pct, color, primary }) => (
-                  <div key={label} style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '5px 10px',
-                    background: primary ? '#f8fafc' : 'rgba(248,250,252,0.5)',
-                    border: primary ? '1px solid #e2e8f0' : '1px solid #f1f5f9',
-                    borderRadius: 4,
-                  }}>
-                    <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: primary ? '#0f172a' : '#64748b' }}>
-                      {label}
-                    </span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: primary ? color : '#94a3b8' }}>
-                      {pct}%
-                    </span>
-                  </div>
-                ))}
-              </div>
+              <AiBreakdownPanel
+                previewData={previewMutation.data ?? null}
+                isLoading={previewMutation.isPending}
+                hasInput={hasInput}
+              />
             </div>
           </div>
         </div>
@@ -215,10 +552,11 @@ export default function EmployeeDashboard() {
             The Employee Personal Grid
           </span>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
-              <Filter size={16} />
-            </button>
-            <button style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}>
+            <button
+              onClick={() => refetch()}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}
+              title="Refresh"
+            >
               <RefreshCw size={16} />
             </button>
           </div>
@@ -234,7 +572,7 @@ export default function EmployeeDashboard() {
             </tr>
           </thead>
           <tbody>
-            {pageItems.length === 0 ? (
+            {myTickets.length === 0 ? (
               <tr>
                 <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
                   No tickets found. Submit your first ticket above.
@@ -243,12 +581,13 @@ export default function EmployeeDashboard() {
             ) : pageItems.map((t) => (
               <tr
                 key={t.id}
-                style={{ borderBottom: '1px solid #f1f5f9', cursor: 'default' }}
+                onClick={() => navigate(`/tickets/${t.id}`)}
+                style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
                 onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", color: '#334155', fontWeight: 600, fontSize: 13 }}>
-                  #{t.id ?? t.ticketId ?? 'TK-???'}
+                  #{t.id}
                 </td>
                 <td style={{ ...tdStyle, maxWidth: 240 }}>
                   <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{t.title}</div>
@@ -258,11 +597,14 @@ export default function EmployeeDashboard() {
                     </div>
                   )}
                 </td>
-                <td style={tdStyle}>{t.departmentName ?? t.department?.name ?? '—'}</td>
+                <td style={tdStyle}>{t.department?.name ?? '—'}</td>
                 <td style={{ ...tdStyle, color: '#64748b' }}>{fmtDate(t.createdAt)}</td>
                 <td style={tdStyle}><StatusBadge status={t.status} /></td>
                 <td style={{ ...tdStyle, textAlign: 'right' }}>
-                  <button style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/tickets/${t.id}`); }}
+                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+                  >
                     <ExternalLink size={14} />
                   </button>
                 </td>
@@ -277,7 +619,7 @@ export default function EmployeeDashboard() {
           padding: '12px 20px', borderTop: '1px solid #f1f5f9',
         }}>
           <span style={{ fontSize: 12, color: '#94a3b8' }}>
-            Showing {pageItems.length} of {myTickets.length} tickets
+            Showing {pageItems.length} of {myTickets.length} ticket{myTickets.length !== 1 ? 's' : ''}
           </span>
           <div style={{ display: 'flex', gap: 4 }}>
             <button
@@ -301,7 +643,7 @@ export default function EmployeeDashboard() {
   );
 }
 
-// ── Local style constants ─────────────────────────────────────────────────────
+// ── Style constants ───────────────────────────────────────────────────────────
 const cardStyle = {
   background: '#ffffff',
   border:     '1px solid #e2e8f0',

@@ -29,7 +29,13 @@
 - **EmployeeDashboard** (`src/pages/EmployeeDashboard.jsx`)
   - **Department selector removed** — routing determined by watsonx.ai NLU
   - New 2-column layout: left (3fr) = title + markdown editor; right (1fr) = dropzone + AI breakdown
-  - AI breakdown uses row-chip style (top item highlighted, others muted)
+  - **AI breakdown is now dynamic** — live call to `POST /api/tickets/preview` (Watson NLU) with 500ms debounce
+  - 4 panel states: idle (empty form), loading (analysing…), result (dept + confidence %), low-confidence (amber triage notice)
+  - Category keys mapped to display names: `hardware → IT Hardware`, `software → IT Software`, `hr → HR`
+  - **Ticket submission is functional** — `POST /api/tickets` then sequential `POST /api/tickets/{id}/attachments` per file
+  - **Attachment dropzone is functional** — drag+drop + browse, client-side validation (PNG/JPG/GIF/PDF/TXT, 10 MB max), file list with remove, badge count
+  - **Employee Personal Grid** — filter fixed to `t.creator?.id === user.id`, rows click to `/tickets/:id`, refresh button wired
+- **useAttachments.js** (`src/hooks/useAttachments.js`) — NEW: `useUploadAttachment` mutation hook
 
 ### 3. Login Page Demo Accounts (complete)
 - **LoginPage** (`src/pages/LoginPage.jsx`)

@@ -1,5 +1,6 @@
 package com.helpdeskcenter.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -16,6 +17,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "ai_classification_logs")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 public class AiClassificationLog {

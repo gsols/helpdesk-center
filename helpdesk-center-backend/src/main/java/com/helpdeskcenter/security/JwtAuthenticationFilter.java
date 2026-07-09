@@ -37,7 +37,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 Long.valueOf(claims.getSubject()),
                 claims.get("email", String.class),
                 com.helpdeskcenter.enums.UserRole.valueOf(claims.get("role", String.class)),
-                claims.get("companyId", Long.class),
+                ((Number) claims.get("companyId")).longValue(),
                 claims.get("departmentId") == null ? null : ((Number) claims.get("departmentId")).longValue()
             );
 

@@ -44,7 +44,8 @@ public class TicketService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
         String title = body.get("title");
-        String description = body.get("description");
+        String description = body.getOrDefault("description", "");
+        if (description == null) description = "";
         String text = title + " " + description;
 
         // Detect priority

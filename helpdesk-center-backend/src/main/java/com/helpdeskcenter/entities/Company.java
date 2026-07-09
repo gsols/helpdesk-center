@@ -1,5 +1,6 @@
 package com.helpdeskcenter.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,6 +13,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "companies")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 @Data
 @NoArgsConstructor
 public class Company {
