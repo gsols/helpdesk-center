@@ -156,7 +156,7 @@ function IntegrationsPanel() {
             value={slackUrl}
             onChange={e => setSlackUrl(e.target.value)}
             className={inputCls}
-            placeholder="https://hooks.slack.com/services/T00000000/B00000000/XXXX"
+            placeholder="https://hooks.slack.com/"
             style={{ borderRadius: 0 }}
           />
         </Field>
