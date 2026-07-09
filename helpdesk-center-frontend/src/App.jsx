@@ -7,6 +7,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import TicketDetailPage from './pages/TicketDetailPage';
 import SettingsPage from './pages/SettingsPage';
 import ForbiddenPage from './pages/ForbiddenPage';
+import ManagerDashboard from './pages/ManagerDashboard';
 
 /**
  * Guards the protected subtree.
@@ -27,8 +28,9 @@ function RoleRedirect() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
   const role = user.role?.toLowerCase?.() ?? '';
-  if (role === 'employee')  return <Navigate to="/dashboard" replace />;
-  if (role === 'sys_admin') return <Navigate to="/admin"     replace />;
+  if (role === 'employee')     return <Navigate to="/dashboard" replace />;
+  if (role === 'sys_admin')    return <Navigate to="/admin"     replace />;
+  if (role === 'dept_manager') return <Navigate to="/manager"   replace />;
   return <Navigate to="/agent" replace />;
 }
 
@@ -54,6 +56,7 @@ const router = createBrowserRouter([
       { path: 'agent',        element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets/:id',  element: <TicketDetailPage /> },
+      { path: 'manager',      element: <ManagerDashboard /> },
       { path: 'settings',     element: <SettingsPage /> },
       { path: '403',          element: <ForbiddenPage /> },
       { path: '*',            element: <RoleRedirect /> },

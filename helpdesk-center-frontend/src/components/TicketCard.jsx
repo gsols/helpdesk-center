@@ -1,87 +1,126 @@
+/**
+ * TicketCard — wireframe "agent_workspace_panel_actions_support_engine_1" style
+ *
+ * Structure (per wireframe Pane 1 ticket cards):
+ *   Top row: JetBrains Mono ticket ID chip (slate-200/50 bg) + priority badge (right)
+ *   Middle: title-md font title, truncated
+ *   Bottom: avatar circle + submitter name + relative timestamp
+ *   Left border: 4px active indicator (blue-500 active, transparent inactive)
+ *   Optional SLA bar below (4px, wireframe style)
+ */
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
-import CategoryBadge from './CategoryBadge';
 import SlaProgressBar from './SlaProgressBar';
+
+function getInitials(name) {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const m = Math.floor(diff / 60000);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ago`;
+  if (h > 0) return `${h}h ago`;
+  if (m > 0) return `${m}m ago`;
+  return 'just now';
+}
 
 export default function TicketCard({
   ticket,
   showSubmitter = false,
   onSelect,
   isSelected = false,
-  onAssign,    // legacy prop (admin assign-to-agent)
-  showClaim,   // pool tab: show "Claim" button
-  onClaim,     // pool tab: handler
+  onAssign,
+  showClaim,
+  onClaim,
 }) {
   const navigate = useNavigate();
-
-  const date = ticket.createdAt
-    ? new Date(ticket.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    : '—';
 
   const handleClick = () => {
     if (onSelect) onSelect(ticket);
     else navigate(`/tickets/${ticket.id}`);
   };
 
+  const initials = getInitials(ticket.creator?.name);
+  const timeAgo  = relativeTime(ticket.createdAt);
+
   return (
     <div
       onClick={handleClick}
-      className={`
-        flex items-center gap-3.5 px-5 py-3 border-b border-neutral-100 dark:border-neutral-800/60
-        cursor-pointer flex-wrap transition-colors duration-150
-        border-l-[3px]
-        ${isSelected
-          ? 'bg-blue-50 dark:bg-blue-950/20 border-l-blue-700'
-          : 'bg-white dark:bg-neutral-900 border-l-transparent hover:bg-neutral-50/80 dark:hover:bg-neutral-800/30 hover:border-l-blue-400'
-        }
-      `}
+      className={[
+        'p-4 border-b border-slate-100 cursor-pointer group',
+        isSelected
+          ? 'bg-slate-50 border-l-4 border-l-blue-500'
+          : 'hover:bg-slate-50 transition-colors border-l-4 border-l-transparent',
+      ].join(' ')}
     >
-      {/* Left: ID + title */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-          <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">#{ticket.id}</span>
-          {showSubmitter && ticket.creator?.name && (
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">· {ticket.creator.name}</span>
-          )}
-        </div>
-        <span className="text-sm font-semibold text-gray-800 block overflow-hidden text-ellipsis whitespace-nowrap">
-          {ticket.title}
+      {/* Top row: ID chip + priority badge */}
+      <div className="flex justify-between items-start mb-1">
+        <span
+          className="font-technical-md text-[#45464d] bg-slate-200/50 px-1.5 py-0.5"
+          style={{ borderRadius: 2, fontSize: 12 }}
+        >
+          #{ticket.id}
         </span>
-      </div>
-
-      {/* Right: badges + actions + date */}
-      <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-        <CategoryBadge value={ticket.department?.name} />
-        <StatusBadge value={ticket.status} />
         <PriorityBadge value={ticket.priority} />
-
-        {showClaim && onClaim && (
-          <button
-            onClick={e => { e.stopPropagation(); onClaim(); }}
-            className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 hover:bg-blue-100"
-            title="Claim ticket"
-          >
-            <UserPlus size={11} /> Claim
-          </button>
-        )}
-        {onAssign && !showClaim && (
-          <button
-            onClick={e => { e.stopPropagation(); onAssign(); }}
-            className="flex items-center gap-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 rounded px-2 py-0.5 hover:bg-blue-100"
-            title="Assign to me"
-          >
-            <UserPlus size={11} /> Assign
-          </button>
-        )}
-        <span className="text-xs text-gray-400 min-w-[76px] text-right">{date}</span>
-        <ChevronRight size={14} className={`shrink-0 ${isSelected ? 'text-blue-700' : 'text-gray-300'}`} />
       </div>
 
-      {/* SLA progress bar — spans full width of the row */}
+      {/* Title */}
+      <p
+        className="text-[#0b1c30] truncate mb-2"
+        style={{ fontSize: 14, fontWeight: 600, lineHeight: '20px' }}
+      >
+        {ticket.title}
+      </p>
+
+      {/* Bottom row: avatar + name + time + status + actions */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          {/* Avatar */}
+          <div
+            className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0"
+            style={{ background: '#3f465c', fontSize: 10 }}
+          >
+            {initials}
+          </div>
+          {(showSubmitter && ticket.creator?.name) ? (
+            <span className="text-[13px] text-[#45464d] truncate">{ticket.creator.name}</span>
+          ) : null}
+          <StatusBadge value={ticket.status} />
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Claim / Assign buttons */}
+          {showClaim && onClaim && (
+            <button
+              onClick={e => { e.stopPropagation(); onClaim(); }}
+              className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2 py-0.5 hover:bg-emerald-100"
+            >
+              <UserPlus size={10} /> Claim
+            </button>
+          )}
+          {onAssign && !showClaim && (
+            <button
+              onClick={e => { e.stopPropagation(); onAssign(); }}
+              className="flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5 hover:bg-blue-100"
+            >
+              <UserPlus size={10} /> Assign
+            </button>
+          )}
+          <span className="text-[13px] text-[#45464d]">{timeAgo}</span>
+        </div>
+      </div>
+
+      {/* SLA bar — below bottom row */}
       {ticket.dueAt && (
-        <div className="w-full px-5 pb-1.5">
+        <div className="mt-2">
           <SlaProgressBar
             createdAt={ticket.createdAt}
             dueAt={ticket.dueAt}

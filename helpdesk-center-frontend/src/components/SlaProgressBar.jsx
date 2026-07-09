@@ -1,72 +1,76 @@
 /**
- * SlaProgressBar
- *
- * Renders a thin progress bar tracking SLA time-to-resolution.
- * Design-system rules (frontend-design-system.md §2C):
- *   - Height: `h-1.5` (thin tracker bar)
- *   - Color transitions: blue → amber → red (below 25% remaining)
- *   - Below 25%: animate pulse/flash
- *   - PENDING_EMPLOYEE: bar pauses, italic amber caption shown
- *
- * Props:
- *   createdAt  — ISO string, ticket creation timestamp
- *   dueAt      — ISO string, SLA due timestamp (null = no SLA)
- *   status     — ticket status string (used to detect PENDING_EMPLOYEE)
+ * SlaProgressBar — wireframe style
+ * 4px height (h-1), bg-slate-100, fill: emerald→amber→red by urgency
+ * Remaining time label inline (text-[10px] font-bold uppercase)
  */
 import { useMemo } from 'react';
 
-export default function SlaProgressBar({ createdAt, dueAt, status }) {
+function formatRemaining(ms) {
+  if (ms <= 0) return 'BREACHED';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m remaining`;
+  return `${m}m remaining`;
+}
+
+export default function SlaProgressBar({ createdAt, dueAt, status, ticket }) {
+  // Support both prop styles: individual fields OR ticket object
+  createdAt = createdAt ?? ticket?.createdAt;
+  dueAt     = dueAt     ?? ticket?.dueAt;
+  status    = status    ?? ticket?.status;
   const isPending = status?.toUpperCase() === 'PENDING_EMPLOYEE';
   const isClosed  = ['RESOLVED', 'CLOSED'].includes(status?.toUpperCase());
 
-  const { pct, colorCls, isBreaching } = useMemo(() => {
-    if (!createdAt || !dueAt) return { pct: 0, colorCls: 'bg-slate-200', isBreaching: false };
-
-    const now     = new Date().getTime();
+  const { pct, fillCls, remainingMs } = useMemo(() => {
+    if (!createdAt || !dueAt) return { pct: 0, fillCls: 'bg-slate-300', remainingMs: 0 };
+    const now     = Date.now();
     const created = new Date(createdAt).getTime();
     const due     = new Date(dueAt).getTime();
     const total   = due - created;
-    const elapsed = now - created;
-
-    if (total <= 0) return { pct: 100, colorCls: 'bg-red-500', isBreaching: true };
-
-    const rawPct      = Math.min(100, Math.max(0, (elapsed / total) * 100));
-    const remaining   = 100 - rawPct;
-    const isBreaching = remaining < 25;
-
-    let colorCls;
-    if (isClosed)       colorCls = 'bg-slate-300';
-    else if (rawPct >= 100) colorCls = 'bg-red-500';
-    else if (remaining < 25) colorCls = 'bg-red-500';
-    else if (remaining < 50) colorCls = 'bg-amber-400';
-    else                     colorCls = 'bg-blue-500';
-
-    return { pct: rawPct, colorCls, isBreaching };
+    if (total <= 0) return { pct: 100, fillCls: 'bg-red-500', remainingMs: 0 };
+    const elapsed    = now - created;
+    const rawPct     = Math.min(100, Math.max(0, (elapsed / total) * 100));
+    const remaining  = 100 - rawPct;
+    const remainingMs = Math.max(0, due - now);
+    let fillCls;
+    if (isClosed)            fillCls = 'bg-slate-300';
+    else if (rawPct >= 100)  fillCls = 'bg-red-500';
+    else if (remaining < 25) fillCls = 'bg-red-500';
+    else if (remaining < 50) fillCls = 'bg-amber-500';
+    else                     fillCls = 'bg-emerald-500';
+    return { pct: rawPct, fillCls, remainingMs };
   }, [createdAt, dueAt, isClosed]);
 
   if (!dueAt) return null;
 
+  const isBreached = remainingMs === 0 && !isClosed;
+  const labelCls = isBreached
+    ? 'text-red-600'
+    : remainingMs < 3600000
+      ? 'text-amber-600'
+      : 'text-[#45464d]';
+
   return (
     <div className="w-full">
-      {/* Track — structural container, rounded-none */}
-      <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-none overflow-hidden">
-        {/* Fill bar */}
+      {/* Track — 4px height, slate-100 bg */}
+      <div className="flex justify-between items-center mb-0.5">
+        {isPending && (
+          <span className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">
+            SLA PAUSED
+          </span>
+        )}
+        {!isPending && (
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${labelCls}`}>
+            {formatRemaining(remainingMs)}
+          </span>
+        )}
+      </div>
+      <div className="w-full h-1 bg-slate-100 overflow-hidden" style={{ borderRadius: 0 }}>
         <div
-          className={[
-            'h-full transition-all duration-300',
-            colorCls,
-            isBreaching && !isPending && !isClosed ? 'animate-pulse' : '',
-          ].join(' ')}
+          className={`h-full transition-all duration-300 ${fillCls} ${isBreached ? 'animate-pulse' : ''}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-
-      {/* PENDING_EMPLOYEE pause caption */}
-      {isPending && (
-        <p className="text-[11px] italic text-amber-600 dark:text-amber-400 mt-0.5">
-          SLA paused — awaiting employee response
-        </p>
-      )}
     </div>
   );
 }
