@@ -6,6 +6,8 @@ export function useMessages(ticketId) {
     queryKey: ['messages', ticketId],
     queryFn: () => getComments(ticketId).then(r => r.data),
     enabled: !!ticketId,
+    refetchInterval: 5000,          // poll every 5 s — new replies appear without refresh
+    refetchIntervalInBackground: false, // pause when tab is hidden
   });
 }
 

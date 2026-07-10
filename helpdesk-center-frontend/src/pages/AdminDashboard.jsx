@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTickets } from '../hooks/useTickets';
+import { deleteAllTickets } from '../api/ticketsApi';
 import AppShell from '../components/AppShell';
 import TicketCard from '../components/TicketCard';
 import TicketDetailPanel from '../components/TicketDetailPanel';
@@ -9,7 +11,7 @@ import StatCard from '../components/StatCard';
 import SlaConfigPanel from '../components/SlaConfigPanel';
 import AnalyticsPanel from '../components/AnalyticsPanel';
 import TriageQueue from '../components/TriageQueue';
-import { CircleDot, Clock, CheckCircle2 } from 'lucide-react';
+import { CircleDot, Clock, CheckCircle2, Trash2 } from 'lucide-react';
 
 const ADMIN_TABS = [
   { id: 'overview',  label: 'Overview'      },
@@ -20,8 +22,19 @@ const ADMIN_TABS = [
 
 export default function AdminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [maximized, setMaximized] = useState(false);
+  const [activeTab, setActiveTab]       = useState('overview');
+  const [maximized, setMaximized]       = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const qc = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: deleteAllTickets,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tickets'] });
+      setSearchParams({});
+      setConfirmDelete(false);
+    },
+  });
 
   const selectedId = searchParams.get('ticket');
   const selectTicket = (t) => { setMaximized(false); setSearchParams({ ticket: t.id }); };
@@ -56,11 +69,64 @@ export default function AdminDashboard() {
 
   const overviewContent = (
     <div className="space-y-5">
-      {/* Stat cards — wireframe metric matrix style */}
-      <div className="flex gap-0 border border-[#c6c6cd] bg-white rounded-none overflow-hidden">
+      {/* Stat cards + debug action row */}
+      <div className="flex items-stretch gap-0 border border-[#c6c6cd] bg-white rounded-none overflow-hidden">
         <StatCard label="Open Tickets"  count={openCount}       icon={CircleDot}    />
         <StatCard label="In Progress"   count={inProgressCount} icon={Clock}        accent="amber" />
         <StatCard label="Resolved"      count={resolvedCount}   icon={CheckCircle2} accent="emerald" last />
+
+        {/* DEBUG — Delete All Tickets */}
+        <div style={{
+          borderLeft: '1px solid #e5e7eb',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '0 20px', gap: 8, flexShrink: 0,
+        }}>
+          {!confirmDelete ? (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 12px',
+                background: '#fff1f2', border: '1px solid #fca5a5',
+                borderRadius: 6, cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, color: '#dc2626',
+                whiteSpace: 'nowrap',
+              }}
+              title="Debug: wipe all tickets from the database"
+            >
+              <Trash2 size={13} />
+              Delete All Tickets
+            </button>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: '#dc2626', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                Are you sure?
+              </span>
+              <button
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                style={{
+                  padding: '5px 10px', background: '#dc2626', border: 'none',
+                  borderRadius: 6, cursor: deleteMutation.isPending ? 'not-allowed' : 'pointer',
+                  fontSize: 12, fontWeight: 700, color: '#fff',
+                  opacity: deleteMutation.isPending ? 0.6 : 1,
+                }}
+              >
+                {deleteMutation.isPending ? 'Deleting…' : 'Yes, delete'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                style={{
+                  padding: '5px 10px', background: 'transparent',
+                  border: '1px solid #e5e7eb', borderRadius: 6, cursor: 'pointer',
+                  fontSize: 12, fontWeight: 600, color: '#374151',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
       {selectedId ? (
         maximized ? (

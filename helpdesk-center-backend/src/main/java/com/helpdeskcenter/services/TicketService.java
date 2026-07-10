@@ -37,6 +37,7 @@ public class TicketService {
     private final AiClassificationLogRepository aiLogRepository;
     private final AIService aiService;
     private final PriorityService priorityService;
+    private final RoundRobinAssignmentService roundRobin;
 
     @Transactional
     public Ticket createTicket(Map<String, String> body, AuthenticatedUser principal) {
@@ -98,6 +99,14 @@ public class TicketService {
                 ));
         }
 
+        // Round-robin assign to the next available agent in the department
+        if (assignedDept != null) {
+            roundRobin.nextAgent(assignedDept).ifPresent(agent -> {
+                ticket.setAssignee(agent);
+                ticket.setStatus(TicketStatus.IN_PROGRESS);
+            });
+        }
+
         Ticket saved = ticketRepository.save(ticket);
 
         // Write AI classification log
@@ -146,6 +155,12 @@ public class TicketService {
                     ZonedDateTime.now().plusHours(rule.getTargetResolutionHours())
                 ));
 
+            // Round-robin assign each child to the next agent in its department
+            roundRobin.nextAgent(dept).ifPresent(agent -> {
+                child.setAssignee(agent);
+                child.setStatus(TicketStatus.IN_PROGRESS);
+            });
+
             children.add(ticketRepository.save(child));
         }
 
@@ -176,7 +191,9 @@ public class TicketService {
         UserRole role = principal.role();
 
         return switch (role) {
-            case AGENT -> ticketRepository.findMyQueue(companyId, userId);
+            case AGENT -> departmentId != null
+                ? ticketRepository.findMyQueue(companyId, userId, departmentId)
+                : List.of();
             case DEPT_MANAGER -> departmentId != null
                 ? ticketRepository.findUnassignedPool(companyId, departmentId)
                 : List.of();
@@ -191,7 +208,9 @@ public class TicketService {
     }
 
     public List<Ticket> getMyQueue(AuthenticatedUser principal) {
-        return ticketRepository.findMyQueue(principal.companyId(), principal.userId());
+        if (principal.departmentId() == null) return List.of();
+        return ticketRepository.findMyQueue(
+            principal.companyId(), principal.userId(), principal.departmentId());
     }
 
     public List<Ticket> getDepartmentPool(AuthenticatedUser principal) {
@@ -250,8 +269,17 @@ public class TicketService {
         }
 
         ticket.setDepartment(targetDept);
-        ticket.setStatus(TicketStatus.OPEN);
         ticket.setAssignee(null);
+
+        // Re-assign to the next round-robin agent in the new department
+        roundRobin.nextAgent(targetDept).ifPresentOrElse(
+            agent -> {
+                ticket.setAssignee(agent);
+                ticket.setStatus(TicketStatus.IN_PROGRESS);
+            },
+            () -> ticket.setStatus(TicketStatus.OPEN)
+        );
+
         Ticket saved = ticketRepository.save(ticket);
 
         // Update the AI classification log — mark as misclassified, record corrected dept

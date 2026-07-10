@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
       role: data.role?.toLowerCase?.() ?? data.role,
       companyId: data.companyId,
       departmentId: data.departmentId,
+      departmentName: data.departmentName ?? null,
     };
     setUser(userData);
     setToken(data.token);

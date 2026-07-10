@@ -55,6 +55,7 @@ const router = createBrowserRouter([
       { index: true,          element: <RoleRedirect /> },
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
+      { path: 'agent/:id',    element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets',      element: <TicketsIndexPage /> },
       { path: 'tickets/:id',  element: <TicketDetailPage /> },

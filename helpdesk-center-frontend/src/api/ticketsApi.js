@@ -39,3 +39,6 @@ export const rerouteTicket = (id, targetDepartmentId) =>
 
 export const splitTicket = (id, splits) =>
   api.post(`/api/tickets/${id}/split`, splits);
+
+export const deleteAllTickets = () =>
+  api.delete('/api/test/tickets');

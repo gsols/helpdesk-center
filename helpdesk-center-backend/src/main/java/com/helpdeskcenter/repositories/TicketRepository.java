@@ -14,6 +14,19 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     /** Triage queue: tickets with no department assigned (ADR-0002) */
     List<Ticket> findByCompanyIdAndDepartmentIsNullOrderByCreatedAtDesc(Long companyId);
 
+    /**
+     * All unassigned tickets that have a department (i.e. classifiable, not in triage).
+     * Used by the round-robin backfill on every new ticket submission.
+     */
+    @Query("""
+        select t from Ticket t
+        where t.company.id = :companyId
+          and t.assignee is null
+          and t.department is not null
+        order by t.createdAt asc
+        """)
+    List<Ticket> findUnassignedWithDepartment(@Param("companyId") Long companyId);
+
     /** All child tickets of a parent */
     List<Ticket> findByParentIdOrderByCreatedAtAsc(Long parentId);
 
@@ -21,9 +34,14 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         select t from Ticket t
         where t.company.id = :companyId
           and t.assignee.id = :agentId
+          and t.department.id = :departmentId
         order by t.createdAt desc
         """)
-    List<Ticket> findMyQueue(@Param("companyId") Long companyId, @Param("agentId") Long agentId);
+    List<Ticket> findMyQueue(
+        @Param("companyId") Long companyId,
+        @Param("agentId") Long agentId,
+        @Param("departmentId") Long departmentId
+    );
 
     @Query("""
         select t from Ticket t
@@ -40,6 +58,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
           and t.department.id = :departmentId
           and t.assignee is not null
           and t.assignee.id <> :agentId
+          and t.assignee.department.id = :departmentId
         order by t.createdAt desc
         """)
     List<Ticket> findTeamReadOnlyArchive(

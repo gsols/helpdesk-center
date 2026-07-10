@@ -104,44 +104,8 @@ function SystemPill({ text }) {
   );
 }
 
-/* ── Agent message (LEFT, light blue-gray bg) ─────────────────────────────── */
-function AgentMessage({ comment }) {
-  const initials = getInitials(comment.sender?.name);
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '85%' }}>
-      {/* Name + timestamp */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: '50%',
-          background: '#1e293b',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 9, fontWeight: 700, color: '#94a3b8', flexShrink: 0,
-        }}>
-          {initials}
-        </div>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b1c30' }}>
-          {comment.sender?.name ?? 'Agent'}
-        </span>
-        {/* Verified checkmark */}
-        <span style={{ fontSize: 13, color: '#3b82f6' }} title="Support Agent">✓</span>
-        <span style={{ fontSize: 11, color: '#76777d' }}>{fmtTime(comment.createdAt)}</span>
-      </div>
-      {/* Bubble */}
-      <div style={{
-        background: '#dce9ff',
-        border: '1px solid #c6c6cd',
-        padding: '12px 14px',
-        fontSize: 14, color: '#0b1c30', lineHeight: 1.6,
-        borderRadius: '0 8px 8px 8px',
-      }}>
-        {comment.body}
-      </div>
-    </div>
-  );
-}
-
-/* ── Employee message (RIGHT, dark bg) ───────────────────────────────────── */
-function EmployeeMessage({ comment }) {
+/* ── "Mine" — right-aligned, dark bubble (the current viewer's own messages) */
+function OwnMessage({ comment }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, maxWidth: '85%', marginLeft: 'auto' }}>
       {/* Timestamp + name */}
@@ -158,6 +122,45 @@ function EmployeeMessage({ comment }) {
         padding: '12px 14px',
         fontSize: 14, color: '#ffffff', lineHeight: 1.6,
         borderRadius: '8px 0 8px 8px',
+      }}>
+        {comment.body}
+      </div>
+    </div>
+  );
+}
+
+/* ── "Theirs" — left-aligned, light bubble (the other party's messages) */
+function TheirMessage({ comment }) {
+  const initials = getInitials(comment.sender?.name);
+  const isAgentSender = comment.sender?.role && comment.sender.role !== 'EMPLOYEE';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxWidth: '85%' }}>
+      {/* Avatar + name + timestamp */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: '#1e293b',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 9, fontWeight: 700, color: '#94a3b8', flexShrink: 0,
+        }}>
+          {initials}
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#0b1c30' }}>
+          {comment.sender?.name ?? 'User'}
+        </span>
+        {/* Verified checkmark only for agent senders */}
+        {isAgentSender && (
+          <span style={{ fontSize: 13, color: '#3b82f6' }} title="Support Agent">✓</span>
+        )}
+        <span style={{ fontSize: 11, color: '#76777d' }}>{fmtTime(comment.createdAt)}</span>
+      </div>
+      {/* Bubble */}
+      <div style={{
+        background: '#dce9ff',
+        border: '1px solid #c6c6cd',
+        padding: '12px 14px',
+        fontSize: 14, color: '#0b1c30', lineHeight: 1.6,
+        borderRadius: '0 8px 8px 8px',
       }}>
         {comment.body}
       </div>
@@ -204,7 +207,7 @@ export default function CommentSection({ ticketId, ticket, onAttachFile }) {
     document.addEventListener('mouseup', onUp);
   }, [editorHeight]);
 
-  const isAgent = (c) => c.sender?.role && c.sender.role !== 'EMPLOYEE';
+  const isOwn = (c) => c.sender?.id != null && c.sender.id === user?.id;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -245,9 +248,9 @@ export default function CommentSection({ ticketId, ticket, onAttachFile }) {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {comments.map((c) =>
-                isAgent(c)
-                  ? <AgentMessage    key={c.id} comment={c} />
-                  : <EmployeeMessage key={c.id} comment={c} />
+                isOwn(c)
+                  ? <OwnMessage   key={c.id} comment={c} />
+                  : <TheirMessage key={c.id} comment={c} />
               )}
             </div>
           )}

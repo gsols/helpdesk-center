@@ -28,6 +28,8 @@ export function useTicket(id) {
       return r.data;
     }),
     enabled: !!id,
+    refetchInterval: 5000,          // poll every 5 s — keeps header + activity live
+    refetchIntervalInBackground: false, // pause when tab is hidden
   });
 }
 

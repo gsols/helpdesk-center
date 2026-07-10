@@ -18,7 +18,7 @@ import { useTickets } from '../hooks/useTickets';
 import {
   LayoutDashboard, Ticket, Settings, LogOut, Bell,
   BarChart2, Clock,
-  Menu, ShieldCheck, ArchiveIcon,
+  Menu, ShieldCheck, ArchiveIcon, Users,
 } from 'lucide-react';
 
 const SIDEBAR_KEY = 'hd_sidebar_collapsed';
@@ -30,9 +30,8 @@ const NAV = {
     { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
   ],
   agent: [
-    { label: 'Queue',     icon: LayoutDashboard, to: '/agent'     },
-    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
-    { label: 'Analytics', icon: BarChart2,       to: '/agent'     },
+    { label: 'Dashboard', icon: LayoutDashboard, to: '/agent'     },
+    { label: 'Team',      icon: Users,           to: '/agent'     },
   ],
   dept_manager: [
     { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
@@ -54,6 +53,16 @@ function getInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+/** Role subtitle: agents get "Agent · <Department>", others get the role label. */
+function roleSubtitle(user) {
+  if (!user) return '';
+  const base = user.role?.replace(/_/g, ' ') ?? '';
+  if ((user.role === 'agent' || user.role === 'AGENT') && user.departmentName) {
+    return `${base} · ${user.departmentName}`;
+  }
+  return base;
 }
 
 /* ── Live clock ──────────────────────────────────────────────────────────── */
@@ -302,7 +311,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
                 {user?.name ?? user?.email}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(100,116,139,1)', lineHeight: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.role?.replace('_', ' ')}
+                {roleSubtitle(user)}
               </div>
             </div>
             <button
@@ -325,7 +334,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 700, color: '#94a3b8',
               }}
-              title={user?.name ?? user?.email}
+              title={`${user?.name ?? user?.email}${user?.departmentName ? ` · ${user.departmentName}` : ''}`}
             >
               {initials}
             </div>
@@ -356,7 +365,12 @@ function TopHeader({ title, sidebarWidth }) {
   const crumbs = ['Helpdesk', ...segments.map(s =>
     s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ')
   )];
-  if (title && crumbs.length > 0) crumbs[crumbs.length - 1] = title;
+  if (title && crumbs.length > 0) {
+    const isAgent = user?.role === 'agent' || user?.role === 'AGENT';
+    crumbs[crumbs.length - 1] = isAgent && user?.departmentName
+      ? `${user.departmentName} ${title}`
+      : title;
+  }
 
   return (
     <header
