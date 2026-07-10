@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 @Entity
 @Table(name = "tickets", indexes = {
@@ -86,10 +88,12 @@ public class Ticket {
     @Column(nullable = false)
     private Priority priority = Priority.MEDIUM;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;
 
-    @Column(name = "updated_at", insertable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at")
     private ZonedDateTime updatedAt;
 
     @Column(name = "due_at")

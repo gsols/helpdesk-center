@@ -37,7 +37,7 @@ function TicketStatusBadge({ status }) {
   );
 }
 
-export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle }) {
+export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle, width = 280, onDragHandleMouseDown }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: tickets = [] } = useTickets();
@@ -57,14 +57,14 @@ export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle }
   return (
     <aside
       style={{
-        width:      collapsed ? 0 : 280,
-        minWidth:   collapsed ? 0 : 280,
+        width:      collapsed ? 0 : width,
+        minWidth:   collapsed ? 0 : width,
         background: '#ffffff',
-        borderRight: '1px solid #e2e8f0',
+        borderRight: 'none',
         display:    'flex',
         flexDirection: 'column',
         overflow:   'hidden',
-        transition: 'width 200ms ease-in-out, min-width 200ms ease-in-out',
+        transition: collapsed ? 'width 200ms ease-in-out, min-width 200ms ease-in-out' : 'none',
         flexShrink: 0,
         position:   'relative',
       }}
@@ -171,6 +171,31 @@ export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle }
           );
         })}
       </div>
+
+      {/* ── Right drag handle ───────────────────────────────────────────── */}
+      {!collapsed && (
+        <div
+          onMouseDown={onDragHandleMouseDown}
+          style={{
+            position: 'absolute', top: 0, right: 0, bottom: 0,
+            width: 5,
+            cursor: 'col-resize',
+            zIndex: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+          title="Drag to resize"
+        >
+          <div style={{
+            width: 1,
+            height: '100%',
+            background: '#e2e8f0',
+            transition: 'background 150ms',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#94a3b8'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#e2e8f0'; }}
+          />
+        </div>
+      )}
     </aside>
   );
 }

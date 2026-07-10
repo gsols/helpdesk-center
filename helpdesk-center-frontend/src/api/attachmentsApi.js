@@ -14,5 +14,8 @@ export const getAttachments = (ticketId) =>
 export const downloadUrl = (id) =>
   `http://localhost:8080/api/attachments/${id}/download`;
 
+export const fetchAttachmentBlob = (id, disposition = 'view') =>
+  api.get(`/api/attachments/${id}/${disposition}`, { responseType: 'blob' });
+
 export const deleteAttachment = (id) =>
   api.delete(`/api/attachments/${id}`);

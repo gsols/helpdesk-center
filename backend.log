@@ -1,0 +1,489 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< com.helpdeskcenter:helpdesk-center-backend >-------------
+[INFO] Building helpdesk-center-backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] >>> spring-boot:3.3.5:run (default-cli) > test-compile @ helpdesk-center-backend >>>
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ helpdesk-center-backend ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 0 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ helpdesk-center-backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] --- resources:3.3.1:testResources (default-testResources) @ helpdesk-center-backend ---
+[INFO] skip non existing resourceDirectory C:\Users\GlennSolis\Documents\Capstone\helpdesk-center\helpdesk-center-backend\src\test\resources
+[INFO] 
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ helpdesk-center-backend ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO] 
+[INFO] <<< spring-boot:3.3.5:run (default-cli) < test-compile @ helpdesk-center-backend <<<
+[INFO] 
+[INFO] 
+[INFO] --- spring-boot:3.3.5:run (default-cli) @ helpdesk-center-backend ---
+[INFO] Attaching agents: []
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v3.3.5)
+
+2026-07-10T20:18:02.652+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] c.h.HelpdeskCenterApplication            : Starting HelpdeskCenterApplication using Java 21.0.11 with PID 30412 (C:\Users\GlennSolis\Documents\Capstone\helpdesk-center\helpdesk-center-backend\target\classes started by GlennSolis in C:\Users\GlennSolis\Documents\Capstone\helpdesk-center\helpdesk-center-backend)
+2026-07-10T20:18:02.654+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] c.h.HelpdeskCenterApplication            : No active profile set, falling back to 1 default profile: "default"
+2026-07-10T20:18:03.401+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-07-10T20:18:03.468+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 8 JPA repository interfaces.
+2026-07-10T20:18:04.036+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-07-10T20:18:04.044+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-07-10T20:18:04.044+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-07-10T20:18:04.233+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-07-10T20:18:04.235+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1521 ms
+2026-07-10T20:18:04.397+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-07-10T20:18:04.442+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.5.3.Final
+2026-07-10T20:18:04.460+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-07-10T20:18:04.694+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-07-10T20:18:04.729+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-07-10T20:18:05.024+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@46524ebe
+2026-07-10T20:18:05.024+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-07-10T20:18:05.053+08:00  WARN 30412 --- [helpdesk-center-backend] [           main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-07-10T20:18:06.042+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+Hibernate: 
+    alter table if exists ai_classification_logs 
+       alter column raw_text set data type TEXT
+Hibernate: 
+    alter table if exists attachments 
+       alter column secure_url set data type TEXT
+Hibernate: 
+    alter table if exists ticket_messages 
+       alter column body set data type TEXT
+Hibernate: 
+    alter table if exists tickets 
+       alter column description set data type TEXT
+2026-07-10T20:18:06.358+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-07-10T20:18:06.691+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-07-10T20:18:07.160+08:00  WARN 30412 --- [helpdesk-center-backend] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-07-10T20:18:07.741+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-07-10T20:18:07.741+08:00  INFO 30412 --- [helpdesk-center-backend] [           main] c.h.HelpdeskCenterApplication            : Started HelpdeskCenterApplication in 5.612 seconds (process running for 6.062)
+Hibernate: 
+    select
+        count(*) 
+    from
+        users u1_0
+2026-07-10T20:19:44.569+08:00  INFO 30412 --- [helpdesk-center-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-07-10T20:19:44.569+08:00  INFO 30412 --- [helpdesk-center-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-07-10T20:19:44.569+08:00  INFO 30412 --- [helpdesk-center-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.id=?
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.creator_id=? 
+    order by
+        t1_0.created_at desc
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        tm1_0.id,
+        tm1_0.body,
+        tm1_0.created_at,
+        tm1_0.sender_id,
+        tm1_0.ticket_id 
+    from
+        ticket_messages tm1_0 
+    where
+        tm1_0.ticket_id=? 
+    order by
+        tm1_0.created_at
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.id=?
+Hibernate: 
+    select
+        tm1_0.id,
+        tm1_0.body,
+        tm1_0.created_at,
+        tm1_0.sender_id,
+        tm1_0.ticket_id 
+    from
+        ticket_messages tm1_0 
+    where
+        tm1_0.ticket_id=? 
+    order by
+        tm1_0.created_at
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.creator_id=? 
+    order by
+        t1_0.created_at desc
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        t1_0.id,
+        t1_0.assignee_id,
+        t1_0.company_id,
+        t1_0.created_at,
+        t1_0.creator_id,
+        t1_0.department_id,
+        t1_0.description,
+        t1_0.due_at,
+        t1_0.parent_id,
+        t1_0.priority,
+        t1_0.status,
+        t1_0.title,
+        t1_0.updated_at 
+    from
+        tickets t1_0 
+    where
+        t1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        c1_0.id,
+        c1_0.created_at,
+        c1_0.name 
+    from
+        companies c1_0 
+    where
+        c1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        d1_0.id,
+        d1_0.company_id,
+        d1_0.created_at,
+        d1_0.name 
+    from
+        departments d1_0 
+    where
+        d1_0.id=?
+Hibernate: 
+    select
+        u1_0.id,
+        u1_0.company_id,
+        u1_0.created_at,
+        u1_0.department_id,
+        u1_0.email,
+        u1_0.name,
+        u1_0.password_hash,
+        u1_0.role 
+    from
+        users u1_0 
+    where
+        u1_0.email=?
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD FAILURE
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  05:25 min
+[INFO] Finished at: 2026-07-10T20:22:44+08:00
+[INFO] ------------------------------------------------------------------------
+[ERROR] Failed to execute goal org.springframework.boot:spring-boot-maven-plugin:3.3.5:run (default-cli) on project helpdesk-center-backend: Process terminated with exit code: -1 -> [Help 1]
+[ERROR] 
+[ERROR] To see the full stack trace of the errors, re-run Maven with the -e switch.
+[ERROR] Re-run Maven using the -X switch to enable full debug logging.
+[ERROR] 
+[ERROR] For more information about the errors and possible solutions, please read the following articles:
+[ERROR] [Help 1] http://cwiki.apache.org/confluence/display/MAVEN/MojoExecutionException

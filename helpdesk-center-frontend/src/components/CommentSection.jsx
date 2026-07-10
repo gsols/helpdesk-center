@@ -10,10 +10,12 @@
  * Agent = sender.role !== 'EMPLOYEE'
  * Employee = sender.role === 'EMPLOYEE'
  */
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useMessages, useAddMessage } from '../hooks/useMessages';
 import { useAuth } from '../context/AuthContext';
-import { Bold, Italic, Link2, Paperclip, List, Code2, Send } from 'lucide-react';
+import { Bold, Italic, Link2, Paperclip, List, Code2, Send, ChevronDown, ChevronUp } from 'lucide-react';
+
+const TOOLBAR_ICONS_PLAIN = [Bold, Italic, Link2];
 
 const fmtTime = (d) => d
   ? new Date(d).toLocaleString('en-US', {
@@ -28,23 +30,30 @@ function getInitials(fullName) {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-/* ── Initial Report card ──────────────────────────────────────────────────── */
+/* ── Initial Report card — sticky collapsible curtain ─────────────────────── */
 function InitialReportCard({ ticket }) {
+  const [open, setOpen] = useState(false);
   if (!ticket) return null;
   return (
-    <div style={{ marginBottom: 24 }}>
-      <div style={{
-        background: '#ffffff',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-      }}>
-        {/* Card header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 12,
-          padding: '10px 16px',
-          borderBottom: '1px solid #e5e7eb',
+    <div style={{
+      position: 'sticky', top: 0, zIndex: 10,
+      margin: 0,
+      borderBottom: '1px solid #e5e7eb',
+      background: '#ffffff',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+    }}>
+      {/* Header — always visible, click to toggle */}
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '9px 14px',
           background: '#f8f9ff',
-        }}>
+          borderBottom: open ? '1px solid #e5e7eb' : 'none',
+          cursor: 'pointer', userSelect: 'none',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{
             fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
             textTransform: 'uppercase', color: '#45464d',
@@ -55,14 +64,24 @@ function InitialReportCard({ ticket }) {
             {fmtTime(ticket.createdAt)}
           </span>
         </div>
-        {/* Card body */}
-        <div style={{ padding: '14px 16px', fontSize: 14, color: '#0b1c30', lineHeight: 1.65 }}>
+        <span style={{ color: '#9ca3af', display: 'flex' }}>
+          {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </span>
+      </div>
+
+      {/* Body — curtain reveal */}
+      {open && (
+        <div style={{
+          padding: '12px 14px',
+          fontSize: 14, color: '#0b1c30', lineHeight: 1.65,
+          borderTop: 'none',
+        }}>
           {ticket.description
             ? ticket.description
             : <span style={{ color: '#94a3b8', fontStyle: 'italic' }}>No description provided.</span>
           }
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -147,11 +166,43 @@ function EmployeeMessage({ comment }) {
 }
 
 /* ── Main CommentSection ──────────────────────────────────────────────────── */
-export default function CommentSection({ ticketId, ticket }) {
+export default function CommentSection({ ticketId, ticket, onAttachFile }) {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const { data: comments = [], isLoading } = useMessages(ticketId);
   const addMessage = useAddMessage();
+  const attachInputRef = useRef(null);
+  const scrollContainerRef = useRef(null);
+  const bottomRef = useRef(null);
+
+  /* Scroll to bottom whenever the comment list grows */
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [comments.length]);
+
+  /* ── Drag-to-resize editor panel ───────────────────────────────────────── */
+  const MIN_H = 100;
+  const MAX_H = 480;
+  const [editorHeight, setEditorHeight] = useState(180);
+  const dragStartY = useRef(null);
+  const dragStartH = useRef(null);
+
+  const onDragStart = useCallback((e) => {
+    e.preventDefault();
+    dragStartY.current = e.clientY;
+    dragStartH.current = editorHeight;
+
+    const onMove = (ev) => {
+      const delta = dragStartY.current - ev.clientY;   // drag up → positive delta → taller
+      setEditorHeight(Math.min(MAX_H, Math.max(MIN_H, dragStartH.current + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [editorHeight]);
 
   const isAgent = (c) => c.sender?.role && c.sender.role !== 'EMPLOYEE';
 
@@ -161,116 +212,147 @@ export default function CommentSection({ ticketId, ticket }) {
     try {
       await addMessage.mutateAsync({ ticketId, message });
       setMessage('');
+      // Instant scroll after send — the useEffect above handles the smooth
+      // scroll once the query refetch lands and comments.length increases.
+      // This immediate call covers the edge case where the count doesn't change.
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     } catch {
       alert('Failed to post comment');
     }
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', background: '#ffffff', border: '1px solid #e5e7eb' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', background: '#ffffff' }}>
 
-      {/* ── Conversation body ──────────────────────────────────────────────── */}
-      <div style={{ flex: 1, padding: '20px 20px 16px', overflowY: 'auto' }}>
+      {/* ── Conversation body — scrollable ─────────────────────────────────── */}
+      <div ref={scrollContainerRef} style={{ flex: 1, padding: '0 0 16px 0', overflowY: 'auto', minHeight: 0 }}>
 
         {/* 1. Initial Report card */}
         <InitialReportCard ticket={ticket} />
 
-        {/* 2. System assignment pill (mocked) */}
-        {ticket?.assignee && (
-          <SystemPill text={`${ticket.assignee.name} assigned to ticket`} />
-        )}
+        {/* 2 + 3. Rest of thread — padded */}
+        <div style={{ padding: '16px 20px 0' }}>
+          {ticket?.assignee && (
+            <SystemPill text={`${ticket.assignee.name} assigned to ticket`} />
+          )}
 
-        {/* 3. Conversation thread */}
-        {isLoading ? (
-          <p style={{ fontSize: 13, color: '#76777d' }}>Loading…</p>
-        ) : comments.length === 0 ? (
-          <p style={{ fontSize: 13, color: '#76777d', textAlign: 'center', padding: '8px 0' }}>
-            No replies yet.
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {comments.map((c) =>
-              isAgent(c)
-                ? <AgentMessage    key={c.id} comment={c} />
-                : <EmployeeMessage key={c.id} comment={c} />
-            )}
-          </div>
-        )}
+          {isLoading ? (
+            <p style={{ fontSize: 13, color: '#76777d' }}>Loading…</p>
+          ) : comments.length === 0 ? (
+            <p style={{ fontSize: 13, color: '#76777d', textAlign: 'center', padding: '8px 0' }}>
+              No replies yet.
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {comments.map((c) =>
+                isAgent(c)
+                  ? <AgentMessage    key={c.id} comment={c} />
+                  : <EmployeeMessage key={c.id} comment={c} />
+              )}
+            </div>
+          )}
+          {/* Scroll anchor — scrollIntoView() targets this after each new message */}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      {/* ── Reply editor ──────────────────────────────────────────────────── */}
-      <div style={{ borderTop: '1px solid #e5e7eb', background: '#f8f9ff', padding: 16 }}>
-        <div style={{
-          border: '1px solid #e5e7eb',
-          background: '#ffffff',
-          overflow: 'hidden',
-        }}>
+      {/* ── Reply editor — resizable via top drag handle ──────────────────── */}
+      <div style={{ height: editorHeight, flexShrink: 0, display: 'flex', flexDirection: 'column', background: '#f8f9ff' }}>
 
-          {/* Toolbar */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 2,
-            padding: '6px 8px',
+        {/* Drag handle strip — cursor: ns-resize, drag up to grow */}
+        <div
+          onMouseDown={onDragStart}
+          style={{
+            height: 6, flexShrink: 0,
+            background: '#f1f5f9',
+            borderTop: '1px solid #e5e7eb',
             borderBottom: '1px solid #e5e7eb',
-            background: '#f8f9ff',
-          }}>
-            {[Bold, Italic, Link2, Paperclip].map((Icon, i) => (
-              <button key={i} style={toolbarBtnStyle}>
-                <Icon size={14} />
-              </button>
+            cursor: 'ns-resize',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 3 }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ width: 3, height: 3, borderRadius: '50%', background: '#cbd5e1' }} />
             ))}
-            <div style={{ width: 1, height: 16, background: '#e5e7eb', margin: '0 4px' }} />
-            {[List, Code2].map((Icon, i) => (
-              <button key={i} style={toolbarBtnStyle}>
-                <Icon size={14} />
-              </button>
-            ))}
-            <div style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: '#76777d', whiteSpace: 'nowrap' }}>
-              Replying as <span style={{ color: '#0b1c30' }}>{user?.name ?? 'You'}</span>
-            </div>
           </div>
+        </div>
 
-          {/* Textarea + submit */}
-          <form onSubmit={handleSubmit}>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your reply here..."
-              rows={3}
-              style={{
-                width: '100%', border: 'none', outline: 'none',
-                fontSize: 14, color: '#0b1c30',
-                padding: '12px 14px', resize: 'none',
-                background: '#ffffff', boxSizing: 'border-box',
-                fontFamily: 'inherit',
-              }}
+        {/* Editor inner */}
+        <div style={{ flex: 1, padding: '0 16px 16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ border: '1px solid #e5e7eb', background: '#ffffff', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}>
+
+            {/* Hidden file input for Paperclip button */}
+            <input
+              ref={attachInputRef}
+              type="file"
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => { if (onAttachFile) onAttachFile(e.target.files); e.target.value = ''; }}
             />
-            <div style={{
-              display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-              padding: '10px 12px',
-              borderTop: '1px solid #f1f5f9',
-              background: '#ffffff',
-            }}>
-              <button
-                type="submit"
-                disabled={addMessage.isPending || !message.trim()}
+
+            {/* Textarea + toolbar + submit — single form so submit button works */}
+            <form onSubmit={handleSubmit} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Type your reply here..."
                 style={{
-                  background: addMessage.isPending || !message.trim() ? '#94a3b8' : '#0b1c30',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '8px 20px',
-                  fontSize: 11, fontWeight: 700,
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  cursor: addMessage.isPending || !message.trim() ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  borderRadius: 0,
-                  transition: 'background 150ms',
+                  flex: 1, width: '100%', border: 'none', outline: 'none',
+                  fontSize: 14, color: '#0b1c30',
+                  padding: '12px 14px', resize: 'none',
+                  background: '#ffffff', boxSizing: 'border-box',
+                  fontFamily: 'inherit', minHeight: 0,
                 }}
-              >
-                {addMessage.isPending ? 'Sending…' : 'Send'}
-                <Send size={12} />
-              </button>
-            </div>
-          </form>
+              />
+
+              {/* Toolbar — now also contains the Send button */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0,
+                padding: '4px 6px',
+                borderTop: '1px solid #e5e7eb',
+                background: '#f8f9ff',
+              }}>
+                {TOOLBAR_ICONS_PLAIN.map((Icon, i) => (
+                  <button key={i} type="button" style={toolbarBtnStyle}><Icon size={14} /></button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => attachInputRef.current?.click()}
+                  title="Attach file"
+                  style={toolbarBtnStyle}
+                >
+                  <Paperclip size={14} />
+                </button>
+                <div style={{ width: 1, height: 16, background: '#e5e7eb', margin: '0 4px' }} />
+                {[List, Code2].map((Icon, i) => (
+                  <button key={i} type="button" style={toolbarBtnStyle}><Icon size={14} /></button>
+                ))}
+                <div style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 600, color: '#76777d', whiteSpace: 'nowrap' }}>
+                  Replying as <span style={{ color: '#0b1c30' }}>{user?.name ?? 'You'}</span>
+                </div>
+                <button
+                  type="submit"
+                  disabled={addMessage.isPending || !message.trim()}
+                  style={{
+                    marginLeft: 8,
+                    background: addMessage.isPending || !message.trim() ? '#94a3b8' : '#0b1c30',
+                    color: '#ffffff', border: 'none',
+                    padding: '5px 14px',
+                    fontSize: 11, fontWeight: 700,
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                    cursor: addMessage.isPending || !message.trim() ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    borderRadius: 0, transition: 'background 150ms', flexShrink: 0,
+                  }}
+                >
+                  {addMessage.isPending ? 'Sending…' : 'Send'}
+                  <Send size={11} />
+                </button>
+              </div>
+            </form>
+
+          </div>
         </div>
       </div>
     </div>

@@ -28,13 +28,11 @@ const NAV = {
   employee: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
     { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
-    { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
   agent: [
     { label: 'Queue',     icon: LayoutDashboard, to: '/agent'     },
     { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
     { label: 'Analytics', icon: BarChart2,       to: '/agent'     },
-    { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
   dept_manager: [
     { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
@@ -42,7 +40,6 @@ const NAV = {
     { label: 'Analytics',  icon: BarChart2,       to: '/manager'  },
     { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager'  },
     { label: 'Archive',    icon: ArchiveIcon,     to: '/manager'  },
-    { label: 'Settings',   icon: Settings,        to: '/settings' },
   ],
   sys_admin: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/admin'     },
@@ -50,7 +47,6 @@ const NAV = {
     { label: 'Triage',    icon: Clock,           to: '/admin'     },
     { label: 'Analytics', icon: BarChart2,       to: '/admin'     },
     { label: 'SLA',       icon: ShieldCheck,     to: '/admin'     },
-    { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
 };
 
@@ -227,13 +223,59 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
         })}
       </nav>
 
-      {/* ── Bottom: user profile ─────────────────────────────────────── */}
+      {/* ── Bottom: Settings + user profile ──────────────────────────── */}
       <div
         style={{
           borderTop: '1px solid rgba(255,255,255,0.06)',
-          padding:   collapsed ? '12px 0' : '12px 12px',
+          padding:   collapsed ? '8px 0' : '8px 8px',
         }}
       >
+        {/* Settings button — same style as nav items */}
+        {(() => {
+          const active = pathname === '/settings' || pathname.startsWith('/settings/');
+          return (
+            <button
+              onClick={() => navigate('/settings')}
+              title={collapsed ? 'Settings' : undefined}
+              style={{
+                width:          '100%',
+                display:        'flex',
+                alignItems:     'center',
+                gap:            collapsed ? 0 : 10,
+                padding:        collapsed ? '10px 0' : '9px 10px',
+                justifyContent: collapsed ? 'center' : 'flex-start',
+                background:     active ? 'rgba(255,255,255,0.06)' : 'transparent',
+                border:         'none',
+                borderLeft:     active ? '3px solid #34d399' : '3px solid transparent',
+                borderRadius:   active && !collapsed ? '0 6px 6px 0' : 0,
+                color:          active ? '#ffffff' : 'rgba(148,163,184,1)',
+                fontSize:       13,
+                fontWeight:     active ? 600 : 400,
+                cursor:         'pointer',
+                transition:     'background 150ms, color 150ms',
+                whiteSpace:     'nowrap',
+                overflow:       'hidden',
+                marginBottom:   6,
+              }}
+              onMouseEnter={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                  e.currentTarget.style.color = '#ffffff';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!active) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = 'rgba(148,163,184,1)';
+                }
+              }}
+            >
+              <Settings size={18} style={{ flexShrink: 0 }} />
+              {!collapsed && <span>Settings</span>}
+            </button>
+          );
+        })()}
+
         {!collapsed ? (
           <div
             style={{

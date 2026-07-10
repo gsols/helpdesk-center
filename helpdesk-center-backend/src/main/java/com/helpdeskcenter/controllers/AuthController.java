@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -50,5 +51,24 @@ public class AuthController {
             "companyId", principal.companyId(),
             "departmentId", principal.departmentId()
         ));
+    }
+
+    @PatchMapping("/change-password")
+    public ResponseEntity<?> changePassword(
+            @AuthenticationPrincipal AuthenticatedUser principal,
+            @RequestBody Map<String, String> body) {
+        if (principal == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Not authenticated"));
+        }
+        String currentPassword = body.get("currentPassword");
+        String newPassword     = body.get("newPassword");
+        if (currentPassword == null || newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.badRequest().body(Map.of("error", "New password must be at least 8 characters"));
+        }
+        boolean ok = authService.changePassword(principal.userId(), currentPassword, newPassword);
+        if (!ok) {
+            return ResponseEntity.status(400).body(Map.of("error", "Current password is incorrect"));
+        }
+        return ResponseEntity.ok(Map.of("message", "Password updated"));
     }
 }
