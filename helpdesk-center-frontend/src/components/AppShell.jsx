@@ -11,13 +11,14 @@
  *
  * Header: 48px, bg-white, border-b border-slate-200
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTickets } from '../hooks/useTickets';
 import {
   LayoutDashboard, Ticket, Settings, LogOut, Bell,
-  BarChart2, Clock, ChevronLeft, ChevronRight,
-  Terminal, ShieldCheck, ArchiveIcon,
+  BarChart2, Clock,
+  Menu, ShieldCheck, ArchiveIcon,
 } from 'lucide-react';
 
 const SIDEBAR_KEY = 'hd_sidebar_collapsed';
@@ -26,17 +27,18 @@ const SIDEBAR_KEY = 'hd_sidebar_collapsed';
 const NAV = {
   employee: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
-    { label: 'Tickets',   icon: Ticket,          to: '/dashboard' },
+    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
     { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
   agent: [
     { label: 'Queue',     icon: LayoutDashboard, to: '/agent'     },
-    { label: 'Tickets',   icon: Ticket,          to: '/agent'     },
+    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
     { label: 'Analytics', icon: BarChart2,       to: '/agent'     },
     { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
   dept_manager: [
     { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
+    { label: 'Tickets',    icon: Ticket,          to: '/tickets'  },
     { label: 'Analytics',  icon: BarChart2,       to: '/manager'  },
     { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager'  },
     { label: 'Archive',    icon: ArchiveIcon,     to: '/manager'  },
@@ -44,9 +46,10 @@ const NAV = {
   ],
   sys_admin: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/admin'     },
-    { label: 'Triage',    icon: Ticket,          to: '/admin'     },
+    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
+    { label: 'Triage',    icon: Clock,           to: '/admin'     },
     { label: 'Analytics', icon: BarChart2,       to: '/admin'     },
-    { label: 'SLA',       icon: Clock,           to: '/admin'     },
+    { label: 'SLA',       icon: ShieldCheck,     to: '/admin'     },
     { label: 'Settings',  icon: Settings,        to: '/settings'  },
   ],
 };
@@ -97,11 +100,17 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
   const navItems = NAV[user?.role] ?? [];
   const initials = getInitials(user?.name ?? user?.email);
 
+  // Pre-fetch tickets so we can navigate directly to the first one
+  // without going through TicketsIndexPage (which causes a double-navigate blink)
+  const { data: tickets = [] } = useTickets();
+  const firstTicketId = [...tickets]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]?.id ?? null;
+
   return (
     <aside
       style={{
-        width:      collapsed ? 64 : 260,
-        minWidth:   collapsed ? 64 : 260,
+        width:      collapsed ? 64 : 180,
+        minWidth:   collapsed ? 64 : 180,
         background: '#020617',
         borderRight: 'none',
         display:    'flex',
@@ -128,17 +137,23 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
           flexShrink:  0,
         }}
       >
-        <div
+        <button
+          onClick={onToggle}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           style={{
             width: 32, height: 32,
             background: '#1e293b',
             borderRadius: 6,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
+            border: 'none',
+            cursor: 'pointer',
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#334155'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#1e293b'; }}
         >
-          <Terminal size={16} color="#34d399" />
-        </div>
+          <Menu size={16} color="#94a3b8" />
+        </button>
         {!collapsed && (
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#ffffff', lineHeight: '18px', whiteSpace: 'nowrap' }}>
@@ -156,10 +171,21 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
         {navItems.map((item) => {
           const Icon = item.icon;
           const active = pathname === item.to || pathname.startsWith(item.to + '/');
+          const handleNavClick = () => {
+            if (active && item.to === '/tickets') {
+              // Already on tickets — toggle the sidebar instead of re-navigating
+              window.dispatchEvent(new CustomEvent('tickets-tab-click'));
+            } else if (item.to === '/tickets' && firstTicketId) {
+              // Navigate directly to the first ticket — skip the /tickets redirect hop
+              navigate(`/tickets/${firstTicketId}`);
+            } else {
+              navigate(item.to);
+            }
+          };
           return (
             <button
               key={item.label + item.to}
-              onClick={() => navigate(item.to)}
+              onClick={handleNavClick}
               title={collapsed ? item.label : undefined}
               style={{
                 width:          '100%',
@@ -274,33 +300,6 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
         )}
       </div>
 
-      {/* ── Collapse toggle ───────────────────────────────────────────── */}
-      <button
-        onClick={onToggle}
-        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        style={{
-          position:   'absolute',
-          top:        '50%',
-          right:      -12,
-          transform:  'translateY(-50%)',
-          width:      24,
-          height:     24,
-          borderRadius: '50%',
-          background: '#1e293b',
-          border:     '1px solid rgba(255,255,255,0.12)',
-          display:    'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor:     'pointer',
-          color:      '#94a3b8',
-          zIndex:     60,
-          flexShrink: 0,
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.background = '#334155'; e.currentTarget.style.color = '#fff'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.color = '#94a3b8'; }}
-      >
-        {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-      </button>
     </aside>
   );
 }
@@ -390,12 +389,29 @@ function TopHeader({ title, sidebarWidth }) {
 export default function AppShell({ title = 'Support Engine', children, noPadding = false }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const mainRef = useRef(null);
 
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(SIDEBAR_KEY) === 'true'
   );
 
-  const sidebarWidth = collapsed ? 64 : 260;
+  // Fade the content area on route change — no unmount, no white flash
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(5px)';
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.style.opacity = '1';
+        el.style.transform = 'translateY(0)';
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [pathname]);
+
+  const sidebarWidth = collapsed ? 64 : 180;
 
   const handleToggle = () => {
     const next = !collapsed;
@@ -431,7 +447,15 @@ export default function AppShell({ title = 'Support Engine', children, noPadding
       >
         <TopHeader title={title} sidebarWidth={sidebarWidth} />
 
-        <main style={{ flex: 1, overflowY: noPadding ? 'hidden' : 'auto', paddingTop: 48, display: noPadding ? 'flex' : 'block', flexDirection: 'column' }}>
+        <main
+          ref={mainRef}
+          style={{
+            flex: 1, overflowY: noPadding ? 'hidden' : 'auto', paddingTop: 48,
+            display: noPadding ? 'flex' : 'block', flexDirection: 'column',
+            opacity: 1, transform: 'translateY(0)',
+            transition: 'opacity 180ms ease, transform 180ms ease',
+          }}
+        >
           {noPadding ? children : (
             <div style={{ padding: '24px' }}>
               {children}

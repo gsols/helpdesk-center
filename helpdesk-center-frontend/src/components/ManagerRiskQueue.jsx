@@ -154,7 +154,7 @@ export default function ManagerRiskQueue() {
               >
                 <td style={{ padding: '16px 16px' }}>
                   <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: '#3b82f6', cursor: 'pointer' }}>
-                    {t.id}
+                    #TK-{t.id}
                   </span>
                 </td>
                 <td style={{ padding: '16px 16px' }}>

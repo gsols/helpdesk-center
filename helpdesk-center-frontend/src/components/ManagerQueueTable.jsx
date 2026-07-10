@@ -137,7 +137,7 @@ export default function ManagerQueueTable() {
             >
               <td style={{ padding: '14px 16px', borderRight: '1px solid #f1f5f9' }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: '#3b82f6', cursor: 'pointer' }}>
-                  TCK-{t.id}
+                  #TK-{t.id}
                 </span>
               </td>
               <td style={{ padding: '14px 16px', borderRight: '1px solid #f1f5f9', fontSize: 13, color: '#0f172a', maxWidth: 320 }}>

@@ -587,7 +587,7 @@ export default function EmployeeDashboard() {
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", color: '#334155', fontWeight: 600, fontSize: 13 }}>
-                  #{t.id}
+                  #TK-{t.id}
                 </td>
                 <td style={{ ...tdStyle, maxWidth: 240 }}>
                   <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{t.title}</div>

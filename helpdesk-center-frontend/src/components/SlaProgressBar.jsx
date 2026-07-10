@@ -13,7 +13,7 @@ function formatRemaining(ms) {
   return `${m}m remaining`;
 }
 
-export default function SlaProgressBar({ createdAt, dueAt, status, ticket }) {
+export default function SlaProgressBar({ createdAt, dueAt, status, ticket, darkTrack }) {
   // Support both prop styles: individual fields OR ticket object
   createdAt = createdAt ?? ticket?.createdAt;
   dueAt     = dueAt     ?? ticket?.dueAt;
@@ -52,25 +52,39 @@ export default function SlaProgressBar({ createdAt, dueAt, status, ticket }) {
 
   return (
     <div className="w-full">
-      {/* Track — 4px height, slate-100 bg */}
-      <div className="flex justify-between items-center mb-0.5">
-        {isPending && (
-          <span className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">
-            SLA PAUSED
-          </span>
-        )}
-        {!isPending && (
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${labelCls}`}>
-            {formatRemaining(remainingMs)}
-          </span>
-        )}
-      </div>
-      <div className="w-full h-1 bg-slate-100 overflow-hidden" style={{ borderRadius: 0 }}>
-        <div
-          className={`h-full transition-all duration-300 ${fillCls} ${isBreached ? 'animate-pulse' : ''}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
+      {/* Inline remaining label — hidden when darkTrack (header already shows it) */}
+      {!darkTrack && (
+        <div className="flex justify-between items-center mb-0.5">
+          {isPending && (
+            <span className="text-[10px] font-bold uppercase text-amber-600 tracking-wider">
+              SLA PAUSED
+            </span>
+          )}
+          {!isPending && (
+            <span className={`text-[10px] font-bold uppercase tracking-wider ${labelCls}`}>
+              {formatRemaining(remainingMs)}
+            </span>
+          )}
+        </div>
+      )}
+      {darkTrack ? (
+        <div style={{ width: '100%', height: 5, background: '#e5e7eb', overflow: 'hidden', borderRadius: 0 }}>
+          <div
+            style={{
+              width: `${pct}%`, height: '100%',
+              background: isBreached ? '#dc2626' : '#1f2937',
+              transition: 'width 0.3s',
+            }}
+          />
+        </div>
+      ) : (
+        <div className="w-full h-1 bg-slate-100 overflow-hidden" style={{ borderRadius: 0 }}>
+          <div
+            className={`h-full transition-all duration-300 ${fillCls} ${isBreached ? 'animate-pulse' : ''}`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
     </div>
   );
 }

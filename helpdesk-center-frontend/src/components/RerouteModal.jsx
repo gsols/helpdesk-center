@@ -54,7 +54,7 @@ export default function RerouteModal({ ticket, onClose }) {
           <p className="text-[13px] text-[#45464d] mb-4">
             Select the correct department for{' '}
             <strong className="text-[#0b1c30] font-semibold">
-              #{ticket.id}: {ticket.title}
+              #TK-{ticket.id}: {ticket.title}
             </strong>.
             This action will be logged for AI model improvement.
           </p>
