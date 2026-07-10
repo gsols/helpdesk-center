@@ -15,3 +15,6 @@ helpdesk-center-frontend/.env.local
 
 # Design reference
 front-end-design/
+
+# Bob MCP config (contains secrets)
+.bob/mcp.json

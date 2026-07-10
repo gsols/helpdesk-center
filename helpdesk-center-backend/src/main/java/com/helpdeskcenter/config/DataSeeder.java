@@ -29,27 +29,36 @@ public class DataSeeder {
         }
 
         Company company = new Company();
-        company.setName("Default Company");
+        company.setName("IBM");
         company = companyRepository.save(company);
 
-        Department itDepartment = new Department();
-        itDepartment.setCompany(company);
-        itDepartment.setName("IT");
-        itDepartment = departmentRepository.save(itDepartment);
+        Department itHardwareDept = new Department();
+        itHardwareDept.setCompany(company);
+        itHardwareDept.setName("IT Hardware");
+        itHardwareDept = departmentRepository.save(itHardwareDept);
+
+        Department itSoftwareDept = new Department();
+        itSoftwareDept.setCompany(company);
+        itSoftwareDept.setName("IT Software");
+        itSoftwareDept = departmentRepository.save(itSoftwareDept);
 
         Department hrDepartment = new Department();
         hrDepartment.setCompany(company);
         hrDepartment.setName("HR");
         hrDepartment = departmentRepository.save(hrDepartment);
 
-        userRepository.save(createUser(company, null,          "John Doe",          "john.doe@company.com",    UserRole.EMPLOYEE));
-        userRepository.save(createUser(company, itDepartment,  "IT Hardware Agent", "it.hardware@company.com", UserRole.AGENT));
-        userRepository.save(createUser(company, itDepartment,  "IT Software Agent", "it.software@company.com", UserRole.AGENT));
-        userRepository.save(createUser(company, hrDepartment,  "HR Agent",          "hr.agent@company.com",    UserRole.AGENT));
-        userRepository.save(createUser(company, itDepartment,  "IT Manager",        "it.manager@company.com",  UserRole.DEPT_MANAGER));
-        userRepository.save(createUser(company, null,          "System Admin",      "admin@company.com",       UserRole.SYS_ADMIN));
+        // Employee
+        userRepository.save(createUser(company, null,           "Alex Rivera",  "employee@ibm.com",       UserRole.EMPLOYEE));
+        // Agents
+        userRepository.save(createUser(company, hrDepartment,   "Jordan Lee",   "hr.agent@ibm.com",       UserRole.AGENT));
+        userRepository.save(createUser(company, itSoftwareDept, "Morgan Chen",  "software.agent@ibm.com", UserRole.AGENT));
+        userRepository.save(createUser(company, itHardwareDept, "Casey Park",   "hardware.agent@ibm.com", UserRole.AGENT));
+        // Manager
+        userRepository.save(createUser(company, hrDepartment,   "Sam Torres",   "hr.manager@ibm.com",     UserRole.DEPT_MANAGER));
+        // Admin
+        userRepository.save(createUser(company, null,           "System Admin", "admin@ibm.com",          UserRole.SYS_ADMIN));
 
-        System.out.println("✅ Seeded default company, departments, and 6 test users");
+        System.out.println("✅ Seeded IBM, 3 departments, and 6 test users");
     }
 
     private User createUser(Company company, Department department, String name, String email, UserRole role) {

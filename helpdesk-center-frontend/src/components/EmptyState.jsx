@@ -13,7 +13,7 @@ export default function EmptyState({ message }) {
       <div style={{
         width:          56,
         height:         56,
-        borderRadius:   12,
+        borderRadius:   0,
         background:     '#f3f4f6',
         border:         '1px solid #e5e7eb',
         display:        'flex',

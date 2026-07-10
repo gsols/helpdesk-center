@@ -6,17 +6,16 @@ import TicketCard from '../components/TicketCard';
 import TicketDetailPanel from '../components/TicketDetailPanel';
 import SplitPane from '../components/SplitPane';
 import StatCard from '../components/StatCard';
-import TabBar from '../components/TabBar';
 import SlaConfigPanel from '../components/SlaConfigPanel';
 import AnalyticsPanel from '../components/AnalyticsPanel';
 import TriageQueue from '../components/TriageQueue';
-import { CircleDot, Clock, CheckCircle2, Users } from 'lucide-react';
+import { CircleDot, Clock, CheckCircle2 } from 'lucide-react';
 
 const ADMIN_TABS = [
-  { id: 'overview',   label: 'Overview' },
-  { id: 'sla',        label: 'SLA Rules' },
-  { id: 'analytics',  label: 'Analytics' },
-  { id: 'triage',     label: 'Triage Queue' },
+  { id: 'overview',  label: 'Overview'      },
+  { id: 'sla',       label: 'SLA Rules'     },
+  { id: 'analytics', label: 'Analytics'     },
+  { id: 'triage',    label: 'Triage Queue'  },
 ];
 
 export default function AdminDashboard() {
@@ -36,11 +35,11 @@ export default function AdminDashboard() {
 
   /* ── Overview ticket list ── */
   const ticketList = (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+    <div className="bg-white border border-[#c6c6cd] rounded-none overflow-hidden">
       {isLoading ? (
-        <p className="text-sm text-gray-400 p-5">Loading…</p>
+        <p className="text-sm text-[#45464d] p-5">Loading…</p>
       ) : tickets.length === 0 ? (
-        <p className="text-sm text-gray-400 p-5">No tickets.</p>
+        <p className="text-sm text-[#45464d] p-5">No tickets.</p>
       ) : (
         tickets.map(t => (
           <TicketCard
@@ -56,11 +55,12 @@ export default function AdminDashboard() {
   );
 
   const overviewContent = (
-    <div>
-      <div className="flex gap-4 mb-5 flex-wrap">
-        <StatCard label="Open Tickets"  count={openCount}       color="#3b82d4" bg="#eff6ff" icon={CircleDot}    />
-        <StatCard label="In Progress"   count={inProgressCount} color="#7c3aed" bg="#f5f3ff" icon={Clock}        />
-        <StatCard label="Resolved"      count={resolvedCount}   color="#15803d" bg="#f0fdf4" icon={CheckCircle2} />
+    <div className="space-y-5">
+      {/* Stat cards — wireframe metric matrix style */}
+      <div className="flex gap-0 border border-[#c6c6cd] bg-white rounded-none overflow-hidden">
+        <StatCard label="Open Tickets"  count={openCount}       icon={CircleDot}    />
+        <StatCard label="In Progress"   count={inProgressCount} icon={Clock}        accent="amber" />
+        <StatCard label="Resolved"      count={resolvedCount}   icon={CheckCircle2} accent="emerald" last />
       </div>
       {selectedId ? (
         maximized ? (
@@ -83,28 +83,28 @@ export default function AdminDashboard() {
 
   return (
     <AppShell title="Admin Dashboard">
-      <TabBar tabs={ADMIN_TABS} value={activeTab} onChange={setActiveTab} />
-      <div className="mt-5">
-        {activeTab === 'overview'  && overviewContent}
-        {activeTab === 'sla'       && (
-          <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-4">SLA Rule Configuration</h2>
-            <SlaConfigPanel />
-          </div>
-        )}
-        {activeTab === 'analytics' && (
-          <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Performance Analytics</h2>
-            <AnalyticsPanel />
-          </div>
-        )}
-        {activeTab === 'triage'    && (
-          <div>
-            <h2 className="text-base font-semibold text-gray-700 mb-4">Triage Queue</h2>
-            <TriageQueue />
-          </div>
-        )}
+      {/* Wireframe tab bar — flush horizontal pill tabs */}
+      <div className="flex items-center gap-1 mb-6 border-b border-[#c6c6cd] pb-0">
+        {ADMIN_TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={[
+              'px-4 py-2 text-[13px] font-semibold rounded-t-sm transition-colors -mb-px',
+              activeTab === tab.id
+                ? 'bg-white border border-b-white border-[#c6c6cd] text-[#0b1c30]'
+                : 'text-[#45464d] hover:text-[#0b1c30] hover:bg-[#f0f4ff] border border-transparent',
+            ].join(' ')}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {activeTab === 'overview'  && overviewContent}
+      {activeTab === 'sla'       && <SlaConfigPanel />}
+      {activeTab === 'analytics' && <AnalyticsPanel />}
+      {activeTab === 'triage'    && <TriageQueue />}
     </AppShell>
   );
 }

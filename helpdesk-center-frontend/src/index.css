@@ -3,85 +3,88 @@
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Design tokens ───────────────────────────────────────────────────────── */
+/* ── Wireframe Design Tokens (Technical Support Enterprise) ──────────────── */
 :root {
-  /* Page / surface */
-  --bg-page:    #f7f8fa;
-  --bg-card:    #ffffff;
-  --border:     #e5e7eb;
-  --border-input: #d1d5db;
+  /* Surfaces */
+  --background:              #f8f9ff;
+  --surface:                 #f8f9ff;
+  --surface-container-lowest:#ffffff;
+  --surface-container-low:   #eff4ff;
+  --surface-container:       #e5eeff;
+  --surface-container-high:  #dce9ff;
+  --surface-container-highest:#d3e4fe;
+  --surface-variant:         #d3e4fe;
+  --surface-dim:             #cbdbf5;
 
-  /* Text */
-  --text-primary:   #1f2328;
-  --text-secondary: #57606a;
-  --text-muted:     #9ca3af;
+  /* Primary (nav rail bg = primary-container) */
+  --primary:                 #000000;
+  --on-primary:              #ffffff;
+  --primary-container:       #131b2e;
+  --on-primary-container:    #7c839b;
+  --primary-fixed:           #dae2fd;
+  --primary-fixed-dim:       #bec6e0;
+  --on-primary-fixed:        #131b2e;
+  --on-primary-fixed-variant:#3f465c;
+  --inverse-primary:         #bec6e0;
 
-  /* Accent */
-  --accent:       #3b82d4;
-  --accent-hover: #2c6fbd;
-  --accent-light: #eff6ff;
+  /* Secondary */
+  --secondary:               #5c5f61;
+  --on-secondary:            #ffffff;
+  --secondary-container:     #e0e3e5;
+  --on-secondary-container:  #626567;
+  --secondary-fixed:         #e0e3e5;
+  --secondary-fixed-dim:     #c4c7c9;
+  --on-secondary-fixed:      #191c1e;
+  --on-secondary-fixed-variant:#444749;
 
-  /* Status badges */
-  --status-open-text:   #1d4ed8;
-  --status-open-bg:     #eff6ff;
-  --status-open-border: #bfdbfe;
+  /* Tertiary */
+  --tertiary:                #000000;
+  --on-tertiary:             #ffffff;
+  --tertiary-container:      #271901;
+  --on-tertiary-container:   #98805d;
 
-  --status-progress-text:   #7c3aed;
-  --status-progress-bg:     #f5f3ff;
-  --status-progress-border: #ddd6fe;
+  /* Error */
+  --error:                   #ba1a1a;
+  --on-error:                #ffffff;
+  --error-container:         #ffdad6;
+  --on-error-container:      #93000a;
 
-  --status-resolved-text:   #15803d;
-  --status-resolved-bg:     #f0fdf4;
-  --status-resolved-border: #bbf7d0;
+  /* Surfaces: On */
+  --on-surface:              #0b1c30;
+  --on-surface-variant:      #45464d;
+  --on-background:           #0b1c30;
+  --inverse-surface:         #213145;
+  --inverse-on-surface:      #eaf1ff;
 
-  /* Priority badges */
-  --priority-critical-text:   #b91c1c;
-  --priority-critical-bg:     #fef2f2;
-  --priority-critical-border: #fecaca;
+  /* Outline */
+  --outline:                 #76777d;
+  --outline-variant:         #c6c6cd;
 
-  --priority-high-text:   #c2410c;
-  --priority-high-bg:     #fff7ed;
-  --priority-high-border: #fed7aa;
-
-  --priority-medium-text:   #b45309;
-  --priority-medium-bg:     #fffbeb;
-  --priority-medium-border: #fde68a;
-
-  --priority-low-text:   #15803d;
-  --priority-low-bg:     #f0fdf4;
-  --priority-low-border: #bbf7d0;
-
-  /* Category badges */
-  --category-hardware-text:   #1d4ed8;
-  --category-hardware-bg:     #eff6ff;
-  --category-hardware-border: #bfdbfe;
-
-  --category-software-text:   #7c3aed;
-  --category-software-bg:     #f5f3ff;
-  --category-software-border: #ddd6fe;
-
-  --category-hr-text:   #065f46;
-  --category-hr-bg:     #ecfdf5;
-  --category-hr-border: #a7f3d0;
-
-  /* Elevation */
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.08), 0 1px 8px rgba(0,0,0,0.04);
-  --shadow-filter: 0 1px 3px rgba(0,0,0,0.08);
-
-  /* Layout */
-  --radius-card:  8px;
-  --radius-input: 6px;
-  --radius-badge: 4px;
-  --header-h:     56px;
+  /* Layout dimensions */
+  --nav-rail-width:          64px;
+  --header-height:           48px;
+  --sidebar-width:           260px;
+  --gutter:                  16px;
+  --container-padding:       24px;
+  --stack-sm:                4px;
+  --stack-md:                8px;
 }
 
 /* ── Base ────────────────────────────────────────────────────────────────── */
 body {
-  font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+  font-family: 'Hanken Grotesk', 'Segoe UI', system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--text-primary);
-  background: var(--bg-page);
+  color: var(--on-surface);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Technical / monospace text (ticket IDs, error codes, API keys) */
+.font-mono,
+.font-technical,
+code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
 }
 
 button { cursor: pointer; font-family: inherit; }
@@ -89,26 +92,45 @@ button { cursor: pointer; font-family: inherit; }
 input, textarea, select {
   font-family: inherit;
   font-size: 14px;
-  color: var(--text-primary);
-  background: var(--bg-card);
-  border: 1px solid var(--border-input);
-  border-radius: var(--radius-input);
+  color: var(--on-surface);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 0;
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s;
 }
 
 input:focus, textarea:focus, select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 212, 0.15);
+  border-color: #3b82f6;
+  box-shadow: none;
 }
 
-/* ── Responsive helpers ──────────────────────────────────────────────────── */
-.hide-mobile  { display: block; }
-.show-mobile  { display: none;  }
+/* ── Custom scrollbars (wireframe spec) ─────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c6c6cd; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #76777d; }
 
-@media (max-width: 640px) {
-  .hide-mobile { display: none !important; }
-  .show-mobile { display: flex !important; }
+/* ── Typography utilities ────────────────────────────────────────────────── */
+.text-label-caps {
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.text-body-sm   { font-size: 13px; font-weight: 400; line-height: 18px; }
+.text-body-md   { font-size: 14px; font-weight: 400; line-height: 20px; }
+.text-title-md  { font-size: 14px; font-weight: 600; line-height: 20px; }
+.text-headline-sm { font-size: 18px; font-weight: 600; line-height: 24px; }
+.text-display-sm  { font-size: 24px; font-weight: 600; line-height: 32px; letter-spacing: -0.02em; }
+
+.font-technical-md {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
 }
 
 /* ── Animations ──────────────────────────────────────────────────────────── */

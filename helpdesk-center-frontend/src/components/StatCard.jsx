@@ -1,52 +1,42 @@
-import { T } from '../styles/tokens';
-
 /**
- * StatCard — displays a metric with label, large count, and colored icon.
+ * StatCard — wireframe metric matrix cell.
+ *
+ * When used inside a shared border flex container (AdminDashboard overview row),
+ * it renders as a flex-1 cell with a right-border divider, except the last cell.
  *
  * Props:
- *   label   — string  e.g. "Open Tickets"
- *   count   — number
- *   color   — CSS color string for the accent (icon + count)
- *   bg      — CSS color string for the icon background tint
- *   icon    — Lucide icon component
+ *   label   — string  — all-caps label
+ *   count   — number  — large display number
+ *   icon    — Lucide icon component (optional, rendered as muted accent)
+ *   accent  — 'default' | 'amber' | 'emerald' — trend color for the value
+ *   last    — bool    — if true, suppress right border (last in row)
  */
-export default function StatCard({ label, count, color, bg, icon: Icon }) {
+export default function StatCard({ label, count, icon: Icon, accent = 'default', last = false }) {
+  const valueColor =
+    accent === 'amber'   ? 'text-amber-600' :
+    accent === 'emerald' ? 'text-emerald-600' :
+    'text-[#0b1c30]';
+
   return (
-    <div style={{
-      background:   T.card,
-      border:       `1px solid ${T.border}`,
-      borderRadius: T.radiusLg,
-      padding:      '18px 20px',
-      display:      'flex',
-      alignItems:   'center',
-      justifyContent: 'space-between',
-      gap:          16,
-      boxShadow:    '0 1px 4px rgba(0,0,0,0.06)',
-      flex:         1,
-      minWidth:     0,
-    }}>
-      <div>
-        <p style={{ fontSize: 12, fontWeight: 600, color: T.textSecondary, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
-          {label}
-        </p>
-        <p style={{ fontSize: 32, fontWeight: 700, color: color ?? T.navy, lineHeight: 1 }}>
+    <div
+      className={[
+        'flex-1 p-6 flex flex-col justify-between bg-white',
+        last ? '' : 'border-r border-[#c6c6cd]',
+      ].join(' ')}
+    >
+      <p className="text-[11px] font-bold tracking-widest text-[#45464d] uppercase mb-1">
+        {label}
+      </p>
+      <div className="flex items-baseline gap-3 mt-1">
+        <span
+          className={['font-["Hanken_Grotesk"] text-[24px] font-bold leading-8 tracking-tight', valueColor].join(' ')}
+        >
           {count ?? 0}
-        </p>
+        </span>
+        {Icon && (
+          <Icon size={14} className="text-[#c6c6cd] mb-0.5" />
+        )}
       </div>
-      {Icon && (
-        <div style={{
-          width:          44,
-          height:         44,
-          borderRadius:   10,
-          background:     bg ?? T.accentLight,
-          display:        'flex',
-          alignItems:     'center',
-          justifyContent: 'center',
-          flexShrink:     0,
-        }}>
-          <Icon size={20} color={color ?? T.accent} strokeWidth={2} />
-        </div>
-      )}
     </div>
   );
 }

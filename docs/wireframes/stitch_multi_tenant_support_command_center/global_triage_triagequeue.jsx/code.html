@@ -1,0 +1,422 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SupportCommand - Triage Queue</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800;900&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        .row-hover:hover {
+            background-color: rgba(241, 245, 249, 0.8);
+        }
+    </style>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#5c5f61",
+                    "on-tertiary-fixed-variant": "#574425",
+                    "on-error": "#ffffff",
+                    "surface-tint": "#565e74",
+                    "inverse-on-surface": "#eaf1ff",
+                    "tertiary-fixed": "#fcdeb5",
+                    "tertiary-fixed-dim": "#dec29a",
+                    "error-container": "#ffdad6",
+                    "secondary-container": "#e0e3e5",
+                    "inverse-primary": "#bec6e0",
+                    "surface-container-lowest": "#ffffff",
+                    "primary-fixed-dim": "#bec6e0",
+                    "error": "#ba1a1a",
+                    "on-tertiary-container": "#98805d",
+                    "on-primary-fixed-variant": "#3f465c",
+                    "secondary-fixed": "#e0e3e5",
+                    "secondary-fixed-dim": "#c4c7c9",
+                    "surface-container-low": "#eff4ff",
+                    "outline-variant": "#c6c6cd",
+                    "surface": "#f8f9ff",
+                    "surface-bright": "#f8f9ff",
+                    "surface-container": "#e5eeff",
+                    "tertiary": "#000000",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-fixed-variant": "#444749",
+                    "on-secondary": "#ffffff",
+                    "surface-variant": "#d3e4fe",
+                    "outline": "#76777d",
+                    "inverse-surface": "#213145",
+                    "surface-container-high": "#dce9ff",
+                    "primary-fixed": "#dae2fd",
+                    "primary-container": "#131b2e",
+                    "tertiary-container": "#271901",
+                    "on-tertiary-fixed": "#271901",
+                    "on-primary-fixed": "#131b2e",
+                    "on-error-container": "#93000a",
+                    "surface-container-highest": "#d3e4fe",
+                    "primary": "#000000",
+                    "background": "#f8f9ff",
+                    "surface-dim": "#cbdbf5",
+                    "on-primary": "#ffffff",
+                    "on-secondary-fixed": "#191c1e",
+                    "on-background": "#0b1c30",
+                    "on-surface-variant": "#45464d",
+                    "on-surface": "#0b1c30",
+                    "on-secondary-container": "#626567",
+                    "on-primary-container": "#7c839b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "spacing": {
+                    "sidebar-width": "260px",
+                    "stack-sm": "4px",
+                    "shell-header-height": "48px",
+                    "gutter": "16px",
+                    "container-padding": "24px",
+                    "shell-nav-width": "64px",
+                    "stack-md": "8px"
+            },
+            "fontFamily": {
+                    "title-md": ["Hanken Grotesk"],
+                    "headline-sm": ["Hanken Grotesk"],
+                    "label-caps": ["Hanken Grotesk"],
+                    "body-sm": ["Hanken Grotesk"],
+                    "body-md": ["Hanken Grotesk"],
+                    "display-sm": ["Hanken Grotesk"],
+                    "technical-md": ["JetBrains Mono"]
+            },
+            "fontSize": {
+                    "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                    "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                    "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                    "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                    "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+</head>
+<body class="bg-surface text-on-surface font-body-md selection:bg-primary-fixed selection:text-on-primary-fixed overflow-hidden">
+<!-- App Shell: SideNav (Rail) -->
+<aside class="fixed left-0 top-0 h-full w-[64px] z-50 bg-slate-950 flex flex-col border-r border-outline-variant transition-all duration-300">
+<div class="h-[48px] flex items-center justify-center border-b border-slate-800">
+<span class="material-symbols-outlined text-white text-[24px]">terminal</span>
+</div>
+<nav class="flex-1 flex flex-col items-center py-stack-md gap-stack-md">
+<!-- Active: Tickets (Triage Queue context) -->
+<button class="w-12 h-12 flex items-center justify-center transition-colors text-outline hover:text-on-surface-variant hover:bg-secondary-container">
+<span class="material-symbols-outlined">dashboard</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center border-l-4 border-inverse-primary bg-primary-container text-on-primary-container">
+<span class="material-symbols-outlined">confirmation_number</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center transition-colors text-outline hover:text-on-surface-variant hover:bg-secondary-container">
+<span class="material-symbols-outlined">analytics</span>
+</button>
+<button class="w-12 h-12 flex items-center justify-center transition-colors text-outline hover:text-on-surface-variant hover:bg-secondary-container">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</nav>
+<div class="py-stack-md flex flex-col items-center border-t border-slate-800">
+<button class="w-12 h-12 flex items-center justify-center text-outline hover:text-on-surface-variant">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+</aside>
+<!-- App Shell: TopNavBar -->
+<header class="fixed top-0 right-0 w-[calc(100%-64px)] h-[48px] z-40 bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center px-gutter">
+<div class="flex items-center gap-stack-md">
+<span class="font-headline-sm text-headline-sm font-black text-on-surface">Helpdesk / Triage Queue</span>
+<span class="mx-2 text-outline-variant">/</span>
+<span class="font-title-md text-title-md text-primary font-bold border-b-2 border-primary pb-1">Unassigned</span>
+</div>
+<div class="flex items-center gap-gutter">
+<div class="flex items-center gap-stack-md text-on-surface-variant">
+<button class="material-symbols-outlined hover:bg-surface-container-low transition-all p-1 active:opacity-80">notifications</button>
+<button class="material-symbols-outlined hover:bg-surface-container-low transition-all p-1 active:opacity-80">schedule</button>
+<button class="material-symbols-outlined hover:bg-surface-container-low transition-all p-1 active:opacity-80">public</button>
+</div>
+<div class="w-8 h-8 overflow-hidden border border-outline-variant cursor-pointer active:opacity-80">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a senior support engineer with short dark hair and glasses, wearing a sleek gray blazer. The lighting is crisp and studio-grade, reflecting a corporate, modern aesthetic. The background is a clean, neutral gradient of light slate and white, emphasizing a precise and systematic workflow environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfOeg5ciDS-G4hWjTfEwPQNN-qceGvqgi624dBIDHkoYePuIlRVTWdu1vQW5DdLJFFkghfflJdQC4qy49MepwKl7OtjV5anTMw4S0xilCs0ry0wv_AmywDAzlNccIO2qPkyzoZXZKubWuNzbXLQIGU_fd_Tla8iVWTYKLnC9Jf0lm8Db1tuySFyW1i0CmFaasJsjD6txvDoZEhc8pI-mQh7WZQTlOVjulFuujn1KcJW7RBCoxfKsSC">
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[64px] mt-[48px] h-[calc(100vh-48px)] flex flex-col overflow-hidden bg-white">
+<!-- Top Metric Banner (Sharp Containers) -->
+<section class="flex border-b border-slate-200">
+<div class="flex-1 p-gutter border-r border-slate-200 flex flex-col gap-1 rounded-none bg-white">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Unassigned Triage Volume</span>
+<div class="flex items-center gap-4">
+<span class="text-[32px] font-bold text-slate-900 leading-none">42</span>
+<span class="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-amber-200 uppercase tracking-wider">Needs Action</span>
+</div>
+</div>
+<div class="flex-1 p-gutter border-r border-slate-200 flex flex-col gap-1 rounded-none bg-white">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Avg Uncategorized Wait Time</span>
+<div class="flex items-center gap-4">
+<span class="text-[32px] font-bold text-slate-900 leading-none">1h 24m</span>
+<div class="flex-1 h-1 bg-slate-100 max-w-[120px]">
+<div class="h-full bg-amber-500 w-[65%]"></div>
+</div>
+</div>
+</div>
+<div class="flex-1 p-gutter border-r border-slate-200 flex flex-col gap-1 rounded-none bg-white">
+<span class="font-label-caps text-label-caps text-secondary uppercase">SLA Breach Probability</span>
+<div class="flex items-center gap-4">
+<span class="text-[32px] font-bold text-slate-900 leading-none">12%</span>
+<span class="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-md border border-emerald-200 uppercase tracking-wider">Low Risk</span>
+</div>
+</div>
+<div class="hidden xl:flex flex-1 p-gutter flex-col gap-1 rounded-none bg-white">
+<span class="font-label-caps text-label-caps text-secondary uppercase">Queue Capacity</span>
+<div class="flex items-center gap-4">
+<span class="text-[32px] font-bold text-slate-900 leading-none">88%</span>
+<div class="flex-1 h-1 bg-slate-100 max-w-[120px]">
+<div class="h-full bg-slate-900 w-[88%]"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- Filter Strip (Sharp) -->
+<section class="w-full bg-slate-50 border-b border-slate-200 flex items-center h-10 px-gutter">
+<span class="material-symbols-outlined text-slate-400 mr-2 text-[18px]">search</span>
+<input class="flex-1 bg-transparent border-none text-body-sm focus:ring-0 placeholder:text-slate-400 rounded-none h-full" placeholder="Search triage queue by ticket ID or raw text payload..." type="text">
+<div class="flex gap-2 ml-4">
+<button class="h-7 px-3 bg-white border border-slate-300 text-slate-700 text-[12px] font-semibold rounded-md flex items-center gap-1 hover:bg-slate-50">
+<span class="material-symbols-outlined text-[16px]">filter_alt</span>
+                    Filters
+                </button>
+<button class="h-7 px-3 bg-slate-900 text-white text-[12px] font-semibold rounded-md flex items-center gap-1 hover:bg-slate-800">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+                    Sync Queue
+                </button>
+</div>
+</section>
+<!-- Triage Grid (High-Density) -->
+<section class="flex-1 overflow-auto custom-scrollbar">
+<table class="w-full text-left border-collapse table-fixed min-w-[1000px]">
+<thead class="sticky top-0 bg-slate-50/90 backdrop-blur-sm border-b border-slate-200 z-10">
+<tr class="h-8">
+<th class="w-32 px-4 font-label-caps text-label-caps text-slate-600 uppercase border-r border-slate-100">Ticket ID</th>
+<th class="w-1/4 px-4 font-label-caps text-label-caps text-slate-600 uppercase border-r border-slate-100">Subject</th>
+<th class="w-36 px-4 font-label-caps text-label-caps text-slate-600 uppercase border-r border-slate-100">Submission Date</th>
+<th class="px-4 font-label-caps text-label-caps text-slate-600 uppercase border-r border-slate-100">AI Raw Text Extraction</th>
+<th class="w-56 px-4 font-label-caps text-label-caps text-slate-600 uppercase">Assigned Department</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<!-- Row 1 -->
+<tr class="row-hover transition-colors h-12">
+<td class="px-4 py-2 border-r border-slate-100">
+<span class="font-technical-md text-technical-md text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer hover:bg-blue-100">TCK-1089</span>
+</td>
+<td class="px-4 py-2 border-r border-slate-100 overflow-hidden truncate font-title-md text-title-md text-slate-900">
+                            Payroll profile locked out after system update
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100 font-body-sm text-body-sm text-slate-500">
+                            2026-07-08
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100">
+<p class="font-body-sm text-body-sm text-slate-600 line-clamp-2 italic">
+                                "Every time I click on my pay stub page, it gives me an internal server error 500"
+                            </p>
+</td>
+<td class="px-4 py-2">
+<div class="relative group">
+<button class="w-full h-8 px-3 flex justify-between items-center text-body-sm bg-white border border-slate-300 rounded-md hover:border-slate-400 focus:border-blue-500 transition-all outline-none" onclick="toggleDropdown(this)">
+<span class="text-slate-500">Choose Department...</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<!-- Floating Menu -->
+<div class="hidden absolute right-0 mt-1 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-20 py-1" id="dropdown-menu">
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">IT Support</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">HR &amp; Benefits</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Finance &amp; Payroll</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Facilities Maintenance</button>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="row-hover transition-colors h-12">
+<td class="px-4 py-2 border-r border-slate-100">
+<span class="font-technical-md text-technical-md text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer">TCK-1090</span>
+</td>
+<td class="px-4 py-2 border-r border-slate-100 overflow-hidden truncate font-title-md text-title-md text-slate-900">
+                            HVAC weird noise on floor 4
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100 font-body-sm text-body-sm text-slate-500">
+                            2026-07-08
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100">
+<p class="font-body-sm text-body-sm text-slate-600 line-clamp-2 italic">
+                                "The vent near cubicle 412 is rattling very loudly and blowing cold air directly down."
+                            </p>
+</td>
+<td class="px-4 py-2">
+<div class="relative">
+<button class="w-full h-8 px-3 flex justify-between items-center text-body-sm bg-white border border-slate-300 rounded-md hover:border-slate-400 focus:border-blue-500 transition-all outline-none" onclick="toggleDropdown(this)">
+<span class="text-slate-500">Choose Department...</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="hidden absolute right-0 mt-1 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-20 py-1">
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">IT Support</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">HR &amp; Benefits</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Finance &amp; Payroll</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Facilities Maintenance</button>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="row-hover transition-colors h-12">
+<td class="px-4 py-2 border-r border-slate-100">
+<span class="font-technical-md text-technical-md text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer">TCK-1092</span>
+</td>
+<td class="px-4 py-2 border-r border-slate-100 overflow-hidden truncate font-title-md text-title-md text-slate-900">
+                            Request for secondary monitor
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100 font-body-sm text-body-sm text-slate-500">
+                            2026-07-07
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100">
+<p class="font-body-sm text-body-sm text-slate-600 line-clamp-2 italic">
+                                "Onboarding intern needs a vertical monitor. Manager approved."
+                            </p>
+</td>
+<td class="px-4 py-2">
+<div class="relative">
+<button class="w-full h-8 px-3 flex justify-between items-center text-body-sm bg-white border border-slate-300 rounded-md hover:border-slate-400 focus:border-blue-500 transition-all outline-none" onclick="toggleDropdown(this)">
+<span class="text-slate-500">Choose Department...</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="hidden absolute right-0 mt-1 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-20 py-1">
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">IT Support</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">HR &amp; Benefits</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Finance &amp; Payroll</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Facilities Maintenance</button>
+</div>
+</div>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="row-hover transition-colors h-12">
+<td class="px-4 py-2 border-r border-slate-100">
+<span class="font-technical-md text-technical-md text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded cursor-pointer">TCK-1095</span>
+</td>
+<td class="px-4 py-2 border-r border-slate-100 overflow-hidden truncate font-title-md text-title-md text-slate-900">
+                            Medical insurance card lost
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100 font-body-sm text-body-sm text-slate-500">
+                            2026-07-07
+                        </td>
+<td class="px-4 py-2 border-r border-slate-100">
+<p class="font-body-sm text-body-sm text-slate-600 line-clamp-2 italic">
+                                "I lost my wallet and need to order a new physical health insurance card for the BlueCross plan."
+                            </p>
+</td>
+<td class="px-4 py-2">
+<div class="relative">
+<button class="w-full h-8 px-3 flex justify-between items-center text-body-sm bg-white border border-slate-300 rounded-md hover:border-slate-400 focus:border-blue-500 transition-all outline-none" onclick="toggleDropdown(this)">
+<span class="text-slate-500">Choose Department...</span>
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+</button>
+<div class="hidden absolute right-0 mt-1 w-full bg-white border border-slate-200 shadow-lg rounded-md overflow-hidden z-20 py-1">
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">IT Support</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">HR &amp; Benefits</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Finance &amp; Payroll</button>
+<button class="w-full px-4 py-1.5 text-left text-body-sm hover:bg-slate-100 text-slate-700">Facilities Maintenance</button>
+</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<!-- Footer / Pagination -->
+<footer class="h-8 bg-slate-50 border-t border-slate-200 px-gutter flex items-center justify-between">
+<div class="text-[11px] text-slate-500 font-medium">
+                Showing 4 of 42 unassigned tickets
+            </div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1">
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-900 disabled:opacity-30" disabled="">
+<span class="material-symbols-outlined text-[18px]">chevron_left</span>
+</button>
+<span class="text-[11px] font-bold px-2 py-0.5 bg-slate-200 rounded">1</span>
+<button class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-slate-900">
+<span class="material-symbols-outlined text-[18px]">chevron_right</span>
+</button>
+</div>
+</div>
+</footer>
+</main>
+<script>
+        function toggleDropdown(btn) {
+            // Close all other dropdowns first
+            document.querySelectorAll('#dropdown-menu, .relative div[id^="dropdown-"]').forEach(menu => {
+                if (menu !== btn.nextElementSibling) {
+                    menu.classList.add('hidden');
+                }
+            });
+            // Toggle current
+            const menu = btn.nextElementSibling;
+            menu.classList.toggle('hidden');
+        }
+
+        // Close dropdowns when clicking outside
+        window.addEventListener('click', function(e) {
+            if (!e.target.closest('.relative')) {
+                document.querySelectorAll('.relative div').forEach(menu => {
+                    menu.classList.add('hidden');
+                });
+            }
+        });
+
+        // Simple selection interaction
+        document.querySelectorAll('div.relative button + div button').forEach(option => {
+            option.addEventListener('click', function() {
+                const button = this.parentElement.previousElementSibling;
+                const span = button.querySelector('span:first-child');
+                span.innerText = this.innerText;
+                span.classList.remove('text-slate-500');
+                span.classList.add('text-slate-900', 'font-bold');
+                this.parentElement.classList.add('hidden');
+                
+                // Visual feedback of "Assignment"
+                const row = button.closest('tr');
+                row.style.opacity = '0.5';
+                setTimeout(() => {
+                    row.remove(); // Simulate ticket moving out of triage
+                }, 400);
+            });
+        });
+    </script>
+</body></html>

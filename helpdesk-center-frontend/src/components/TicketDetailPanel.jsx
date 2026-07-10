@@ -1,249 +1,257 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+/**
+ * TicketDetailPanel — "employee_ticket_detail_refined_layout" wireframe
+ *
+ * Layout: 2-column view (fills TicketDetailPage's content area)
+ *  Center (fluid):
+ *    • Ticket header: large #ID / Title + status/priority badges + SLA bar
+ *    • Scrollable conversation thread (CommentSection)
+ *  Right (280px):
+ *    • AI Classification
+ *    • Ticket Metadata
+ *    • Attachments
+ *    • Recent Activity (timeline)
+ *    • Tags
+ */
+import { useState, useEffect } from 'react';
 import { useTicket, useUpdateStatus } from '../hooks/useTickets';
-import { getAttachments, downloadUrl } from '../api/attachmentsApi';
+import { getAttachments } from '../api/attachmentsApi';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
-import CategoryBadge from './CategoryBadge';
 import CommentSection from './CommentSection';
-import {
-  ChevronDown, FileText, ImageIcon, File, Download, X, Maximize2, Minimize2, ArrowLeftRight
-} from 'lucide-react';
+import SlaProgressBar from './SlaProgressBar';
+import { FileText, ImageIcon, Plus, Sparkles } from 'lucide-react';
 
-const STATUSES = ['OPEN', 'IN_PROGRESS', 'PENDING_EMPLOYEE', 'RESOLVED', 'CLOSED'];
-const STATUS_LABELS = {
-  OPEN: 'Open', IN_PROGRESS: 'In Progress',
-  PENDING_EMPLOYEE: 'Pending Employee', RESOLVED: 'Resolved', CLOSED: 'Closed'
-};
-
-/* ── File type icon ──────────────────────────────────────────────────────── */
-function FileTypeIcon({ type }) {
-  if (type === 'pdf')   return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-red-600"><FileText size={14} color="#fff" /></div>;
-  if (type === 'image') return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-blue-700"><ImageIcon size={14} color="#fff" /></div>;
-  if (type === 'text')  return <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-gray-500"><FileText size={14} color="#fff" /></div>;
-  return                       <div className="w-7 h-7 rounded flex items-center justify-center shrink-0 bg-gray-400"><File     size={14} color="#fff" /></div>;
-}
-
-/* ── File viewer modal ───────────────────────────────────────────────────── */
-function FileViewer({ attachment, onClose }) {
-  const ext  = attachment.fileName?.split('.').pop()?.toLowerCase();
-  const type = ext === 'pdf' ? 'pdf' : ['png','jpg','jpeg','gif','webp'].includes(ext) ? 'image' : ext === 'txt' ? 'text' : 'other';
-  const url  = downloadUrl(attachment.id);
-
-  const handleBackdrop = useCallback((e) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
-
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  return (
-    <div onClick={handleBackdrop} className="fixed inset-0 bg-black/60 flex items-center justify-center z-[1000] p-4">
-      <div className="bg-white rounded-xl flex flex-col max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
-          <span className="text-sm font-semibold text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap flex-1 mr-4">
-            {attachment.fileName}
-          </span>
-          <div className="flex items-center gap-2 shrink-0">
-            <a href={url} download={attachment.fileName}
-              className="flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded-md px-3.5 py-1.5 no-underline hover:bg-blue-800">
-              <Download size={13} /> Download
-            </a>
-            <button onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700">
-              <X size={16} />
-            </button>
-          </div>
-        </div>
-        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 min-h-48">
-          {type === 'image' && <img src={url} alt={attachment.fileName} className="max-w-full max-h-[75vh] object-contain block" />}
-          {type === 'pdf'   && <iframe src={url} title={attachment.fileName} className="w-full h-[75vh] border-none" />}
-          {(type === 'text' || type === 'other') && (
-            <div className="p-6 text-center">
-              <File size={48} className="text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-500 mb-4">Preview not available for this file type.</p>
-              <a href={url} download={attachment.fileName}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-blue-700 rounded-md px-5 py-2 no-underline hover:bg-blue-800">
-                <Download size={14} /> Download File
-              </a>
-            </div>
-          )}
-        </div>
+/* ── Attachment icon ──────────────────────────────────────────────────────── */
+function AttachIcon({ fileName }) {
+  const ext = fileName?.split('.').pop()?.toLowerCase();
+  if (['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext))
+    return (
+      <div style={{ width: 40, height: 40, background: '#dce9ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <ImageIcon size={16} color="#dc2626" />
       </div>
+    );
+  return (
+    <div style={{ width: 40, height: 40, background: '#e5eeff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <FileText size={16} color="#565e74" />
     </div>
   );
 }
 
-/* ── TicketDetailPanel ───────────────────────────────────────────────────── */
-/**
- * Props:
- *   ticketId   — string/number, required
- *   readOnly   — bool, when true hides agent controls (e.g. Archive tab view)
- *   onClose    — optional () => void
- *   onMaximize — optional () => void
- *   onMinimize — optional () => void
- *   onReroute  — optional (ticket) => void — called when reroute button is clicked
- */
-export default function TicketDetailPanel({ ticketId, readOnly = false, onClose, onMaximize, onMinimize, onReroute }) {
-  const { user } = useAuth();
-  const { data: ticket, isLoading, isError } = useTicket(ticketId);
+/* ── AI Classification confidence data (mocked) ───────────────────────────── */
+const AI_CLASSES = [
+  { label: 'Security',   pct: 92, primary: true  },
+  { label: 'IT Support', pct: 8,  primary: false },
+];
+
+export default function TicketDetailPanel({ ticketId }) {
+  const { data: ticket, isLoading } = useTicket(ticketId);
   const updateStatus = useUpdateStatus();
-
-  const [attachments,   setAttachments]   = useState([]);
-  const [pendingStatus, setPendingStatus] = useState('');
-  const [viewingFile,   setViewingFile]   = useState(null);
-
-  const isAgent = user?.role !== 'employee';
-  const canEdit = isAgent && !readOnly;
+  const [attachments, setAttachments] = useState([]);
 
   useEffect(() => {
-    if (ticket) setPendingStatus(ticket.status);
-  }, [ticket]);
-
-  useEffect(() => {
-    if (ticketId) getAttachments(ticketId).then(r => setAttachments(r.data)).catch(() => {});
+    if (!ticketId) return;
+    getAttachments(ticketId).then(r => setAttachments(r.data ?? [])).catch(() => {});
   }, [ticketId]);
 
-  const handleSaveStatus = async () => {
-    try {
-      await updateStatus.mutateAsync({ id: ticketId, status: pendingStatus });
-    } catch {
-      alert('Failed to update status');
-    }
-  };
+  if (isLoading || !ticket) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13 }}>
+        {isLoading ? 'Loading ticket…' : 'Select a ticket to view details'}
+      </div>
+    );
+  }
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      + ' · '
+      + new Date(d).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
     : '—';
 
-  if (isError) return <div className="p-8 text-center text-red-700 text-sm">Could not load ticket.</div>;
-  if (isLoading || !ticket) return <div className="p-8 text-center text-gray-500 text-sm">Loading…</div>;
-
   return (
-    <div className="flex flex-col gap-4">
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
-      {/* Header card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">{ticket.title}</h2>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-gray-400 font-mono">#{ticket.id}</span>
-              <span className="text-xs text-gray-400">{fmtDate(ticket.createdAt)}</span>
-              <CategoryBadge value={ticket.department?.name} />
-              <StatusBadge value={ticket.status} />
-              <PriorityBadge value={ticket.priority} />
+      {/* ── Center: main content ─────────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+
+        {/* ── Ticket header ─────────────────────────────────────────────── */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #e5e7eb', background: '#ffffff', flexShrink: 0 }}>
+          {/* ID / Title / Badges row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, marginBottom: 14 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1 }}>
+              <h2 style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 28, fontWeight: 900, color: '#0b1c30',
+                lineHeight: 1, flexShrink: 0, margin: 0,
+              }}>
+                #{ticket.id}
+              </h2>
+              <span style={{ fontSize: 24, fontWeight: 300, color: '#c4c7c9', flexShrink: 0 }}>/</span>
+              <h2 style={{
+                fontSize: 22, fontWeight: 900, color: '#0b1c30',
+                lineHeight: '28px', margin: 0,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              }}>
+                {ticket.title}
+              </h2>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+              <StatusBadge status={ticket.status} />
+              <PriorityBadge priority={ticket.priority} />
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0">
-            {canEdit && onReroute && (
-              <button onClick={() => onReroute(ticket)}
-                className="flex items-center gap-1.5 h-8 px-3 text-xs font-semibold text-orange-700 bg-orange-50 border border-orange-200 rounded-md hover:bg-orange-100"
-                title="Re-route to correct department">
-                <ArrowLeftRight size={13} /> Re-Route
-              </button>
-            )}
-            {onMaximize && <button onClick={onMaximize} title="Maximize" className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><Maximize2 size={15} /></button>}
-            {onMinimize && <button onClick={onMinimize} title="Minimize" className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><Minimize2 size={15} /></button>}
-            {onClose    && <button onClick={onClose}    title="Close"    className="flex items-center justify-center w-7.5 h-7.5 border border-gray-200 rounded-md bg-white text-gray-400 hover:text-gray-700"><X        size={15} /></button>}
-          </div>
+          {/* SLA bar */}
+          {ticket.dueAt && (
+            <div>
+              <div style={{ marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#45464d', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  Resolution SLA (Standard 4h)
+                </span>
+              </div>
+              <SlaProgressBar ticket={ticket} />
+            </div>
+          )}
         </div>
 
-        {/* Agent status control */}
-        {canEdit && (
-          <div className="flex items-center gap-2 mt-3.5 pt-3.5 border-t border-gray-100">
-            <div className="relative">
-              <select
-                value={pendingStatus}
-                onChange={e => setPendingStatus(e.target.value)}
-                disabled={updateStatus.isPending}
-                className="h-8.5 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white appearance-none outline-none cursor-pointer focus:border-blue-500"
-              >
-                {STATUSES.map(s => <option key={s} value={s}>{STATUS_LABELS[s]}</option>)}
-              </select>
-              <ChevronDown size={11} className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+        {/* ── Scrollable conversation ────────────────────────────────────── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#f8f9ff' }}>
+          <CommentSection ticketId={ticketId} ticket={ticket} />
+        </div>
+      </div>
+
+      {/* ── Right sidebar ────────────────────────────────────────────────── */}
+      <div style={{
+        width: 280, flexShrink: 0,
+        borderLeft: '1px solid #e5e7eb',
+        background: '#f8f9ff',
+        overflowY: 'auto',
+        display: 'flex', flexDirection: 'column',
+      }}>
+
+        {/* AI CLASSIFICATION */}
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>
+            <Sparkles size={12} style={{ color: '#565e74' }} />
+            AI Classification
+          </div>
+          <div style={{ padding: '12px 16px' }}>
+            <div style={jiraCard}>
+              {AI_CLASSES.map(({ label, pct, primary }) => (
+                <div key={label} style={{ marginBottom: primary ? 12 : 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: primary ? '#0b1c30' : '#45464d' }}>{label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: primary ? '#0b1c30' : '#45464d' }}>{pct}% Confidence</span>
+                  </div>
+                  <div style={{ height: 4, background: '#e5e7eb', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, background: primary ? '#0b1c30' : '#c4c7c9' }} />
+                  </div>
+                </div>
+              ))}
+              <div style={{ paddingTop: 10, marginTop: 10, borderTop: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontSize: 10, color: '#45464d' }}>ⓘ Classified by watsonx.ai L3 model</span>
+              </div>
             </div>
-            <button
-              onClick={handleSaveStatus}
-              disabled={updateStatus.isPending || pendingStatus === ticket.status}
-              className="h-8.5 px-3.5 bg-blue-700 text-white rounded-md font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-800"
-            >
-              {updateStatus.isPending ? 'Saving…' : 'Save'}
+          </div>
+        </section>
+
+        {/* TICKET METADATA */}
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>Ticket Metadata</div>
+          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <MetaRow label="Department"     value={ticket.department?.name ?? ticket.departmentName ?? '—'} />
+            <MetaRow label="Assigned Agent" value={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                {ticket.assignee && (
+                  <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#94a3b8', flexShrink: 0 }}>
+                    {ticket.assignee?.name?.[0]?.toUpperCase() ?? 'A'}
+                  </div>
+                )}
+                <span>{ticket.assignee?.name ?? 'Unassigned'}</span>
+              </div>
+            } />
+            <MetaRow label="Date Created" value={fmtDate(ticket.createdAt)} />
+            <MetaRow label="Reporter"     value={`${ticket.reporter?.name ?? 'Unknown'} (ID: ${ticket.reporterId ?? '—'})`} />
+          </div>
+        </section>
+
+        {/* ATTACHMENTS */}
+        <section style={sectionStyle}>
+          <div style={{ ...sectionHeaderStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Attachments ({attachments.length})</span>
+            <button style={{ background: 'transparent', border: 'none', color: '#76777d', cursor: 'pointer', padding: 0 }}>
+              <Plus size={14} />
             </button>
           </div>
-        )}
-
-        {readOnly && (
-          <p className="mt-3 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
-            Read-only — this ticket is assigned to another agent in your department.
-          </p>
-        )}
-      </div>
-
-      {/* Description + Metadata card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <div className="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-7">
-          <div>
-            <h3 className="text-xs font-semibold text-gray-800 mb-2.5">Description</h3>
-            <p className="text-sm text-gray-700 leading-7">{ticket.description}</p>
-          </div>
-          <div className="md:border-l md:border-gray-200 md:pl-7 flex flex-col gap-3.5">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Submitted By</p>
-              <p className="text-sm font-medium text-gray-800">{ticket.creator?.name ?? '—'}</p>
-              <p className="text-xs text-gray-500">{ticket.creator?.email}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Assigned Agent</p>
-              <p className="text-sm font-medium text-gray-800">{ticket.assignee?.name ?? 'Unassigned'}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Created</p>
-              <p className="text-sm text-gray-600">{fmtDate(ticket.createdAt)}</p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Due</p>
-              <p className="text-sm text-gray-600">{fmtDate(ticket.dueAt)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Attachments card */}
-      <div className="bg-white border border-gray-200 rounded-lg p-5 shadow-sm">
-        <div className="flex items-center gap-2 mb-3.5">
-          <h3 className="text-xs font-semibold text-gray-800">Attachments</h3>
-          <span className="text-xs font-semibold text-gray-400 bg-gray-100 border border-gray-200 px-2 py-0.5 rounded-full">{attachments.length}</span>
-        </div>
-        {attachments.length === 0 ? (
-          <p className="text-sm text-gray-400">No attachments.</p>
-        ) : (
-          <div className="flex flex-col gap-1">
-            {attachments.map(a => {
-              const ext  = a.fileName?.split('.').pop()?.toLowerCase();
-              const type = ext === 'pdf' ? 'pdf' : ['png','jpg','jpeg','gif','webp'].includes(ext) ? 'image' : ext === 'txt' ? 'text' : 'other';
-              return (
-                <div key={a.id} onClick={() => setViewingFile(a)}
-                  className="flex items-center gap-3 px-2.5 py-2 rounded-md bg-white hover:bg-blue-50 cursor-pointer transition-colors">
-                  <FileTypeIcon type={type} />
-                  <span className="flex-1 text-sm font-medium text-blue-600 overflow-hidden text-ellipsis whitespace-nowrap">{a.fileName}</span>
-                  <span className="text-xs text-gray-400 shrink-0">{(a.fileSize / 1024).toFixed(1)} KB</span>
+          <div style={{ padding: '8px 16px' }}>
+            {attachments.length === 0 ? (
+              <span style={{ fontSize: 12, color: '#76777d' }}>No attachments</span>
+            ) : attachments.map((a) => (
+              <div key={a.id} style={{ ...jiraCard, display: 'flex', alignItems: 'center', gap: 10, padding: 8, marginBottom: 8, cursor: 'pointer' }}>
+                <AttachIcon fileName={a.fileName} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0b1c30', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.fileName}</div>
+                  <div style={{ fontSize: 10, color: '#45464d' }}>{a.fileSize ? `${(a.fileSize / 1024).toFixed(0)} KB` : ''}</div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
-        )}
+        </section>
+
+        {/* RECENT ACTIVITY */}
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle}>Recent Activity</div>
+          <div style={{ padding: '8px 16px 12px', position: 'relative' }}>
+            <div style={{ position: 'absolute', left: 22, top: 12, bottom: 12, width: 1, background: '#e5e7eb' }} />
+            {[
+              { color: '#3b82f6', text: 'Ticket opened by reporter', time: 'Today at 10:42 AM' },
+              { color: '#94a3b8', text: 'Agent assigned',            time: 'Today at 10:43 AM' },
+              { color: '#f59e0b', text: 'Status: Pending Employee',  time: 'Today at 10:45 AM' },
+            ].map((ev, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 0', position: 'relative' }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: ev.color, flexShrink: 0, marginTop: 4, position: 'relative', zIndex: 1 }} />
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#0b1c30' }}>{ev.text}</div>
+                  <div style={{ fontSize: 10, color: '#45464d' }}>{ev.time}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* TAGS */}
+        <section style={{ ...sectionStyle, borderBottom: 'none' }}>
+          <div style={sectionHeaderStyle}>Tags</div>
+          <div style={{ padding: '8px 16px 12px', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {(ticket.tags ?? ['SAML', 'OKTA', 'SSO']).map((tag) => (
+              <span key={tag} style={{ padding: '2px 8px', background: '#e5eeff', border: '1px solid #c6c6cd', fontSize: 10, fontWeight: 700, color: '#45464d' }}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </section>
       </div>
-
-      {/* Comments */}
-      <CommentSection ticketId={ticketId} />
-
-      {/* File Viewer Modal */}
-      {viewingFile && <FileViewer attachment={viewingFile} onClose={() => setViewingFile(null)} />}
     </div>
   );
 }
+
+/* ── Sub-components ───────────────────────────────────────────────────────── */
+function MetaRow({ label, value }) {
+  return (
+    <div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#45464d', marginBottom: 3 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 13, color: '#0b1c30' }}>{value}</div>
+    </div>
+  );
+}
+
+const sectionStyle   = { borderBottom: '1px solid #e5e7eb' };
+const sectionHeaderStyle = {
+  padding: '10px 16px', fontSize: 10, fontWeight: 700,
+  letterSpacing: '0.08em', textTransform: 'uppercase',
+  color: '#45464d', background: '#f8f9ff',
+  borderBottom: '1px solid #e5e7eb',
+  display: 'flex', alignItems: 'center', gap: 6,
+};
+const jiraCard = { border: '1px solid #e0e3e5', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', background: '#ffffff' };

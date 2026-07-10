@@ -1,105 +1,307 @@
+/**
+ * LoginPage — "Gateway Access" wireframe
+ *
+ * Layout:
+ *  • #f8f9ff background, dot-grid pattern
+ *  • OMNISUPPORT shield logo + wordmark centered above card
+ *  • White card with 3px left-edge blue accent bar, sharp corners
+ *  • Fields: Workspace ID (.omnisupport.io suffix), Corporate Email, Password (eye toggle)
+ *  • FORGOT SECURITY KEY? link on password row
+ *  • AUTHENTICATE & ENTER → dark button full-width
+ *  • Demo accounts panel below card — one-tap sign in
+ */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Headphones, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+
+/* ── Sample accounts matching the data seeder ───────────────────────────── */
+const SAMPLE_ACCOUNTS = [
+  { label: 'Employee',       role: 'EMPLOYEE',     email: 'employee@ibm.com',       color: '#3b82f6' },
+  { label: 'HR Agent',       role: 'AGENT',        email: 'hr.agent@ibm.com',        color: '#8b5cf6' },
+  { label: 'Software Agent', role: 'AGENT',        email: 'software.agent@ibm.com',  color: '#8b5cf6' },
+  { label: 'Hardware Agent', role: 'AGENT',        email: 'hardware.agent@ibm.com',  color: '#8b5cf6' },
+  { label: 'HR Manager',     role: 'DEPT_MANAGER', email: 'hr.manager@ibm.com',      color: '#f59e0b' },
+  { label: 'Admin',          role: 'SYS_ADMIN',    email: 'admin@ibm.com',           color: '#ef4444' },
+];
+
+const ROLE_BADGE = {
+  EMPLOYEE:     { bg: '#eff6ff', text: '#1d4ed8' },
+  AGENT:        { bg: '#f5f3ff', text: '#6d28d9' },
+  DEPT_MANAGER: { bg: '#fffbeb', text: '#b45309' },
+  SYS_ADMIN:    { bg: '#fef2f2', text: '#b91c1c' },
+};
 
 export default function LoginPage() {
   const { login } = useAuth();
   const navigate  = useNavigate();
-  const [email,    setEmail]    = useState('');
-  const [password, setPassword] = useState('');
-  const [error,    setError]    = useState('');
-  const [loading,  setLoading]  = useState(false);
-  const [focused,  setFocused]  = useState(null);
+
+  const [workspace, setWorkspace] = useState('');
+  const [email,     setEmail]     = useState('');
+  const [password,  setPassword]  = useState('');
+  const [showPw,    setShowPw]    = useState(false);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      const user = await login(email, password);
-      // Role is lowercased in AuthContext from the enum name (e.g. 'employee', 'agent', 'sys_admin')
-      const role = user.role?.toLowerCase?.() ?? '';
-      if (role === 'employee')    navigate('/dashboard');
-      else if (role === 'sys_admin') navigate('/admin');
-      else navigate('/agent'); // agent, dept_manager
-    } catch {
-      setError('Invalid email or password');
+      await login(email, password);
+      navigate('/');
+    } catch (err) {
+      setError(err?.response?.data?.message ?? 'Authentication failed. Check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
-  const inputCls = (field) =>
-    `w-full h-9.5 px-3 text-sm border rounded-md outline-none bg-white transition-all
-     ${focused === field
-       ? 'border-blue-500 ring-2 ring-blue-100'
-       : 'border-gray-300'
-     }`;
+  const handleQuickLogin = async (acct) => {
+    setError('');
+    setLoading(true);
+    setEmail(acct.email);
+    setPassword('password123');
+    try {
+      await login(acct.email, 'password123');
+      navigate('/');
+    } catch (err) {
+      setError(err?.response?.data?.message ?? 'Authentication failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <div className="bg-white border border-gray-200 rounded-2xl p-10 w-full max-w-sm shadow-lg">
-
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-13 h-13 rounded-2xl bg-blue-900 flex items-center justify-center mb-3.5">
-            <Headphones size={26} color="#ffffff" strokeWidth={2} />
-          </div>
-          <h1 className="text-xl font-bold text-gray-800 tracking-tight mb-1">Helpdesk Center</h1>
-          <p className="text-sm text-gray-500 text-center">Sign in to submit and track support requests</p>
+    <div
+      style={{
+        minHeight:   '100vh',
+        background:  '#f8f9ff',
+        display:     'flex',
+        flexDirection: 'column',
+        alignItems:  'center',
+        justifyContent: 'center',
+        padding:     '24px',
+        backgroundImage: 'radial-gradient(circle, #c6c6cd 1px, transparent 1px)',
+        backgroundSize:  '24px 24px',
+      }}
+    >
+      {/* ── OMNISUPPORT logo + wordmark ─────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <div
+          style={{
+            width: 40, height: 40, borderRadius: 6,
+            background: '#0f172a',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <ShieldCheck size={22} color="#ffffff" />
         </div>
+        <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
+          OMNISUPPORT
+        </span>
+      </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setError(''); }}
-              placeholder="you@company.com"
-              required
-              autoFocus
-              className={inputCls('email')}
-              onFocus={() => setFocused('email')}
-              onBlur={() => setFocused(null)}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => { setPassword(e.target.value); setError(''); }}
-              placeholder="Enter your password"
-              required
-              className={inputCls('password')}
-              onFocus={() => setFocused('password')}
-              onBlur={() => setFocused(null)}
-            />
-          </div>
+      {/* ── Login card ───────────────────────────────────────────────────── */}
+      <div
+        style={{
+          width: '100%', maxWidth: 440,
+          background: '#ffffff',
+          borderRadius: 0,
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        {/* Left accent bar */}
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#0f172a' }} />
+
+        <div style={{ padding: '32px 36px 36px' }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: 4, letterSpacing: '-0.02em' }}>
+            Gateway Access
+          </h1>
+          <p style={{ fontSize: 13, color: '#64748b', marginBottom: 28 }}>
+            Authorize your secure support session.
+          </p>
 
           {error && (
-            <div className="flex items-center gap-1.5 text-xs text-red-600">
-              <AlertCircle size={13} />{error}
+            <div style={{ marginBottom: 20, padding: '10px 14px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 13, color: '#dc2626' }}>
+              {error}
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-1 w-full h-10 bg-blue-900 text-white rounded-md font-semibold text-sm disabled:opacity-60 disabled:cursor-not-allowed hover:bg-blue-800 transition-colors"
-          >
-            {loading ? 'Signing in…' : 'Sign In'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Workspace ID */}
+            <div>
+              <label style={labelStyle}>Workspace ID</label>
+              <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
+                <input
+                  type="text"
+                  placeholder="company-subdomain"
+                  value={workspace}
+                  onChange={(e) => setWorkspace(e.target.value)}
+                  style={{
+                    flex: 1, height: 40, padding: '0 12px',
+                    border: 'none', outline: 'none',
+                    fontSize: 14, color: '#0f172a',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    background: 'transparent',
+                  }}
+                />
+                <span style={{
+                  display: 'flex', alignItems: 'center', padding: '0 12px',
+                  background: '#f8fafc', borderLeft: '1px solid #e2e8f0',
+                  fontSize: 13, color: '#94a3b8',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  whiteSpace: 'nowrap',
+                }}>
+                  .omnisupport.io
+                </span>
+              </div>
+            </div>
 
-        {/* Test credentials hint */}
-        <p className="mt-5 text-xs text-gray-400 text-center">
-          Demo: <code className="text-gray-500">john.doe@company.com</code> / <code className="text-gray-500">password123</code>
-        </p>
+            {/* Corporate Email */}
+            <div>
+              <label style={labelStyle}>Corporate Email</label>
+              <input
+                type="email"
+                placeholder="agent@ibm.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={inputStyle}
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>Password</label>
+                <a href="#" style={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', textDecoration: 'none', letterSpacing: '0.02em' }}>
+                  FORGOT SECURITY KEY?
+                </a>
+              </div>
+              <div style={{ display: 'flex', border: '1px solid #cbd5e1', borderRadius: 6, overflow: 'hidden', background: '#fff' }}>
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="••••••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ flex: 1, height: 40, padding: '0 12px', border: 'none', outline: 'none', fontSize: 14, color: '#0f172a', background: 'transparent' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPw(!showPw)}
+                  style={{ padding: '0 12px', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}
+                >
+                  {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              style={{
+                width: '100%', height: 46,
+                background: loading ? '#374151' : '#0f172a',
+                color: '#ffffff', border: 'none', borderRadius: 6,
+                fontSize: 13, fontWeight: 700, letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'background 150ms',
+              }}
+            >
+              {loading ? (
+                <>
+                  <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                  Authenticating…
+                </>
+              ) : (
+                <>Authenticate &amp; Enter →</>
+              )}
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* ── Demo accounts panel ──────────────────────────────────────────── */}
+      <div
+        style={{
+          width: '100%', maxWidth: 440, marginTop: 16,
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+          overflow: 'hidden', position: 'relative',
+        }}
+      >
+        <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: '#0f172a' }} />
+        <div style={{ padding: '16px 20px' }}>
+          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12 }}>
+            Demo Accounts — click to sign in
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {SAMPLE_ACCOUNTS.map((acct) => {
+              const badge = ROLE_BADGE[acct.role] ?? { bg: '#f1f5f9', text: '#475569' };
+              return (
+                <button
+                  key={acct.email}
+                  onClick={() => handleQuickLogin(acct)}
+                  disabled={loading}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '8px 10px',
+                    background: '#f8fafc', border: '1px solid #e2e8f0',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    textAlign: 'left', width: '100%',
+                    transition: 'background 120ms, border-color 120ms',
+                    opacity: loading ? 0.6 : 1,
+                  }}
+                  onMouseEnter={(e) => { if (!loading) { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; } }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.borderColor = '#e2e8f0'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: acct.color, flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', lineHeight: '16px' }}>{acct.label}</div>
+                      <div style={{ fontSize: 11, color: '#64748b', fontFamily: "'JetBrains Mono', monospace", lineHeight: '14px' }}>{acct.email}</div>
+                    </div>
+                  </div>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                    padding: '2px 7px', background: badge.bg, color: badge.text, whiteSpace: 'nowrap',
+                  }}>
+                    {acct.role.replace('_', ' ')}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ fontSize: 10, color: '#94a3b8', marginTop: 10 }}>
+            All demo accounts use password:{' '}
+            <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#64748b' }}>password123</span>
+          </p>
+        </div>
       </div>
     </div>
   );
 }
+
+const labelStyle = {
+  display: 'block', fontSize: 11, fontWeight: 700,
+  letterSpacing: '0.06em', textTransform: 'uppercase',
+  color: '#64748b', marginBottom: 6,
+};
+
+const inputStyle = {
+  width: '100%', height: 40, padding: '0 12px',
+  border: '1px solid #cbd5e1', borderRadius: 6,
+  fontSize: 14, outline: 'none',
+  background: '#ffffff', color: '#0f172a',
+  boxSizing: 'border-box', display: 'block',
+};

@@ -1,0 +1,453 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Analytics Panel - Support Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-surface": "#0b1c30",
+                        "surface-tint": "#565e74",
+                        "on-surface-variant": "#45464d",
+                        "secondary-fixed": "#e0e3e5",
+                        "on-background": "#0b1c30",
+                        "surface-container-highest": "#d3e4fe",
+                        "tertiary-fixed": "#fcdeb5",
+                        "surface": "#f8f9ff",
+                        "secondary": "#5c5f61",
+                        "primary-container": "#131b2e",
+                        "on-secondary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "surface-container": "#e5eeff",
+                        "on-primary-container": "#7c839b",
+                        "on-secondary-fixed-variant": "#444749",
+                        "primary-fixed-dim": "#bec6e0",
+                        "tertiary": "#000000",
+                        "outline": "#76777d",
+                        "on-secondary-fixed": "#191c1e",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-error-container": "#93000a",
+                        "outline-variant": "#c6c6cd",
+                        "on-primary-fixed": "#131b2e",
+                        "surface-bright": "#f8f9ff",
+                        "surface-dim": "#cbdbf5",
+                        "inverse-on-surface": "#eaf1ff",
+                        "on-tertiary-fixed-variant": "#574425",
+                        "on-secondary-container": "#626567",
+                        "on-tertiary-container": "#98805d",
+                        "on-error": "#ffffff",
+                        "inverse-primary": "#bec6e0",
+                        "secondary-container": "#e0e3e5",
+                        "primary-fixed": "#dae2fd",
+                        "on-tertiary-fixed": "#271901",
+                        "on-primary-fixed-variant": "#3f465c",
+                        "inverse-surface": "#213145",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed-dim": "#dec29a",
+                        "tertiary-container": "#271901",
+                        "surface-container-low": "#eff4ff",
+                        "surface-container-high": "#dce9ff",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f8f9ff",
+                        "surface-container-lowest": "#ffffff",
+                        "primary": "#000000",
+                        "error-container": "#ffdad6",
+                        "error": "#ba1a1a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-md": "8px",
+                        "sidebar-width": "260px",
+                        "container-padding": "24px",
+                        "shell-nav-width": "64px",
+                        "gutter": "16px",
+                        "stack-sm": "4px",
+                        "shell-header-height": "48px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Hanken Grotesk"],
+                        "technical-md": ["JetBrains Mono"],
+                        "label-caps": ["Hanken Grotesk"],
+                        "headline-sm": ["Hanken Grotesk"],
+                        "title-md": ["Hanken Grotesk"],
+                        "display-sm": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}],
+                        "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Hanken Grotesk', sans-serif; background-color: #f8f9ff; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e5eeff; border-radius: 2px; }
+        .gauge-container { position: relative; width: 48px; height: 48px; }
+        .gauge-svg { transform: rotate(-90deg); }
+        .gauge-bg { fill: none; stroke: #e0e3e5; stroke-width: 4; }
+        .gauge-fill { fill: none; stroke: #000000; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 125.6; stroke-dashoffset: calc(125.6 * (1 - 0.874)); transition: stroke-dashoffset 1s ease-in-out; }
+    </style>
+</head>
+<body class="text-on-surface antialiased overflow-hidden">
+<!-- SideNavBar (Shared Component) -->
+<nav class="fixed left-0 top-0 h-full w-[64px] bg-primary-container flex flex-col items-center py-4 z-50 border-r border-outline-variant">
+<div class="mb-8">
+<span class="material-symbols-outlined text-on-primary text-display-sm font-display-sm">support_agent</span>
+</div>
+<div class="flex flex-col gap-6 flex-grow">
+<!-- Dashboard Tab -->
+<button class="group relative flex items-center justify-center w-12 h-12 text-on-primary-container opacity-70 hover:bg-on-primary-container/20 hover:text-on-primary transition-colors scale-95 active:scale-90 duration-75">
+<span class="material-symbols-outlined">dashboard</span>
+</button>
+<!-- Tickets Tab -->
+<button class="group relative flex items-center justify-center w-12 h-12 text-on-primary-container opacity-70 hover:bg-on-primary-container/20 hover:text-on-primary transition-colors scale-95 active:scale-90 duration-75">
+<span class="material-symbols-outlined">confirmation_number</span>
+</button>
+<!-- Analytics Tab (ACTIVE) -->
+<button class="group relative flex items-center justify-center w-12 h-12 border-l-4 border-primary bg-secondary-fixed-dim/10 text-on-primary transition-colors scale-95 active:scale-90 duration-75">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">analytics</span>
+</button>
+<!-- SLA Config Tab -->
+<button class="group relative flex items-center justify-center w-12 h-12 text-on-primary-container opacity-70 hover:bg-on-primary-container/20 hover:text-on-primary transition-colors scale-95 active:scale-90 duration-75">
+<span class="material-symbols-outlined">timer</span>
+</button>
+<!-- Settings Tab -->
+<button class="group relative flex items-center justify-center w-12 h-12 text-on-primary-container opacity-70 hover:bg-on-primary-container/20 hover:text-on-primary transition-colors scale-95 active:scale-90 duration-75">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="flex flex-col gap-6 pt-4 border-t border-outline-variant/30">
+<button class="text-on-primary-container opacity-70 hover:text-on-primary"><span class="material-symbols-outlined">help</span></button>
+<button class="text-on-primary-container opacity-70 hover:text-on-primary"><span class="material-symbols-outlined">notifications</span></button>
+</div>
+</nav>
+<!-- TopNavBar (Shared Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-64px)] h-shell-header-height bg-surface flex justify-between items-center px-gutter z-40 border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<span class="font-headline-sm text-headline-sm text-on-surface font-bold">Support Engine</span>
+<div class="h-4 w-[1px] bg-outline-variant"></div>
+<nav class="flex gap-4 items-center">
+<span class="text-on-surface-variant font-title-md text-title-md cursor-pointer hover:text-primary transition-colors">Helpdesk</span>
+<span class="text-on-surface-variant font-title-md text-title-md cursor-pointer hover:text-primary transition-colors">Admin</span>
+<span class="text-primary font-semibold font-title-md text-title-md">Analytics</span>
+</nav>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-sm">search</span>
+<input class="h-8 pl-8 pr-4 bg-surface-container border border-outline-variant rounded-none text-body-sm focus:outline-none focus:border-primary w-64 transition-all" placeholder="Search systems..." type="text">
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">schedule</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary">apps</span>
+<img class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="Close-up professional portrait of a system administrator in a high-tech corporate office. The lighting is crisp and cool, reflecting a modern light-mode interface design. The aesthetic is clean and authoritative, with a neutral gray and slate color palette. The composition is focused and sharp, conveying expertise and technical command." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZkSSOsqhGs3XoLtn1c9KXIoXxqY8xCTvDzNptekOeMx37SRmR-s6RabRDNjoeDUHTokv_GUcVAxxZz3jMiVuNiWHhOAyfHgjrYGbdOoVtKPTZEUI1XsalJwQ9K0Vy7x9pR6RpydBkFp-SEOwhi3LQmBiTCwCjLH3EsLyMU78cFy8S0xevo1bMcNxi_2q3Oyd0Y-nUp4sMzCWPaI489ZDYBTJ5Ek7ALNeZGPk0krmBpDb_cMjTQGYv">
+</div>
+</div>
+</header>
+<!-- Main Canvas -->
+<main class="ml-[64px] mt-shell-header-height h-[calc(100vh-48px)] overflow-y-auto custom-scrollbar bg-background">
+<!-- Breadcrumb & Header -->
+<div class="px-gutter pt-6 pb-4">
+<nav class="flex items-center gap-2 text-label-caps font-label-caps text-on-surface-variant uppercase tracking-widest mb-2">
+<span>Helpdesk</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span>Admin</span>
+<span class="material-symbols-outlined text-[12px]">chevron_right</span>
+<span class="text-primary">Operational Analytics</span>
+</nav>
+<h1 class="font-display-sm text-display-sm text-on-surface font-bold">System Performance Dashboard</h1>
+</div>
+<div class="px-gutter space-y-6 pb-12">
+<!-- 1. Executive Operational Metric Matrix -->
+<section class="bg-white border border-slate-200 rounded-none overflow-hidden flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-slate-200">
+<!-- Metric 1 -->
+<div class="flex-1 p-6 flex flex-col justify-between">
+<div>
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Avg First Response Time (FRT)</p>
+<div class="flex items-baseline gap-3">
+<span class="font-display-sm text-display-sm font-bold text-on-surface">1.2 hrs</span>
+<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md text-[11px] font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+                                -15% vs Last Week
+                            </span>
+</div>
+</div>
+<div class="mt-4 h-1 w-full bg-slate-100 overflow-hidden">
+<div class="h-full bg-emerald-500 w-[75%]"></div>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="flex-1 p-6">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">Mean Time to Resolution (MTTR)</p>
+<div class="flex items-baseline gap-3">
+<span class="font-display-sm text-display-sm font-bold text-on-surface">4.6 hrs</span>
+</div>
+<div class="mt-8 flex gap-1">
+<div class="h-4 flex-1 bg-slate-900"></div>
+<div class="h-4 flex-1 bg-slate-900"></div>
+<div class="h-4 flex-1 bg-slate-900/50"></div>
+<div class="h-4 flex-1 bg-slate-200"></div>
+<div class="h-4 flex-1 bg-slate-100"></div>
+<div class="h-4 flex-1 bg-slate-100"></div>
+</div>
+<p class="mt-2 text-body-sm text-on-surface-variant">Efficiency Trend: <span class="text-on-surface font-semibold">Stable</span></p>
+</div>
+<!-- Metric 3 -->
+<div class="flex-1 p-6 flex items-center gap-6">
+<div class="flex-grow">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase mb-1">AI Routing Accuracy</p>
+<span class="font-display-sm text-display-sm font-bold text-on-surface">87.4%</span>
+<p class="text-body-sm text-on-surface-variant mt-1">Goal: 92.0% (+4.6% target)</p>
+</div>
+<div class="gauge-container">
+<svg class="gauge-svg w-full h-full" viewBox="0 0 44 44">
+<circle class="gauge-bg" cx="22" cy="22" r="20"></circle>
+<circle class="gauge-fill" cx="22" cy="22" r="20"></circle>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Main Body Grid (Asymmetric Layout) -->
+<div class="grid grid-cols-12 gap-6 items-start">
+<!-- Left Content: Main Analysis -->
+<div class="col-span-12 lg:col-span-8 space-y-6">
+<!-- Ticket Volume Heatmap Placeholder -->
+<div class="bg-white border border-slate-200 rounded-none p-6">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-title-md text-title-md font-bold text-on-surface">Ticket Volume Heatmap</h3>
+<div class="flex gap-2">
+<button class="px-3 py-1 border border-slate-200 rounded-none text-body-sm bg-slate-50">7 Days</button>
+<button class="px-3 py-1 border border-slate-200 rounded-none text-body-sm">30 Days</button>
+</div>
+</div>
+<div class="h-48 w-full flex flex-col gap-1">
+<!-- Heatmap Rows -->
+<div class="flex-1 flex gap-1">
+<div class="flex-1 bg-slate-50"></div><div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-200"></div><div class="flex-1 bg-slate-300"></div><div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-50"></div><div class="flex-1 bg-slate-100"></div>
+</div>
+<div class="flex-1 flex gap-1">
+<div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-400"></div><div class="flex-1 bg-slate-600"></div><div class="flex-1 bg-slate-900"></div><div class="flex-1 bg-slate-400"></div><div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-100"></div>
+</div>
+<div class="flex-1 flex gap-1">
+<div class="flex-1 bg-slate-200"></div><div class="flex-1 bg-slate-600"></div><div class="flex-1 bg-slate-900"></div><div class="flex-1 bg-slate-900"></div><div class="flex-1 bg-slate-600"></div><div class="flex-1 bg-slate-200"></div><div class="flex-1 bg-slate-100"></div>
+</div>
+<div class="flex-1 flex gap-1">
+<div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-300"></div><div class="flex-1 bg-slate-400"></div><div class="flex-1 bg-slate-300"></div><div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-100"></div><div class="flex-1 bg-slate-50"></div>
+</div>
+</div>
+<div class="flex justify-between mt-2 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+<span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+</div>
+</div>
+<!-- Retrospective Analysis Table -->
+<div class="bg-white border border-slate-200 rounded-none overflow-hidden">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-slate-50/80 border-b border-slate-200">
+<th class="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant">Top Routing Categories</th>
+<th class="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant">Volume</th>
+<th class="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant">Success Rate</th>
+<th class="px-4 py-3 font-label-caps text-label-caps text-on-surface-variant text-right">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100">
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-4 py-3 text-body-md font-semibold">Account &amp; Authentication</td>
+<td class="px-4 py-3 text-body-md">2,412</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full w-[94%]"></div>
+</div>
+<span class="text-technical-md font-technical-md">94%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_horiz</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-4 py-3 text-body-md font-semibold">API Connectivity Issues</td>
+<td class="px-4 py-3 text-body-md">1,894</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="bg-amber-500 h-full w-[78%]"></div>
+</div>
+<span class="text-technical-md font-technical-md">78%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_horiz</span></button>
+</td>
+</tr>
+<tr class="hover:bg-slate-50 transition-colors">
+<td class="px-4 py-3 text-body-md font-semibold">Billing Discrepancies</td>
+<td class="px-4 py-3 text-body-md">942</td>
+<td class="px-4 py-3">
+<div class="flex items-center gap-2">
+<div class="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+<div class="bg-emerald-500 h-full w-[89%]"></div>
+</div>
+<span class="text-technical-md font-technical-md">89%</span>
+</div>
+</td>
+<td class="px-4 py-3 text-right">
+<button class="text-on-surface-variant hover:text-primary"><span class="material-symbols-outlined">more_horiz</span></button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right Sidebar: System Health & Status -->
+<div class="col-span-12 lg:col-span-4 space-y-6">
+<!-- Service Status Bento Card -->
+<div class="bg-slate-900 text-white p-6 rounded-none space-y-4">
+<h3 class="font-title-md text-title-md font-bold">System Integrity</h3>
+<div class="space-y-3">
+<div class="flex justify-between items-center text-body-sm">
+<span class="opacity-70">Model Node A</span>
+<span class="text-emerald-400 font-bold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                    Operational
+                                </span>
+</div>
+<div class="flex justify-between items-center text-body-sm">
+<span class="opacity-70">Model Node B</span>
+<span class="text-emerald-400 font-bold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                    Operational
+                                </span>
+</div>
+<div class="flex justify-between items-center text-body-sm">
+<span class="opacity-70">Training Queue</span>
+<span class="text-amber-400 font-bold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                    High Latency
+                                </span>
+</div>
+</div>
+<div class="pt-4 border-t border-slate-700">
+<div class="flex justify-between items-center mb-1">
+<span class="text-[10px] font-bold uppercase tracking-widest opacity-50">Global Uptime</span>
+<span class="text-[10px] font-bold">99.98%</span>
+</div>
+<div class="h-1 w-full bg-slate-800">
+<div class="h-full bg-blue-500 w-[99.98%]"></div>
+</div>
+</div>
+</div>
+<!-- Operational Newsfeed / Alerts -->
+<div class="bg-white border border-slate-200 rounded-none p-4 space-y-4">
+<div class="flex items-center justify-between">
+<h4 class="font-label-caps text-label-caps text-on-surface-variant uppercase">Recent Critical Events</h4>
+<span class="bg-red-50 text-red-700 px-1.5 py-0.5 text-[9px] font-bold uppercase">2 Unread</span>
+</div>
+<div class="space-y-4">
+<div class="flex gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-red-500 shrink-0"></div>
+<div class="space-y-1">
+<p class="text-body-sm font-semibold">SLA Breach Detected - API Tier</p>
+<p class="text-technical-md text-on-surface-variant">Response latency exceeded 500ms threshold.</p>
+<p class="text-[10px] text-on-surface-variant opacity-60">14 mins ago</p>
+</div>
+</div>
+<div class="flex gap-3">
+<div class="mt-1 w-2 h-2 rounded-full bg-slate-300 shrink-0"></div>
+<div class="space-y-1">
+<p class="text-body-sm font-semibold">Retraining Scheduled</p>
+<p class="text-technical-md text-on-surface-variant">Automated model optimization cycle begins 00:00 UTC.</p>
+<p class="text-[10px] text-on-surface-variant opacity-60">2 hrs ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. AI Model Control Board & Tuning Dock -->
+<section class="bg-white border border-slate-200 rounded-none overflow-hidden shadow-sm">
+<header class="bg-slate-100 px-6 py-3 border-b border-slate-200 flex justify-between items-center">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-slate-900">memory</span>
+<h2 class="font-title-md text-title-md font-bold text-slate-900 uppercase tracking-tight">IBM watsonx.ai Model Optimization</h2>
+</div>
+<span class="text-technical-md font-technical-md bg-white border border-slate-300 px-3 py-1 text-slate-700">PIPELINE_STABLE_V2</span>
+</header>
+<div class="p-6 flex flex-col md:flex-row gap-8 items-center">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 flex-grow">
+<div class="space-y-1">
+<p class="text-label-caps font-label-caps text-on-surface-variant opacity-60 uppercase">Active Model Pipeline</p>
+<p class="text-body-md font-bold text-slate-900">watsonx.ai Classify v2.1</p>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="text-[11px] text-emerald-600 font-bold">LIVE PRODUCTION</span>
+</div>
+</div>
+<div class="space-y-1">
+<p class="text-label-caps font-label-caps text-on-surface-variant opacity-60 uppercase">Pending Corrected Logs</p>
+<div class="flex items-baseline gap-2">
+<p class="text-body-md font-bold text-slate-900">142 samples</p>
+<span class="text-[10px] text-on-surface-variant">(Ready for retraining compilation)</span>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2 italic">Threshold for optimal retraining: 150 samples</p>
+</div>
+<div class="space-y-1">
+<p class="text-label-caps font-label-caps text-on-surface-variant opacity-60 uppercase">Last Optimization Executed</p>
+<p class="text-body-md font-bold text-slate-900">14 days ago</p>
+<p class="text-[11px] text-on-surface-variant mt-2">Next scheduled: <span class="font-bold">In 16 days</span></p>
+</div>
+</div>
+<div class="shrink-0">
+<button class="bg-slate-900 text-white px-6 py-3 rounded-none font-bold text-body-md flex items-center gap-2 hover:bg-black transition-all active:scale-95">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+                            Compile Dataset &amp; Optimize Model
+                        </button>
+</div>
+</div>
+<div class="bg-slate-50 px-6 py-2 border-t border-slate-200 flex gap-4">
+<span class="text-[10px] text-on-surface-variant uppercase font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">info</span> AUTO-OPTIMIZATION: ON</span>
+<span class="text-[10px] text-on-surface-variant uppercase font-bold flex items-center gap-1"><span class="material-symbols-outlined text-[12px]">security</span> ENCRYPTION: AES-256</span>
+</div>
+</section>
+</div>
+</main>
+<script>
+        // Micro-interaction for the Gauge Animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const fill = document.querySelector('.gauge-fill');
+            if (fill) {
+                // Triggering a reflow to restart the transition
+                fill.style.strokeDashoffset = '125.6';
+                setTimeout(() => {
+                    fill.style.strokeDashoffset = (125.6 * (1 - 0.874)).toString();
+                }, 100);
+            }
+        });
+    </script>
+</body></html>

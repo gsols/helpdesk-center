@@ -1,7 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from 'react';
 import { login as apiLogin, logout as apiLogout } from '../api/authApi';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -31,7 +32,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    try { await apiLogout(); } catch (_) {}
+    try { await apiLogout(); } catch { /* ignore */ }
     setUser(null);
     setToken(null);
     localStorage.removeItem('hd_user');
@@ -45,4 +46,5 @@ export function AuthProvider({ children }) {
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+// Exported separately to satisfy react-refresh (only components as default export)
+export function useAuth() { return useContext(AuthContext); }

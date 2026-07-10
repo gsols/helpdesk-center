@@ -64,7 +64,7 @@ public class JwtProvider {
     }
 
     public Long getCompanyId(String token) {
-        return validateAndParseClaims(token).get("companyId", Long.class);
+        return ((Number) validateAndParseClaims(token).get("companyId")).longValue();
     }
 
     public Long getDepartmentId(String token) {

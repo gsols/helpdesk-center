@@ -1,47 +1,23 @@
-const PRIORITY_MAP = {
-  critical: {
-    label: 'Critical',
-    color:  '#b91c1c',
-    bg:     '#fef2f2',
-    border: '#fecaca',
-  },
-  high: {
-    label: 'High',
-    color:  '#c2410c',
-    bg:     '#fff7ed',
-    border: '#fed7aa',
-  },
-  medium: {
-    label: 'Medium',
-    color:  '#b45309',
-    bg:     '#fffbeb',
-    border: '#fde68a',
-  },
-  low: {
-    label: 'Low',
-    color:  '#15803d',
-    bg:     '#f0fdf4',
-    border: '#bbf7d0',
-  },
+/**
+ * PriorityBadge — wireframe style
+ * rounded-md, all-caps, text-[10px] font-bold, low-opacity bg + high-opacity text, border
+ * CRITICAL=red, HIGH=emerald-green, MEDIUM=amber, LOW=slate
+ */
+const BADGE_CLS = {
+  CRITICAL: 'bg-red-50 text-red-700 border-red-200',
+  HIGH:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+  MEDIUM:   'bg-amber-50 text-amber-700 border-amber-200',
+  LOW:      'bg-slate-100 text-slate-600 border-slate-200',
 };
 
-export default function PriorityBadge({ value }) {
-  const p = PRIORITY_MAP[value] ?? { label: value ?? '—', color: '#57606a', bg: '#f3f4f6', border: '#e5e7eb' };
+export default function PriorityBadge({ priority, value }) {
+  const raw = priority ?? value;
+  const key = raw?.toUpperCase() ?? 'MEDIUM';
+  const badgeCls = BADGE_CLS[key] ?? BADGE_CLS.MEDIUM;
+
   return (
-    <span style={{
-      display:       'inline-flex',
-      alignItems:    'center',
-      padding:       '2px 8px',
-      borderRadius:  999,
-      fontSize:      11,
-      fontWeight:    600,
-      letterSpacing: '0.02em',
-      color:         p.color,
-      background:    p.bg,
-      border:        `1px solid ${p.border}`,
-      whiteSpace:    'nowrap',
-    }}>
-      {p.label}
+    <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[10px] font-bold uppercase tracking-wider select-none whitespace-nowrap ${badgeCls}`}>
+      {key}
     </span>
   );
 }

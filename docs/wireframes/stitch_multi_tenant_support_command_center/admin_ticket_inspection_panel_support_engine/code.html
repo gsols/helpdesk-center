@@ -1,0 +1,332 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Support Engine Admin Console - Triage Workspace</title>
+<!-- Google Fonts: Hanken Grotesk & JetBrains Mono -->
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet">
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed-variant": "#3f465c",
+                        "secondary-fixed-dim": "#c4c7c9",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#bec6e0",
+                        "surface-container-high": "#dce9ff",
+                        "surface-tint": "#565e74",
+                        "surface-container": "#e5eeff",
+                        "tertiary": "#000000",
+                        "secondary": "#5c5f61",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#dec29a",
+                        "tertiary-container": "#271901",
+                        "surface-dim": "#cbdbf5",
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-fixed": "#131b2e",
+                        "on-primary-container": "#7c839b",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#d3e4fe",
+                        "on-tertiary-fixed-variant": "#574425",
+                        "on-secondary-fixed-variant": "#444749",
+                        "background": "#f8f9ff",
+                        "surface-bright": "#f8f9ff",
+                        "on-surface": "#0b1c30",
+                        "on-error": "#ffffff",
+                        "primary-fixed-dim": "#bec6e0",
+                        "on-surface-variant": "#45464d",
+                        "on-secondary-fixed": "#191c1e",
+                        "surface-container-highest": "#d3e4fe",
+                        "on-tertiary-container": "#98805d",
+                        "inverse-surface": "#213145",
+                        "error-container": "#ffdad6",
+                        "secondary-container": "#e0e3e5",
+                        "on-tertiary-fixed": "#271901",
+                        "inverse-on-surface": "#eaf1ff",
+                        "surface-container-low": "#eff4ff",
+                        "outline-variant": "#c6c6cd",
+                        "error": "#ba1a1a",
+                        "primary-container": "#131b2e",
+                        "secondary-container": "#e0e3e5",
+                        "primary-fixed": "#dae2fd",
+                        "outline": "#76777d",
+                        "primary": "#000000",
+                        "on-secondary-container": "#626567",
+                        "on-background": "#0b1c30",
+                        "on-primary": "#ffffff",
+                        "tertiary-fixed": "#fcdeb5",
+                        "surface": "#f8f9ff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "stack-sm": "4px",
+                        "sidebar-width": "260px",
+                        "shell-header-height": "48px",
+                        "container-padding": "24px",
+                        "stack-md": "8px",
+                        "shell-nav-width": "64px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "body-sm": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "technical-md": ["JetBrains Mono"],
+                        "label-caps": ["Hanken Grotesk"],
+                        "display-sm": ["Hanken Grotesk"],
+                        "title-md": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", {"lineHeight": "24px", "fontWeight": "600"}],
+                        "body-sm": ["13px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "technical-md": ["13px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "display-sm": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "title-md": ["14px", {"lineHeight": "20px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Hanken Grotesk', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    </style>
+</head>
+<body class="bg-background text-on-surface overflow-hidden">
+<!-- SIDE NAV BAR (Predicted Component) -->
+<aside class="fixed left-0 top-0 h-full w-sidebar-width bg-primary-container text-on-primary-container border-r border-outline-variant flex flex-col z-50">
+<div class="h-shell-header-height flex items-center px-6">
+<span class="font-display-sm text-display-sm text-white">Support Engine</span>
+</div>
+<div class="px-3 py-2 flex flex-col gap-1">
+<div class="flex items-center gap-3 px-3 py-2 text-on-primary-container opacity-70 transition-colors duration-150 hover:bg-on-primary-fixed-variant hover:text-on-primary-fixed">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps">Dashboard</span>
+</div>
+<!-- Active State: Triage Queue -->
+<div class="flex items-center gap-3 px-3 py-2 border-l-4 border-white bg-on-primary-fixed-variant text-white transition-colors duration-150">
+<span class="material-symbols-outlined">create</span>
+<span class="font-label-caps text-label-caps">Triage Queue</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-primary-container opacity-70 transition-colors duration-150 hover:bg-on-primary-fixed-variant hover:text-on-primary-fixed">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-label-caps text-label-caps">SLA Reports</span>
+</div>
+<div class="flex items-center gap-3 px-3 py-2 text-on-primary-container opacity-70 transition-colors duration-150 hover:bg-on-primary-fixed-variant hover:text-on-primary-fixed">
+<span class="material-symbols-outlined">groups</span>
+<span class="font-label-caps text-label-caps">Team Oversight</span>
+</div>
+</div>
+<div class="mt-auto px-3 py-4 border-t border-outline-variant/30">
+<div class="flex items-center gap-3 px-3 py-2 text-on-primary-container opacity-70 transition-colors duration-150 hover:bg-on-primary-fixed-variant hover:text-on-primary-fixed">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-label-caps text-label-caps">Settings</span>
+</div>
+</div>
+</aside>
+<!-- TOP NAV BAR (Predicted Component) -->
+<header class="fixed top-0 right-0 w-[calc(100%-260px)] h-shell-header-height bg-surface border-b border-outline-variant flex justify-between items-center px-container-padding z-40">
+<div class="flex items-center gap-8">
+<span class="font-headline-sm text-headline-sm font-bold text-on-surface">Triage Workspace</span>
+<nav class="flex gap-6">
+<a class="text-primary border-b-2 border-primary pb-1 font-title-md text-title-md" href="#">Queue</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">History</a>
+<a class="text-on-surface-variant hover:text-primary transition-all duration-200 font-title-md text-title-md" href="#">Overrides</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+<span class="material-symbols-outlined text-on-surface-variant">help_outline</span>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden bg-slate-200 border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a support engineer with a focused expression, wearing modern office attire. The background is a clean, neutral workspace with soft, diffused corporate lighting. Minimalist professional aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDwZCOpFFVRAqflwBp8e-5AwGlzJ7cw1caYIVjbU_jZHhTSNgw5j__KanVJHgMYFwodvlo5oHGuzpLB5-sO_w1SxQKs7onWCgOEBfUp2r5akImY0ZAPgcQgmGDGDIjSGqCwjaxFGeQy-J-9NjC6N97149hqlQfp9VaAzMtZDWtS6JupwFz4wmeMx4EaaQuZIw2hK8TxUeR2mkdOLk2kSIEjmKjO_TVNE_bEjGbU0H0-LO9jr8PiKe3K">
+</div>
+</div>
+</header>
+<!-- MAIN CONTENT AREA (The Triage Queue partially obscured) -->
+<main class="fixed top-shell-header-height left-sidebar-width w-[calc(100%-260px)] h-[calc(100%-48px)] flex overflow-hidden">
+<!-- Background/Underlayed Queue List -->
+<section class="flex-1 overflow-hidden p-6 bg-background">
+<div class="mb-4 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="h-8 w-64 bg-white border border-slate-200 flex items-center px-3 gap-2">
+<span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+<span class="text-slate-400 text-body-sm">Search queue...</span>
+</div>
+<div class="flex gap-2">
+<span class="px-2 py-1 bg-slate-100 border border-slate-200 text-label-caps rounded-md text-slate-600">UNASSIGNED (12)</span>
+<span class="px-2 py-1 bg-slate-100 border border-slate-200 text-label-caps rounded-md text-slate-600">CRITICAL (3)</span>
+</div>
+</div>
+</div>
+<!-- High Density Table -->
+<div class="w-full border border-slate-200 bg-white">
+<div class="grid grid-cols-6 bg-slate-50 border-b border-slate-200 py-2 px-4">
+<span class="font-label-caps text-label-caps text-slate-500">TICKET ID</span>
+<span class="font-label-caps text-label-caps text-slate-500 col-span-2">SUBJECT</span>
+<span class="font-label-caps text-label-caps text-slate-500">CLIENT</span>
+<span class="font-label-caps text-label-caps text-slate-500">STATUS</span>
+<span class="font-label-caps text-label-caps text-slate-500">URGENCY</span>
+</div>
+<!-- Row 1 (The active one) -->
+<div class="grid grid-cols-6 border-b border-slate-100 py-3 px-4 bg-slate-50">
+<span class="font-technical-md text-technical-md font-bold">TCK-1089</span>
+<span class="font-body-sm text-body-sm col-span-2 truncate">Payroll profile locked out after system update</span>
+<span class="font-body-sm text-body-sm">Acme Corp</span>
+<div><span class="px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded text-[10px] font-bold">OPEN</span></div>
+<div><span class="px-2 py-0.5 bg-red-50 text-red-700 border border-red-100 rounded text-[10px] font-bold">HIGH</span></div>
+</div>
+<!-- Repeat rows for density visualization -->
+<div class="grid grid-cols-6 border-b border-slate-100 py-3 px-4 opacity-50">
+<span class="font-technical-md text-technical-md">TCK-1090</span>
+<span class="font-body-sm text-body-sm col-span-2 truncate">API Timeout on Checkout Endpoint</span>
+<span class="font-body-sm text-body-sm">Globex Inc</span>
+<div><span class="px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-200 rounded text-[10px]">IN_PROGRESS</span></div>
+<div><span class="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 rounded text-[10px]">MEDIUM</span></div>
+</div>
+<div class="grid grid-cols-6 border-b border-slate-100 py-3 px-4 opacity-30">
+<span class="font-technical-md text-technical-md">TCK-1091</span>
+<span class="font-body-sm text-body-sm col-span-2 truncate">SSO Integration failing for Sandbox</span>
+<span class="font-body-sm text-body-sm">Initech</span>
+<div><span class="px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-200 rounded text-[10px]">TRIAGE</span></div>
+<div><span class="px-2 py-0.5 bg-slate-50 text-slate-500 border border-slate-100 rounded text-[10px]">LOW</span></div>
+</div>
+<!-- Fade out visual -->
+<div class="h-32 bg-gradient-to-b from-transparent to-background/50"></div>
+</div>
+</section>
+<!-- SIDE DRAWER: TicketDetailPanel.jsx -->
+<aside class="w-[480px] h-full bg-white border-l border-outline-variant shadow-2xl flex flex-col z-30 transition-transform duration-300">
+<!-- Section 1: Metadata -->
+<div class="p-6 border-b border-slate-200 bg-slate-50/30">
+<div class="flex justify-between items-start mb-4">
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-0.5 bg-slate-200 text-slate-700 font-label-caps text-[10px] rounded-full">Acme Corp</span>
+<span class="px-2 py-0.5 bg-blue-100 text-blue-800 font-label-caps text-[10px] rounded-full">OPEN</span>
+<span class="px-2 py-0.5 bg-red-100 text-red-800 font-label-caps text-[10px] rounded-full">HIGH</span>
+</div>
+<button class="text-slate-400 hover:text-slate-600">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<h1 class="font-technical-md text-headline-sm leading-tight text-slate-900 mb-6">
+                    [TCK-1089] Payroll profile locked out after system update
+                </h1>
+<div class="bg-white border border-slate-200 p-3 rounded-none">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-sm text-slate-400">person</span>
+<span class="text-label-caps text-slate-500">REQUESTER MESSAGE</span>
+</div>
+<p class="text-body-sm text-slate-700 italic leading-relaxed">
+                        "Every time I click on my pay stub page, it gives me an internal server error 500. I need to download my tax forms urgently."
+                    </p>
+</div>
+</div>
+<!-- Section 2: AI Triage Analytics Log -->
+<div class="p-6 border-b border-slate-200 bg-slate-50 flex-grow custom-scrollbar overflow-y-auto">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-blue-600" style="font-variation-settings: 'FILL' 1;">neurology</span>
+<h2 class="text-label-caps text-slate-900">AI TRIAGE ANALYTICS LOG</h2>
+</div>
+<div class="space-y-4">
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-white p-3 border border-slate-200 shadow-sm">
+<span class="block text-[10px] text-slate-400 font-label-caps mb-1">PREDICTED TARGET</span>
+<span class="text-technical-md text-slate-800">IT Support</span>
+</div>
+<div class="bg-white p-3 border border-slate-200 shadow-sm">
+<span class="block text-[10px] text-slate-400 font-label-caps mb-1">CONFIDENCE</span>
+<span class="text-technical-md text-slate-800">41.20%</span>
+</div>
+</div>
+<!-- Warning Card -->
+<div class="bg-amber-50 border-l-4 border-amber-500 p-4 flex items-center gap-4">
+<span class="material-symbols-outlined text-amber-600">warning</span>
+<div>
+<span class="block font-technical-md text-[12px] text-amber-900">[ BREACHED / BELOW 60.00% GATEWAY ]</span>
+<span class="block text-[10px] text-amber-700">Manual intervention required for accurate department routing.</span>
+</div>
+</div>
+<div class="text-[11px] text-slate-400 font-technical-md border-t border-slate-200 pt-3">
+                        LATENCY: 1.24s | MODEL: WATSONX-GEN-2 | STATUS: PENDING_OVERRIDE
+                    </div>
+</div>
+</div>
+<!-- Section 3: Administrative Overrides -->
+<div class="p-6 bg-white space-y-4">
+<h3 class="text-label-caps text-slate-900 border-b border-slate-100 pb-2">ADMINISTRATIVE OVERRIDES</h3>
+<div class="space-y-3">
+<div>
+<label class="block text-[10px] text-slate-500 font-label-caps mb-1">FORCED DEPARTMENT ASSIGNMENT</label>
+<select class="w-full h-9 bg-slate-50 border-slate-200 rounded-full text-body-sm focus:ring-0 focus:border-slate-900 px-4">
+<option>General Support</option>
+<option selected="">Finance &amp; Payroll</option>
+<option>System Infrastructure</option>
+<option>Compliance &amp; Legal</option>
+</select>
+</div>
+<div>
+<label class="block text-[10px] text-slate-500 font-label-caps mb-1">FORCED ASSIGNEE OVERRIDE</label>
+<select class="w-full h-9 bg-slate-50 border-slate-200 rounded-full text-body-sm focus:ring-0 focus:border-slate-900 px-4 text-slate-400">
+<option>Select Agent...</option>
+<option>Sarah Jenkins (Lead)</option>
+<option>Marcus Aurelius (Senior)</option>
+<option>Elena Rodriguez (Payroll Specialist)</option>
+</select>
+</div>
+</div>
+<div class="pt-4">
+<button class="w-full h-11 bg-slate-950 text-white font-label-caps tracking-widest rounded-none hover:bg-black transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm">route</span>
+                        APPLY OVERRIDE &amp; RE-ROUTE
+                    </button>
+<p class="text-center text-[10px] text-slate-400 mt-2">
+                        Action will be logged in the system audit trail.
+                    </p>
+</div>
+</div>
+</aside>
+</main>
+<!-- Contextual FAB (Suppressed per instructions on Detail screens) -->
+<!-- The prompt requires the TicketDetailPanel view, so FAB is suppressed. -->
+<script>
+        // Micro-interaction for the side-drawer emergence
+        window.addEventListener('load', () => {
+            const drawer = document.querySelector('aside.w-\\[480px\\]');
+            drawer.style.transform = 'translateX(100%)';
+            setTimeout(() => {
+                drawer.style.transform = 'translateX(0)';
+            }, 100);
+        });
+
+        // Simple click effect on primary button
+        const mainBtn = document.querySelector('button.bg-slate-950');
+        mainBtn.addEventListener('click', () => {
+            mainBtn.classList.add('scale-[0.98]');
+            mainBtn.textContent = 'ROUTING...';
+            setTimeout(() => {
+                mainBtn.classList.remove('scale-[0.98]');
+                mainBtn.innerHTML = '<span class="material-symbols-outlined text-sm">check_circle</span> SUCCESS';
+                mainBtn.classList.replace('bg-slate-950', 'bg-emerald-600');
+            }, 800);
+        });
+    </script>
+</body></html>

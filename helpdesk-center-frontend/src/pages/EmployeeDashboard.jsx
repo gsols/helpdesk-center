@@ -1,485 +1,716 @@
-import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '../context/AuthContext';
-import { useTickets, useCreateTicket } from '../hooks/useTickets';
-import { previewTicket } from '../api/ticketsApi';
-import { uploadAttachment } from '../api/attachmentsApi';
+/**
+ * EmployeeDashboard — "my_tickets" + "my_tickets_ai_triage_breakdown" wireframes
+ *
+ * Form layout:
+ *  • Left col (3fr): REQUEST TITLE + MARKDOWN DESCRIPTION
+ *  • Right col (1fr): ATTACHMENT DROPZONE (functional) + AI CONFIDENCE BREAKDOWN (live)
+ *  • Department selector removed — routing determined by watsonx.ai NLU
+ *
+ * Submit flow:
+ *  1. POST /api/tickets  → returns ticket with id
+ *  2. POST /api/tickets/{id}/attachments (multipart) for each queued file
+ *  3. Invalidate tickets query → grid refreshes automatically
+ */
+import { useState, useEffect, useRef, useCallback } from 'react';
 import AppShell from '../components/AppShell';
-import TicketCard from '../components/TicketCard';
-import TicketDetailPanel from '../components/TicketDetailPanel';
-import SplitPane from '../components/SplitPane';
-import CategoryBadge from '../components/CategoryBadge';
+import { useTickets, useCreateTicket, usePreviewTicket } from '../hooks/useTickets';
+import { useUploadAttachment }  from '../hooks/useAttachments';
+import { useAuth }              from '../context/AuthContext';
+import StatusBadge              from '../components/StatusBadge';
+import { useNavigate }          from 'react-router-dom';
 import {
-  Plus, X, Upload, Paperclip, Sparkles, Loader2, AlertCircle,
-  ChevronDown, CircleDot, Clock, CheckCircle2, Ticket,
+  Bold, Italic, List, Code, UploadCloud,
+  Filter, RefreshCw, ExternalLink, ChevronLeft, ChevronRight,
+  Cpu, X, FileText, Image, FileArchive,
 } from 'lucide-react';
 
-/* ── New Ticket Drawer ───────────────────────────────────────────────────── */
-function NewTicketDrawer({ user, onClose, onCreated }) {
-  const createTicket = useCreateTicket();
-  const [form, setForm]                 = useState({ title: '', description: '', email: user?.email || '' });
-  const [file, setFile]                 = useState(null);
-  const [isDragging, setIsDragging]     = useState(false);
-  const [errors, setErrors]             = useState({});
-  const [preview, setPreview]           = useState(null);
-  const [previewing, setPreviewing]     = useState(false);
-  const [previewError, setPreviewError] = useState(null);
-  const fileInputRef = useRef(null);
-  const debounceRef  = useRef(null);
+// Maps Watson category keys → display department names (must match DataSeeder exactly)
+const CATEGORY_DISPLAY = {
+  hardware: 'IT Hardware',
+  software: 'IT Software',
+  hr:       'HR',
+};
 
+// Allowed MIME types (must match backend FileStorageUtil)
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain'];
+const MAX_BYTES     = 10 * 1024 * 1024; // 10 MB
+
+const PAGE_SIZE = 10;
+
+/* ── File type icon ─────────────────────────────────────────────────────────── */
+function FileIcon({ type }) {
+  if (type?.startsWith('image/')) return <Image size={14} color="#3b82f6" />;
+  if (type === 'application/pdf') return <FileText size={14} color="#dc2626" />;
+  return <FileArchive size={14} color="#64748b" />;
+}
+
+/* ── Attachment Dropzone ────────────────────────────────────────────────────── */
+function AttachmentDropzone({ files, onAdd, onRemove }) {
+  const inputRef  = useRef(null);
+  const [dragging, setDragging] = useState(false);
+  const [errors,   setErrors]   = useState([]);
+
+  const validate = (fileList) => {
+    const valid = [];
+    const errs  = [];
+    Array.from(fileList).forEach(f => {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errs.push(`${f.name}: unsupported type (PNG, JPG, GIF, PDF, TXT only)`);
+      } else if (f.size > MAX_BYTES) {
+        errs.push(`${f.name}: exceeds 10 MB limit`);
+      } else {
+        valid.push(f);
+      }
+    });
+    if (errs.length) setErrors(errs);
+    else setErrors([]);
+    if (valid.length) onAdd(valid);
+  };
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    validate(e.dataTransfer.files);
+  }, []);
+
+  const onDragOver = (e) => { e.preventDefault(); setDragging(true); };
+  const onDragLeave = () => setDragging(false);
+
+  return (
+    <div>
+      {/* Drop area */}
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        style={{
+          border: `1.5px dashed ${dragging ? '#3b82f6' : '#cbd5e1'}`,
+          borderRadius: 8,
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 4,
+          background: dragging ? '#eff6ff' : '#f8fafc',
+          cursor: 'pointer', padding: '20px 16px',
+          textAlign: 'center',
+          transition: 'border-color 150ms, background 150ms',
+        }}
+      >
+        <UploadCloud size={24} color={dragging ? '#3b82f6' : '#94a3b8'} />
+        <span style={{ fontSize: 12, color: '#64748b' }}>
+          Drag files here or{' '}
+          <span style={{ color: '#3b82f6', fontWeight: 600 }}>browse</span>
+        </span>
+        <span style={{ fontSize: 10, color: '#94a3b8', letterSpacing: '0.04em' }}>
+          PNG, JPG, GIF, PDF, TXT · max 10 MB
+        </span>
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept={ALLOWED_TYPES.join(',')}
+          style={{ display: 'none' }}
+          onChange={(e) => { validate(e.target.files); e.target.value = ''; }}
+        />
+      </div>
+
+      {/* Validation errors */}
+      {errors.map((err, i) => (
+        <div key={i} style={{ marginTop: 4, fontSize: 11, color: '#dc2626' }}>{err}</div>
+      ))}
+
+      {/* Queued file list */}
+      {files.length > 0 && (
+        <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {files.map((f, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '4px 8px',
+              background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
+            }}>
+              <FileIcon type={f.type} />
+              <span style={{ fontSize: 11, color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {f.name}
+              </span>
+              <span style={{ fontSize: 10, color: '#94a3b8', flexShrink: 0 }}>
+                {(f.size / 1024).toFixed(0)} KB
+              </span>
+              <button
+                type="button"
+                onClick={() => onRemove(i)}
+                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2, display: 'flex', alignItems: 'center' }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Watson keyword chips ───────────────────────────────────────────────────── */
+function KeywordChips({ keywords, source }) {
+  if (!keywords?.length) {
+    // Fallback source — show a single badge instead of chips
+    if (source === 'fallback') {
+      return (
+        <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{
+            padding: '1px 6px', borderRadius: 3,
+            background: '#f1f5f9', border: '1px solid #e2e8f0',
+            fontSize: 9, fontWeight: 700, color: '#94a3b8',
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            fontFamily: "'JetBrains Mono', monospace",
+          }}>
+            fallback · no watson keywords
+          </span>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  return (
+    <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+      {source === 'fallback' && (
+        <span style={{
+          padding: '1px 5px', borderRadius: 3,
+          background: '#f1f5f9', border: '1px solid #e2e8f0',
+          fontSize: 9, fontWeight: 700, color: '#94a3b8',
+          letterSpacing: '0.06em', textTransform: 'uppercase',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          fallback
+        </span>
+      )}
+      {keywords.map((kw, i) => {
+        const matched = !!kw.matchedCategory;
+        return (
+          <span
+            key={i}
+            title={matched ? `matched: ${kw.matchedCategory} · ${kw.relevance}%` : `relevance: ${kw.relevance}%`}
+            style={{
+              padding: '1px 6px', borderRadius: 3,
+              background: matched ? '#eff6ff' : '#f8fafc',
+              border:     matched ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+              fontSize: 10,
+              fontWeight: matched ? 700 : 400,
+              color:      matched ? '#1d4ed8' : '#64748b',
+              fontFamily: "'JetBrains Mono', monospace",
+              cursor: 'default',
+            }}
+          >
+            {kw.text}
+            <span style={{ marginLeft: 3, fontSize: 9, opacity: 0.6 }}>{kw.relevance}%</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── AI Confidence Breakdown Panel ─────────────────────────────────────────── */
+function AiBreakdownPanel({ previewData, isLoading, hasInput }) {
+  if (!hasInput) {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: 8,
+        padding: '20px 12px',
+        border: '1px solid #f1f5f9', borderRadius: 6,
+        background: 'rgba(248,250,252,0.5)',
+        textAlign: 'center',
+        minHeight: 80,
+      }}>
+        <Cpu size={18} color="#cbd5e1" />
+        <span style={{ fontSize: 12, color: '#94a3b8', lineHeight: '18px', fontStyle: 'italic' }}>
+          Describe your issue and our AI will classify it for you.
+        </span>
+      </div>
+    );
+  }
+
+  if (isLoading || !previewData) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '10px 12px',
+        border: '1px solid #f1f5f9', borderRadius: 6,
+        background: 'rgba(248,250,252,0.5)',
+        minHeight: 40,
+      }}>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: '#3b82f6', display: 'inline-block',
+          animation: 'pulse 1.4s ease-in-out infinite',
+        }} />
+        <span style={{ fontSize: 11, color: '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>
+          Analysing…
+        </span>
+      </div>
+    );
+  }
+
+  const { category, confidence, allowed, watsonKeywords = [], source } = previewData;
+
+  if (!allowed || !category) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '5px 10px',
+          background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 4,
+        }}>
+          <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#92400e' }}>
+            Routing to triage (low confidence)
+          </span>
+          {confidence > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706' }}>
+              {Math.round(confidence)}%
+            </span>
+          )}
+        </div>
+        <KeywordChips keywords={watsonKeywords} source={source} />
+      </div>
+    );
+  }
+
+  const displayName = CATEGORY_DISPLAY[category] ?? category;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '5px 10px',
+        background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
+      }}>
+        <span style={{ fontSize: 11, fontFamily: "'JetBrains Mono', monospace", color: '#0f172a' }}>
+          {displayName}
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#3b82f6' }}>
+          {Math.round(confidence)}%
+        </span>
+      </div>
+      <KeywordChips keywords={watsonKeywords} source={source} />
+    </div>
+  );
+}
+
+/* ── EmployeeDashboard ──────────────────────────────────────────────────────── */
+export default function EmployeeDashboard() {
+  const { user }   = useAuth();
+  const navigate   = useNavigate();
+  const { data: tickets = [], refetch } = useTickets();
+  const { mutateAsync: createTicket, isPending: isCreating } = useCreateTicket();
+  const uploadAttachment = useUploadAttachment();
+  const previewMutation  = usePreviewTicket();
+
+  const [title,      setTitle]      = useState('');
+  const [desc,       setDesc]       = useState('');
+  const [files,      setFiles]      = useState([]);   // queued File objects
+  const [submitDone, setSubmitDone] = useState(false);
+  const [uploadErr,  setUploadErr]  = useState(null);
+  const [page,       setPage]       = useState(1);
+
+  // Derived flag — true when either field has content
+  const hasInput = title.trim().length > 0 || desc.trim().length > 0;
+
+  // 500ms debounced AI preview call
   useEffect(() => {
-    const text = (form.title + ' ' + form.description).trim();
-    if (text.length < 10) { setPreview(null); setPreviewError(null); return; }
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setPreviewing(true); setPreviewError(null);
-      try {
-        const res = await previewTicket({ title: form.title, description: form.description });
-        setPreview(res.data);
-      } catch {
-        setPreviewError('Could not reach the AI classifier.');
-        setPreview(null);
-      } finally { setPreviewing(false); }
-    }, 700);
-    return () => clearTimeout(debounceRef.current);
-  }, [form.title, form.description]);
+    if (!hasInput) {
+      previewMutation.reset();
+      return;
+    }
+    const timer = setTimeout(() => {
+      previewMutation.mutate({ title, description: desc });
+    }, 500);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, desc]);
 
-  const validate = () => {
-    const e = {};
-    if (!form.title.trim())       e.title       = 'Title is required';
-    if (!form.description.trim()) e.description = 'Description is required';
-    return e;
+  // Filter to this user's tickets using the nested creator object
+  const myTickets = tickets
+    .filter(t => t.creator?.id === user?.id)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const totalPages = Math.max(1, Math.ceil(myTickets.length / PAGE_SIZE));
+  const pageItems  = myTickets.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const handleAddFiles = (newFiles) => {
+    setFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleRemoveFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const e2 = validate();
-    if (Object.keys(e2).length) { setErrors(e2); return; }
-    if (!preview?.allowed) return;
+    if (!title.trim()) return;
+    setUploadErr(null);
     try {
-      const ticket = await createTicket.mutateAsync(form);
-      if (file) await uploadAttachment(ticket.id, file);
-      onCreated(ticket);
-      onClose();
-    } catch { alert('Failed to submit ticket'); }
+      // Step 1: create the ticket
+      const res    = await createTicket({ title, description: desc });
+      const ticket = res.data;
+      const ticketId = ticket.id;
+
+      // Step 2: upload each queued file sequentially
+      for (const file of files) {
+        try {
+          await uploadAttachment.mutateAsync({ ticketId, file });
+        } catch {
+          setUploadErr(`Failed to upload "${file.name}" — ticket was saved, try re-attaching later.`);
+        }
+      }
+
+      // Step 3: reset form
+      setTitle('');
+      setDesc('');
+      setFiles([]);
+      previewMutation.reset();
+      setSubmitDone(true);
+      setTimeout(() => setSubmitDone(false), 3000);
+
+      // Grid refreshes automatically via useCreateTicket onSuccess invalidation
+    } catch {
+      setUploadErr('Failed to submit ticket. Please try again.');
+    }
   };
 
-  const canSubmit = preview?.allowed === true && !createTicket.isPending && !previewing;
-
-  return (
-    <div className="fixed inset-0 z-50 flex">
-      <div onClick={onClose} className="absolute inset-0 bg-slate-900/30" />
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 h-14 border-b border-gray-200 shrink-0">
-          <h2 className="text-base font-bold text-gray-900">New Support Ticket</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 flex items-center">
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto flex flex-wrap">
-          {/* Form */}
-          <div className="flex-1 min-w-64 p-6 flex flex-col gap-5">
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                Title <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.title}
-                placeholder="Brief summary of your issue"
-                className={`w-full h-9 px-3 border rounded-md text-sm outline-none bg-white text-gray-900 focus:ring-2 focus:ring-blue-200 ${errors.title ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
-                onChange={e => { setForm(f => ({ ...f, title: e.target.value })); setErrors(p => ({ ...p, title: undefined })); }}
-              />
-              {errors.title && (
-                <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
-                  <AlertCircle size={11} /> {errors.title}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                Description <span className="text-red-500">*</span>
-              </label>
-              <textarea
-                rows={5}
-                value={form.description}
-                placeholder="Describe the issue in detail"
-                className={`w-full px-3 py-2.5 border rounded-md text-sm outline-none bg-white text-gray-900 resize-vertical min-h-24 focus:ring-2 focus:ring-blue-200 ${errors.description ? 'border-red-400' : 'border-gray-300 focus:border-blue-400'}`}
-                onChange={e => { setForm(f => ({ ...f, description: e.target.value })); setErrors(p => ({ ...p, description: undefined })); }}
-              />
-              {errors.description && (
-                <p className="flex items-center gap-1 text-xs text-red-500 mt-1">
-                  <AlertCircle size={11} /> {errors.description}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">Contact Email</label>
-              <input
-                type="email"
-                value={form.email}
-                className="w-full h-9 px-3 border border-gray-300 rounded-md text-sm outline-none bg-white text-gray-900 focus:border-blue-400 focus:ring-2 focus:ring-blue-200"
-                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-900 mb-1.5">
-                Attachment <span className="text-xs text-gray-400 font-normal">(optional, max 10 MB)</span>
-              </label>
-              {file ? (
-                <div className="flex items-center gap-2.5 px-3 py-2 border border-gray-200 rounded-md bg-gray-50">
-                  <Paperclip size={14} className="text-gray-400 shrink-0" />
-                  <span className="flex-1 text-sm text-gray-900 overflow-hidden text-ellipsis whitespace-nowrap">{file.name}</span>
-                  <button onClick={() => setFile(null)} className="text-gray-400 hover:text-gray-600 flex items-center">
-                    <X size={14} />
-                  </button>
-                </div>
-              ) : (
-                <div
-                  onClick={() => fileInputRef.current?.click()}
-                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
-                  onDragLeave={() => setIsDragging(false)}
-                  onDrop={e => { e.preventDefault(); setIsDragging(false); const f = e.dataTransfer.files[0]; if (f) setFile(f); }}
-                  className={`border-2 border-dashed rounded-lg p-7 text-center cursor-pointer transition-colors ${isDragging ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50 hover:border-gray-300'}`}
-                >
-                  <Upload size={20} className="text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Drag & drop a file here, or <span className="text-blue-500 font-medium">click to browse</span>
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">PDF, PNG, JPG, TXT up to 10 MB</p>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.gif,.pdf,.txt"
-                    className="hidden"
-                    onChange={e => { const f = e.target.files?.[0]; if (f) setFile(f); }}
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* AI Preview panel */}
-          <div className="w-56 shrink-0 border-l border-gray-200 bg-gray-50 p-4 flex flex-col gap-3.5">
-            <div className="flex items-center gap-1.5">
-              <Sparkles size={13} className="text-blue-500" />
-              <span className="text-xs font-semibold text-gray-800 uppercase tracking-wide">AI Classification</span>
-            </div>
-            {!previewing && !preview && !previewError && (
-              <p className="text-xs text-gray-400 leading-relaxed">Start typing — AI will predict the category and priority.</p>
-            )}
-            {previewing && (
-              <div className="flex flex-col gap-3">
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</p>
-                  <div className="h-5 w-20 bg-gray-200 rounded animate-pulse" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Priority</p>
-                  <div className="h-5 w-16 bg-gray-200 rounded animate-pulse" />
-                </div>
-                <div className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <Loader2 size={11} className="animate-spin" /> Detecting…
-                </div>
-              </div>
-            )}
-            {previewError && <p className="text-xs text-red-500">{previewError}</p>}
-            {preview && !previewing && (
-              <div className="flex flex-col gap-3">
-                {preview.category ? (
-                  <>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Category</p>
-                      <CategoryBadge value={preview.category} />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Source</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${preview.source === 'watson' ? 'bg-blue-50 text-blue-800 border-blue-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
-                        {preview.source === 'watson' ? 'Watson NLU' : 'Keyword Fallback'}
-                      </span>
-                    </div>
-                    {preview.watsonKeywords?.length > 0 && (
-                      <div>
-                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Keywords</p>
-                        <div className="flex flex-wrap gap-1">
-                          {preview.watsonKeywords.map((kw, i) => (
-                            <span key={i} className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-gray-100 border border-gray-200 text-gray-600">
-                              {kw.text} <span className="opacity-70">{kw.relevance}%</span>
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 px-2.5 py-1.5 rounded-md border border-green-200">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" />
-                      Auto-detected by AI
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-3">
-                    <p className="text-xs text-red-600 font-semibold mb-1">No work-related category detected</p>
-                    <p className="text-xs text-red-800 leading-relaxed">Your ticket must relate to Hardware, Software, or HR.</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-gray-200 shrink-0">
-          <button onClick={onClose} className="h-9 px-4 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
-            className={`h-9 px-4 text-sm font-semibold text-white rounded-md transition-colors ${canSubmit ? 'bg-blue-700 hover:bg-blue-800 cursor-pointer' : 'bg-blue-300 cursor-not-allowed'}`}
-          >
-            {createTicket.isPending ? 'Submitting…' : previewing ? 'Classifying…' : !preview ? 'Waiting for AI…' : !preview.allowed ? 'Ticket blocked' : 'Submit Ticket'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Stat Card ───────────────────────────────────────────────────────────── */
-function StatCard({ label, count, colorClass, bgClass, icon: Icon }) {
-  return (
-    <div className={`flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 bg-white flex-1 min-w-32`}>
-      <div className={`w-9 h-9 rounded-lg ${bgClass} flex items-center justify-center shrink-0`}>
-        <Icon size={16} className={colorClass} />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900 leading-none">{count}</p>
-        <p className="text-xs text-gray-500 mt-0.5">{label}</p>
-      </div>
-    </div>
-  );
-}
-
-/* ── Empty state ─────────────────────────────────────────────────────────── */
-function EmptyState({ message }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-13 h-13 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center mb-3">
-        <Ticket size={22} className="text-gray-400" />
-      </div>
-      <p className="text-sm text-gray-500">{message}</p>
-    </div>
-  );
-}
-
-/* ── EmployeeDashboard ───────────────────────────────────────────────────── */
-export default function EmployeeDashboard() {
-  const { user } = useAuth();
-  const qc = useQueryClient();
-  const { data: tickets = [], isLoading } = useTickets();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [showForm,  setShowForm]  = useState(false);
-  const [success,   setSuccess]   = useState(null);
-  const [maximized, setMaximized] = useState(false);
-
-  const [filters, setFilters] = useState({
-    category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '',
-  });
-
-  const selectedId = searchParams.get('ticket');
-  const selectTicket = (t) => { setMaximized(false); setSearchParams({ ticket: t.id }); };
-  const closePanel   = ()  => { setMaximized(false); setSearchParams({}); };
-
-  const filteredTickets = tickets
-    .filter(t => {
-      const created = new Date(t.createdAt);
-      const from = filters.dateFrom ? new Date(filters.dateFrom) : null;
-      const to   = filters.dateTo   ? new Date(filters.dateTo + 'T23:59:59') : null;
-      return (
-        (filters.category === 'all' || t.category === filters.category) &&
-        (filters.status   === 'all' || t.status   === filters.status)   &&
-        (filters.priority === 'all' || t.priority === filters.priority) &&
-        (!from || created >= from) && (!to || created <= to)
-      );
-    })
-    .sort((a, b) => {
-      const diff = new Date(a.createdAt) - new Date(b.createdAt);
-      return filters.sort === 'newest' ? -diff : diff;
-    });
-
-  const hasActiveFilter =
-    filters.category !== 'all' || filters.status !== 'all' || filters.priority !== 'all' ||
-    filters.sort !== 'newest'  || filters.dateFrom !== ''  || filters.dateTo !== '';
-
-  const openCount       = tickets.filter(t => t.status === 'OPEN').length;
-  const inProgressCount = tickets.filter(t => t.status === 'IN_PROGRESS').length;
-  const resolvedCount   = tickets.filter(t => t.status === 'RESOLVED').length;
-
-  const handleCreated = (ticket) => {
-    setSuccess(ticket);
-    qc.invalidateQueries({ queryKey: ['tickets'] });
+  const fmtDate = (d) => {
+    if (!d) return '—';
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const listContent = (
-    <>
-      <div className={selectedId ? 'sticky top-0 z-10 bg-gray-50 pb-1' : ''}>
-        {/* Toolbar */}
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-base font-bold text-gray-900">My Tickets</h2>
-            <span className="text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
-              {filteredTickets.length} {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
-            </span>
+  const isSubmitting = isCreating || uploadAttachment.isPending;
+
+  return (
+    <AppShell title="Dashboard">
+      {/* ── Ticket Dropper Form ─────────────────────────────────────────── */}
+      <div style={cardStyle}>
+        {/* Form header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>
+              The Ticket Dropper Form
+            </div>
+            <div style={{ fontSize: 13, color: '#64748b' }}>
+              Need assistance? File a new request with precise information.
+            </div>
+            {/* watsonx.ai badge */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              marginTop: 8, padding: '3px 8px',
+              background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 4,
+              fontSize: 10, fontWeight: 700, color: '#3b82f6', letterSpacing: '0.05em',
+            }}>
+              <Cpu size={11} />
+              WATSONX.AI: INTENT CLASSIFICATION ACTIVE
+            </div>
           </div>
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-white bg-blue-700 hover:bg-blue-800 rounded-md cursor-pointer transition-colors"
-          >
-            <Plus size={14} strokeWidth={2.5} /> New Ticket
-          </button>
+          {/* Action buttons */}
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={() => { setTitle(''); setDesc(''); setFiles([]); previewMutation.reset(); }}
+              style={btnSecondary}
+            >
+              Clear
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || !title.trim()}
+              style={{
+                ...btnPrimary,
+                background: isSubmitting ? '#374151' : '#0f172a',
+                cursor: (isSubmitting || !title.trim()) ? 'not-allowed' : 'pointer',
+                opacity: !title.trim() ? 0.6 : 1,
+              }}
+            >
+              {submitDone
+                ? '✓ Submitted'
+                : isCreating
+                  ? 'Submitting…'
+                  : uploadAttachment.isPending
+                    ? `Uploading files…`
+                    : 'Submit Ticket'}
+            </button>
+          </div>
         </div>
 
-        {/* Success banner */}
-        {success && (
-          <div className="flex justify-between items-center bg-green-50 border border-green-200 rounded-lg px-3.5 py-2.5 mb-3 text-sm">
-            <span>
-              Ticket <strong>#{success.id}</strong> submitted — Category: <strong>{success.category}</strong>
-            </span>
-            <button onClick={() => setSuccess(null)} className="text-gray-400 hover:text-gray-600 flex items-center ml-2">
-              <X size={14} />
+        {/* Error banner */}
+        {uploadErr && (
+          <div style={{
+            marginBottom: 12, padding: '8px 12px',
+            background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 4,
+            fontSize: 12, color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            {uploadErr}
+            <button type="button" onClick={() => setUploadErr(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 2 }}>
+              <X size={13} />
             </button>
           </div>
         )}
 
-        {/* Filter bar */}
-        <div className="bg-white border border-gray-200 rounded-lg px-3.5 py-3 mb-3 shadow-sm flex flex-col gap-2.5">
-          <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Filter</span>
-            {[
-              { key: 'category', opts: [['all','Category'],['hardware','Hardware'],['software','Software'],['hr','HR']] },
-              { key: 'status',   opts: [['all','Status'],['OPEN','Open'],['IN_PROGRESS','In Progress'],['PENDING_EMPLOYEE','Pending'],['RESOLVED','Resolved'],['CLOSED','Closed']] },
-              { key: 'priority', opts: [['all','Priority'],['CRITICAL','Critical'],['HIGH','High'],['MEDIUM','Medium'],['LOW','Low']] },
-            ].map(({ key, opts }) => (
-              <div key={key} className="relative">
-                <select
-                  value={filters[key]}
-                  onChange={e => setFilters(f => ({ ...f, [key]: e.target.value }))}
-                  className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
-                >
-                  {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
-                <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
-              </div>
-            ))}
-            <div className="w-px h-5 bg-gray-200 shrink-0" />
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort</span>
-            <div className="relative">
-              <select
-                value={filters.sort}
-                onChange={e => setFilters(f => ({ ...f, sort: e.target.value }))}
-                className="h-8 pl-2.5 pr-7 border border-gray-300 rounded-md text-sm bg-white cursor-pointer appearance-none outline-none text-gray-800"
-              >
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
-              </select>
-              <ChevronDown size={11} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400" />
+        {/* Form grid — 2 columns: left 3fr, right 1fr */}
+        <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 24 }}>
+
+          {/* Left: Title + Markdown Description */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {/* Request Title */}
+            <div>
+              <label style={labelStyle}>Request Title</label>
+              <input
+                type="text"
+                placeholder="e.g. Access issues with Tenant Alpha dashboard"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={inputStyle}
+              />
             </div>
-            {hasActiveFilter && (
-              <button
-                onClick={() => setFilters({ category: 'all', status: 'all', priority: 'all', sort: 'newest', dateFrom: '', dateTo: '' })}
-                className="ml-auto text-xs text-blue-500 bg-transparent border-none cursor-pointer underline whitespace-nowrap"
-              >
-                Clear filters
-              </button>
-            )}
+
+            {/* Markdown Description */}
+            <div>
+              <label style={labelStyle}>Markdown Description</label>
+              <div style={{ border: '1px solid #e2e8f0', borderRadius: 6, overflow: 'hidden' }}>
+                {/* Toolbar */}
+                <div style={{
+                  display: 'flex', gap: 2, padding: '6px 10px',
+                  background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
+                }}>
+                  {[Bold, Italic, List, Code].map((Icon, i) => (
+                    <button key={i} type="button" style={{
+                      background: 'transparent', border: 'none', color: '#64748b',
+                      cursor: 'pointer', padding: '3px 6px', borderRadius: 4,
+                    }}>
+                      <Icon size={14} />
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  placeholder="Describe the issue... Use markdown for formatting."
+                  value={desc}
+                  onChange={(e) => setDesc(e.target.value)}
+                  rows={7}
+                  style={{
+                    width: '100%', padding: '10px 12px',
+                    border: 'none', outline: 'none',
+                    fontSize: 13, fontFamily: "'JetBrains Mono', monospace",
+                    color: '#0f172a', resize: 'vertical',
+                    background: '#ffffff', boxSizing: 'border-box',
+                    lineHeight: 1.6,
+                  }}
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 items-center flex-wrap">
-            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">Date</span>
-            <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              From
-              <input type="date" value={filters.dateFrom} onChange={e => setFilters(f => ({ ...f, dateFrom: e.target.value }))}
-                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
-            </label>
-            <label className="flex flex-col gap-0.5 text-xs font-semibold text-gray-400 uppercase tracking-tight">
-              To
-              <input type="date" value={filters.dateTo} onChange={e => setFilters(f => ({ ...f, dateTo: e.target.value }))}
-                className="h-8 px-2.5 border border-gray-300 rounded-md text-sm bg-white text-gray-800 outline-none cursor-pointer [color-scheme:light]" />
-            </label>
+
+          {/* Right: Attachment Dropzone + AI Confidence Breakdown */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {/* Functional Attachment Dropzone */}
+            <div>
+              <label style={labelStyle}>
+                Attachment Dropzone
+                {files.length > 0 && (
+                  <span style={{
+                    marginLeft: 6, padding: '1px 6px',
+                    background: '#dbeafe', borderRadius: 10,
+                    fontSize: 10, fontWeight: 700, color: '#1d4ed8',
+                  }}>
+                    {files.length}
+                  </span>
+                )}
+              </label>
+              <AttachmentDropzone
+                files={files}
+                onAdd={handleAddFiles}
+                onRemove={handleRemoveFile}
+              />
+            </div>
+
+            {/* AI Confidence Breakdown — live, debounced */}
+            <div>
+              <label style={labelStyle}>AI Confidence Breakdown</label>
+              <AiBreakdownPanel
+                previewData={previewMutation.data ?? null}
+                isLoading={previewMutation.isPending}
+                hasInput={hasInput}
+              />
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Ticket list */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-        {isLoading         ? <EmptyState message="Loading tickets…" />
-          : tickets.length === 0   ? <EmptyState message="No tickets yet. Submit your first ticket using '+ New Ticket'." />
-          : filteredTickets.length === 0 ? <EmptyState message="No tickets match the current filters." />
-          : filteredTickets.map(t => (
-            <TicketCard key={t.id} ticket={t} isSelected={String(t.id) === String(selectedId)} onSelect={selectTicket} />
-          ))}
-      </div>
-    </>
-  );
-
-  return (
-    <AppShell title="My Tickets">
-      {!selectedId && (
-        <>
-          {/* Welcome banner */}
-          <div className="rounded-xl bg-blue-900 px-6 py-5 mb-5 flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <p className="text-sm text-blue-200 font-medium mb-1">Welcome back</p>
-              <h2 className="text-xl font-bold text-white">{user?.name ?? user?.email}</h2>
-            </div>
+      {/* ── Employee Personal Grid ──────────────────────────────────────── */}
+      <div style={{ ...cardStyle, marginTop: 20, padding: 0 }}>
+        {/* Grid header */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '14px 20px', borderBottom: '1px solid #f1f5f9',
+        }}>
+          <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>
+            The Employee Personal Grid
+          </span>
+          <div style={{ display: 'flex', gap: 8 }}>
             <button
-              onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 h-9 px-4 text-sm font-semibold text-blue-900 bg-white hover:bg-blue-50 rounded-md cursor-pointer transition-colors"
+              onClick={() => refetch()}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: 4 }}
+              title="Refresh"
             >
-              <Plus size={14} strokeWidth={2.5} /> Submit New Ticket
+              <RefreshCw size={16} />
             </button>
           </div>
-
-          {/* Stat cards */}
-          <div className="flex gap-4 mb-5 flex-wrap">
-            <StatCard label="Open Tickets" count={openCount}       colorClass="text-blue-500"  bgClass="bg-blue-50"   icon={CircleDot}    />
-            <StatCard label="In Progress"  count={inProgressCount} colorClass="text-violet-600" bgClass="bg-violet-50" icon={Clock}        />
-            <StatCard label="Resolved"     count={resolvedCount}   colorClass="text-green-600"  bgClass="bg-green-50"  icon={CheckCircle2} />
-          </div>
-        </>
-      )}
-
-      {selectedId ? (
-        <div>
-          {maximized ? (
-            <div className="split-detail-col overflow-y-auto max-h-[calc(100vh-88px)]">
-              <TicketDetailPanel ticketId={selectedId} onClose={closePanel} onMinimize={() => setMaximized(false)} />
-            </div>
-          ) : (
-            <SplitPane
-              leftContent={listContent}
-              rightContent={<TicketDetailPanel ticketId={selectedId} onClose={closePanel} onMaximize={() => setMaximized(true)} />}
-            />
-          )}
         </div>
-      ) : (
-        listContent
-      )}
 
-      {showForm && <NewTicketDrawer user={user} onClose={() => setShowForm(false)} onCreated={handleCreated} />}
+        {/* Table */}
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              {['ID', 'TITLE', 'DEPARTMENT', 'DATE CREATED', 'STATUS', ''].map((h, i) => (
+                <th key={i} style={thStyle}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {myTickets.length === 0 ? (
+              <tr>
+                <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                  No tickets found. Submit your first ticket above.
+                </td>
+              </tr>
+            ) : pageItems.map((t) => (
+              <tr
+                key={t.id}
+                onClick={() => navigate(`/tickets/${t.id}`)}
+                style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+              >
+                <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", color: '#334155', fontWeight: 600, fontSize: 13 }}>
+                  #{t.id}
+                </td>
+                <td style={{ ...tdStyle, maxWidth: 240 }}>
+                  <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{t.title}</div>
+                  {t.description && (
+                    <div style={{ fontSize: 12, color: '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>
+                      {t.description}
+                    </div>
+                  )}
+                </td>
+                <td style={tdStyle}>{t.department?.name ?? '—'}</td>
+                <td style={{ ...tdStyle, color: '#64748b' }}>{fmtDate(t.createdAt)}</td>
+                <td style={tdStyle}><StatusBadge status={t.status} /></td>
+                <td style={{ ...tdStyle, textAlign: 'right' }}>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/tickets/${t.id}`); }}
+                    style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 4 }}
+                  >
+                    <ExternalLink size={14} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-      <style>{`
-        @media (max-width: 767px) {
-          .split-list-col   { display: none !important; }
-          .split-detail-col { flex: 1 1 100% !important; max-height: none !important; }
-        }
-      `}</style>
+        {/* Footer */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '12px 20px', borderTop: '1px solid #f1f5f9',
+        }}>
+          <span style={{ fontSize: 12, color: '#94a3b8' }}>
+            Showing {pageItems.length} of {myTickets.length} ticket{myTickets.length !== 1 ? 's' : ''}
+          </span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={page === 1}
+              style={{ ...paginBtn, opacity: page === 1 ? 0.4 : 1 }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <button
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              disabled={page === totalPages}
+              style={{ ...paginBtn, opacity: page === totalPages ? 0.4 : 1 }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
     </AppShell>
   );
 }
+
+// ── Style constants ───────────────────────────────────────────────────────────
+const cardStyle = {
+  background: '#ffffff',
+  border:     '1px solid #e2e8f0',
+  borderRadius: 0,
+  padding:    20,
+};
+
+const labelStyle = {
+  display:       'block',
+  fontSize:      11,
+  fontWeight:    700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color:         '#64748b',
+  marginBottom:  6,
+};
+
+const inputStyle = {
+  width:        '100%',
+  height:       36,
+  padding:      '0 12px',
+  border:       '1px solid #e2e8f0',
+  borderRadius: 6,
+  fontSize:     14,
+  outline:      'none',
+  background:   '#ffffff',
+  color:        '#0f172a',
+  boxSizing:    'border-box',
+  display:      'block',
+};
+
+const btnPrimary = {
+  height: 34, padding: '0 16px',
+  background: '#0f172a', color: '#ffffff',
+  border: 'none', borderRadius: 6,
+  fontSize: 13, fontWeight: 700, cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+};
+
+const btnSecondary = {
+  height: 34, padding: '0 16px',
+  background: '#ffffff', color: '#374151',
+  border: '1px solid #e2e8f0', borderRadius: 6,
+  fontSize: 13, fontWeight: 500, cursor: 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: 6,
+};
+
+const thStyle = {
+  padding:       '10px 16px',
+  fontSize:      11,
+  fontWeight:    700,
+  letterSpacing: '0.06em',
+  textTransform: 'uppercase',
+  color:         '#94a3b8',
+  textAlign:     'left',
+  whiteSpace:    'nowrap',
+};
+
+const tdStyle = {
+  padding:  '14px 16px',
+  fontSize: 13,
+  color:    '#374151',
+};
+
+const paginBtn = {
+  width: 28, height: 28,
+  border: '1px solid #e2e8f0', borderRadius: 4,
+  background: '#ffffff', color: '#64748b',
+  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+};
