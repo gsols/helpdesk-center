@@ -57,7 +57,7 @@ function AiTriageDrawer({ ticket, departments, onClose }) {
           fontSize: 16, fontWeight: 700, color: '#0f172a',
           lineHeight: '22px', marginBottom: 16,
         }}>
-          [{ticket.idLabel ?? `TCK-${ticket.id}`}] {ticket.title}
+          [#TK-{ticket.id}] {ticket.title}
         </h2>
 
         {/* Requester message */}
@@ -300,7 +300,7 @@ export default function TriageQueue() {
                   >
                     <td style={{ padding: '14px 16px', borderRight: '1px solid #f1f5f9' }}>
                       <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, fontWeight: 700, color: '#3b82f6' }}>
-                        TCK-{t.id}
+                        #TK-{t.id}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px', borderRight: '1px solid #f1f5f9', maxWidth: 240 }}>

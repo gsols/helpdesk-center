@@ -70,6 +70,26 @@ public class AttachmentController {
         }
     }
 
+    @GetMapping("/api/attachments/{id}/view")
+    public ResponseEntity<Resource> view(@PathVariable Long id) {
+        try {
+            Attachment attachment = attachmentService.getById(id);
+            Path path = fileStorageUtil.load(attachment.getSecureUrl());
+            Resource resource = new PathResource(path);
+
+            if (!resource.exists()) {
+                return ResponseEntity.notFound().build();
+            }
+
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(attachment.getFileType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + attachment.getFileName() + "\"")
+                .body(resource);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).build();
+        }
+    }
+
     @DeleteMapping("/api/attachments/{id}")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         try {

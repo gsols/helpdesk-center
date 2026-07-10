@@ -16,6 +16,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.ZonedDateTime;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "ticket_messages", indexes = {
@@ -43,6 +44,7 @@ public class TicketMessage {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String body;
 
-    @Column(name = "created_at", insertable = false, updatable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private ZonedDateTime createdAt;
 }

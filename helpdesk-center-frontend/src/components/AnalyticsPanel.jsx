@@ -327,7 +327,7 @@ export default function AnalyticsPanel() {
                   ) : filteredTickets.map(ticket => (
                     <tr key={ticket.id} className="cursor-pointer group hover:bg-[#f8f9ff] transition-colors">
                       <td className="px-4 py-3 pl-5 font-mono text-[12px] font-semibold text-blue-600 group-hover:underline">
-                        {ticket.id}
+                        #TK-{ticket.id}
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#0b1c30] truncate max-w-0">
                         <span className="block truncate" title={ticket.subject}>{ticket.subject}</span>

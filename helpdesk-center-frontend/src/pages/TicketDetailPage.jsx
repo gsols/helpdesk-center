@@ -1,55 +1,60 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import TicketDetailPanel from '../components/TicketDetailPanel';
 import MyTicketsSidebar from '../components/MyTicketsSidebar';
-import { ChevronRight } from 'lucide-react';
 
-const TICKET_LIST_KEY = 'hd_ticket_list_collapsed';
+const LIST_MIN = 200;
+const LIST_MAX = 500;
+const LIST_DEFAULT = 280;
 
 export default function TicketDetailPage() {
   const { id } = useParams();
+  const [listCollapsed, setListCollapsed] = useState(false);
+  const [listWidth, setListWidth] = useState(LIST_DEFAULT);
+  const dragStartX = useRef(null);
+  const dragStartW = useRef(null);
 
-  const [listCollapsed, setListCollapsed] = useState(
-    () => localStorage.getItem(TICKET_LIST_KEY) === 'true'
-  );
+  const handleToggle = useCallback(() => {
+    setListCollapsed(prev => !prev);
+  }, []);
 
-  const handleToggle = () => {
-    const next = !listCollapsed;
-    setListCollapsed(next);
-    localStorage.setItem(TICKET_LIST_KEY, String(next));
-  };
+  const handleDragStart = useCallback((e) => {
+    e.preventDefault();
+    dragStartX.current = e.clientX;
+    dragStartW.current = listWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev) => {
+      const delta = ev.clientX - dragStartX.current;
+      setListWidth(Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartW.current + delta)));
+    };
+    const onUp = () => {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [listWidth]);
+
+  useEffect(() => {
+    window.addEventListener('tickets-tab-click', handleToggle);
+    return () => window.removeEventListener('tickets-tab-click', handleToggle);
+  }, [handleToggle]);
 
   return (
     <AppShell title="Ticket Details" noPadding>
-      <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden', position: 'relative' }}>
-
-        {/* Re-open tab when collapsed */}
-        {listCollapsed && (
-          <button
-            onClick={handleToggle}
-            title="Expand ticket list"
-            style={{
-              position: 'absolute', left: 0, top: '50%', transform: 'translateY(-50%)',
-              zIndex: 10, background: '#0b1c30', border: 'none',
-              borderRight: '1px solid rgba(255,255,255,0.1)',
-              borderTop: '1px solid rgba(255,255,255,0.1)',
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
-              color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
-              padding: '8px 4px', borderRadius: '0 4px 4px 0',
-              display: 'flex', alignItems: 'center',
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
-          >
-            <ChevronRight size={14} />
-          </button>
-        )}
+      <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden' }}>
 
         <MyTicketsSidebar
           activeTicketId={id}
           collapsed={listCollapsed}
           onToggle={handleToggle}
+          width={listWidth}
+          onDragHandleMouseDown={handleDragStart}
         />
 
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#fff' }}>

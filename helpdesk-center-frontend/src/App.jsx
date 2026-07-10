@@ -5,6 +5,7 @@ import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import TicketDetailPage from './pages/TicketDetailPage';
+import TicketsIndexPage from './pages/TicketsIndexPage';
 import SettingsPage from './pages/SettingsPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import ManagerDashboard from './pages/ManagerDashboard';
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
+      { path: 'tickets',      element: <TicketsIndexPage /> },
       { path: 'tickets/:id',  element: <TicketDetailPage /> },
       { path: 'manager',      element: <ManagerDashboard /> },
       { path: 'settings',     element: <SettingsPage /> },

@@ -23,7 +23,10 @@ export function useTickets() {
 export function useTicket(id) {
   return useQuery({
     queryKey: ['ticket', id],
-    queryFn: () => getTicket(id).then(r => r.data),
+    queryFn: () => getTicket(id).then(r => {
+      console.debug('[useTicket] raw createdAt:', r.data?.createdAt, '| type:', typeof r.data?.createdAt);
+      return r.data;
+    }),
     enabled: !!id,
   });
 }

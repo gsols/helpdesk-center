@@ -37,4 +37,18 @@ public class AuthService {
             user.getDepartment() == null ? null : user.getDepartment().getId()
         );
     }
+
+    /**
+     * Changes the password for the given user after verifying the current password.
+     * Returns false if the current password does not match.
+     */
+    public boolean changePassword(Long userId, String currentRaw, String newRaw) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null || !passwordEncoder.matches(currentRaw, user.getPasswordHash())) {
+            return false;
+        }
+        user.setPasswordHash(passwordEncoder.encode(newRaw));
+        userRepository.save(user);
+        return true;
+    }
 }

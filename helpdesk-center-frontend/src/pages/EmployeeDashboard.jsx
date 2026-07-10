@@ -77,7 +77,7 @@ function AttachmentDropzone({ files, onAdd, onRemove }) {
   const onDragLeave = () => setDragging(false);
 
   return (
-    <div>
+    <div style={{ minWidth: 0 }}>
       {/* Drop area */}
       <div
         onClick={() => inputRef.current?.click()}
@@ -126,6 +126,7 @@ function AttachmentDropzone({ files, onAdd, onRemove }) {
               display: 'flex', alignItems: 'center', gap: 6,
               padding: '4px 8px',
               background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 4,
+              minWidth: 0,
             }}>
               <FileIcon type={f.type} />
               <span style={{ fontSize: 11, color: '#374151', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -506,9 +507,9 @@ export default function EmployeeDashboard() {
           </div>
 
           {/* Right: Attachment Dropzone + AI Confidence Breakdown */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
             {/* Functional Attachment Dropzone */}
-            <div>
+            <div style={{ minWidth: 0 }}>
               <label style={labelStyle}>
                 Attachment Dropzone
                 {files.length > 0 && (
@@ -587,7 +588,7 @@ export default function EmployeeDashboard() {
                 onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
               >
                 <td style={{ ...tdStyle, fontFamily: "'JetBrains Mono', monospace", color: '#334155', fontWeight: 600, fontSize: 13 }}>
-                  #{t.id}
+                  #TK-{t.id}
                 </td>
                 <td style={{ ...tdStyle, maxWidth: 240 }}>
                   <div style={{ fontWeight: 600, color: '#0f172a', fontSize: 14 }}>{t.title}</div>

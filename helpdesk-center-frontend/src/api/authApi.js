@@ -8,3 +8,6 @@ export const logout = () =>
 
 export const getMe = () =>
   api.get('/api/auth/me');
+
+export const changePassword = (currentPassword, newPassword) =>
+  api.patch('/api/auth/change-password', { currentPassword, newPassword });

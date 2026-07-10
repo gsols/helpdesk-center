@@ -67,7 +67,7 @@ export default function TicketCard({
           className="font-technical-md text-[#45464d] bg-slate-200/50 px-1.5 py-0.5"
           style={{ borderRadius: 2, fontSize: 12 }}
         >
-          #{ticket.id}
+          #TK-{ticket.id}
         </span>
         <PriorityBadge value={ticket.priority} />
       </div>

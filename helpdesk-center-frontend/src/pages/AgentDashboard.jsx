@@ -116,7 +116,7 @@ function TicketListPane({ tab, onTabChange, tickets, selectedId, onSelect, query
               {/* Ticket ID + priority */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: '#475569' }}>
-                  #SR-{ticket.id}
+                  #TK-{ticket.id}
                 </span>
                 <PriorityBadge priority={ticket.priority} />
               </div>
@@ -324,7 +324,7 @@ export default function AgentDashboard() {
               {/* Breadcrumb: TCK-XXXX / Department */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 13 }}>
                 <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#475569' }}>
-                  TCK-{t.id}
+                  #TK-{t.id}
                 </span>
                 <span style={{ color: '#94a3b8' }}>/</span>
                 <span style={{ color: '#64748b' }}>{t.department?.name ?? '—'}</span>
