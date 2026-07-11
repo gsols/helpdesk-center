@@ -207,6 +207,10 @@ public class TicketService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ticket not found"));
     }
 
+    public Optional<AiClassificationLog> getAiLog(Long ticketId) {
+        return aiLogRepository.findByTicketId(ticketId);
+    }
+
     public List<Ticket> getMyQueue(AuthenticatedUser principal) {
         if (principal.departmentId() == null) return List.of();
         return ticketRepository.findMyQueue(

@@ -59,7 +59,7 @@ export default function AgentDashboard() {
   }, [handleToggle]);
 
   return (
-    <AppShell title="Agent Workspace" noPadding>
+    <AppShell title="Agent Workspace" noPadding panelToggle={handleToggle} panelCollapsed={listCollapsed}>
       <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden' }}>
 
         <AgentQueueSidebar

@@ -30,8 +30,8 @@ const NAV = {
     { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
   ],
   agent: [
-    { label: 'Dashboard', icon: LayoutDashboard, to: '/agent'     },
-    { label: 'Team',      icon: Users,           to: '/agent'     },
+    { label: 'Dashboard', icon: LayoutDashboard, to: '/agent',      exact: true },
+    { label: 'Team',      icon: Users,           to: '/agent/team'              },
   ],
   dept_manager: [
     { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
@@ -175,7 +175,9 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
       <nav style={{ flex: 1, padding: collapsed ? '4px 0' : '4px 8px', overflowY: 'auto' }}>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.to || pathname.startsWith(item.to + '/');
+          const active = item.exact
+            ? pathname === item.to
+            : pathname === item.to || pathname.startsWith(item.to + '/');
           const handleNavClick = () => {
             if (active && item.to === '/tickets') {
               // Already on tickets — toggle the sidebar instead of re-navigating
@@ -356,7 +358,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
 }
 
 /* ── Top Header ──────────────────────────────────────────────────────────── */
-function TopHeader({ title, sidebarWidth }) {
+function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
   const { user } = useAuth();
   const initials = getInitials(user?.name ?? user?.email);
   const { pathname } = useLocation();
@@ -391,6 +393,34 @@ function TopHeader({ title, sidebarWidth }) {
       }}
     >
       <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, minWidth: 0, flex: 1 }}>
+        {panelToggle && (
+          <button
+            onClick={panelToggle}
+            title={panelCollapsed ? 'Expand panel' : 'Collapse panel'}
+            style={{
+              background: panelCollapsed ? '#f1f5f9' : 'transparent',
+              border: '1px solid',
+              borderColor: panelCollapsed ? '#cbd5e1' : 'transparent',
+              borderRadius: 5,
+              padding: 4,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: panelCollapsed ? '#334155' : '#94a3b8',
+              marginRight: 4,
+              flexShrink: 0,
+              transition: 'background 150ms, border-color 150ms, color 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = panelCollapsed ? '#f1f5f9' : 'transparent'; e.currentTarget.style.borderColor = panelCollapsed ? '#cbd5e1' : 'transparent'; e.currentTarget.style.color = panelCollapsed ? '#334155' : '#94a3b8'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="1" y="1" width="14" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.3"/>
+              <line x1="5.5" y1="1" x2="5.5" y2="15" stroke="currentColor" strokeWidth="1.3"/>
+            </svg>
+          </button>
+        )}
         {crumbs.map((crumb, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             {i > 0 && <span style={{ color: '#94a3b8', fontSize: 12 }}>›</span>}
@@ -442,7 +472,7 @@ function TopHeader({ title, sidebarWidth }) {
 }
 
 /* ── AppShell ─────────────────────────────────────────────────────────────── */
-export default function AppShell({ title = 'Support Engine', children, noPadding = false }) {
+export default function AppShell({ title = 'Support Engine', children, noPadding = false, panelToggle, panelCollapsed }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -501,7 +531,7 @@ export default function AppShell({ title = 'Support Engine', children, noPadding
           transition:    'margin-left 200ms ease-in-out',
         }}
       >
-        <TopHeader title={title} sidebarWidth={sidebarWidth} />
+        <TopHeader title={title} sidebarWidth={sidebarWidth} panelToggle={panelToggle} panelCollapsed={panelCollapsed} />
 
         <main
           ref={mainRef}

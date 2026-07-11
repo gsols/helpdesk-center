@@ -64,7 +64,7 @@ export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle,
         display:       'flex',
         flexDirection: 'column',
         overflow:      'hidden',
-        transition:    collapsed ? 'width 200ms ease-in-out, min-width 200ms ease-in-out' : 'none',
+        transition:    'width 200ms ease-in-out, min-width 200ms ease-in-out',
         flexShrink:    0,
         position:      'relative',
       }}

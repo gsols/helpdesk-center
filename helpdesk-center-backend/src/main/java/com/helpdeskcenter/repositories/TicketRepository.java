@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     List<Ticket> findByCreatorIdOrderByCreatedAtDesc(Long creatorId);
@@ -101,6 +102,19 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         WHERE t.company_id = :companyId
         """, nativeQuery = true)
     BigDecimal findAiClassificationAccuracy(@Param("companyId") Long companyId);
+
+    /**
+     * Returns the count of active (OPEN or IN_PROGRESS) tickets assigned to a specific agent.
+     */
+    @Query("""
+        select count(t) from Ticket t
+        where t.assignee.id = :agentId
+          and t.status in (
+              com.helpdeskcenter.enums.TicketStatus.OPEN,
+              com.helpdeskcenter.enums.TicketStatus.IN_PROGRESS
+          )
+        """)
+    int countActiveTicketsByAgent(@Param("agentId") Long agentId);
 
     interface DepartmentMttrView {
 

@@ -9,6 +9,7 @@ import TicketsIndexPage from './pages/TicketsIndexPage';
 import SettingsPage from './pages/SettingsPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import ManagerDashboard from './pages/ManagerDashboard';
+import TeamPage from './pages/TeamPage';
 
 /**
  * Guards the protected subtree.
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { index: true,          element: <RoleRedirect /> },
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
+      { path: 'agent/team',   element: <TeamPage /> },
       { path: 'agent/:id',    element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets',      element: <TicketsIndexPage /> },

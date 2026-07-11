@@ -11,6 +11,7 @@ import {
   assignToMe,
   rerouteTicket,
   previewTicket,
+  getAiLog,
 } from '../api/ticketsApi';
 
 export function useTickets() {
@@ -72,10 +73,49 @@ export function useCreateTicket() {
 export function useUpdateStatus() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }) => updateStatus(id, status),
-    onSuccess: (_data, { id }) => {
-      qc.invalidateQueries({ queryKey: ['ticket', id] });
-      qc.invalidateQueries({ queryKey: ['tickets'] });
+    mutationFn: ({ id, status }) => updateStatus(id, status).then(r => r.data),
+    onMutate: ({ id, status }) => {
+      // Snapshot for rollback
+      const previousTicket  = qc.getQueryData(['ticket', id]);
+      const previousMyQueue = qc.getQueryData(['tickets', 'my-queue']);
+      const previousPool    = qc.getQueryData(['tickets', 'pool']);
+      const previousArchive = qc.getQueryData(['tickets', 'archive']);
+      const previousAll     = qc.getQueryData(['tickets']);
+
+      // Write optimistic status to every cache immediately (synchronous — no await)
+      const patch = (old) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.map(t => String(t.id) === String(id) ? { ...t, status } : t);
+        return { ...old, status };
+      };
+      qc.setQueryData(['ticket', id],          patch);
+      qc.setQueryData(['tickets', 'my-queue'], patch);
+      qc.setQueryData(['tickets', 'pool'],     patch);
+      qc.setQueryData(['tickets', 'archive'],  patch);
+      qc.setQueryData(['tickets'],             patch);
+
+      return { previousTicket, previousMyQueue, previousPool, previousArchive, previousAll, id };
+    },
+    onSuccess: (serverTicket, { id }) => {
+      // Commit the real server response — no extra refetch needed
+      const commit = (old) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return old.map(t => String(t.id) === String(id) ? { ...t, status: serverTicket.status } : t);
+        return { ...old, status: serverTicket.status };
+      };
+      qc.setQueryData(['ticket', id],          commit);
+      qc.setQueryData(['tickets', 'my-queue'], commit);
+      qc.setQueryData(['tickets', 'pool'],     commit);
+      qc.setQueryData(['tickets', 'archive'],  commit);
+      qc.setQueryData(['tickets'],             commit);
+    },
+    onError: (_err, _vars, context) => {
+      if (!context) return;
+      qc.setQueryData(['ticket', context.id],  context.previousTicket);
+      qc.setQueryData(['tickets', 'my-queue'], context.previousMyQueue);
+      qc.setQueryData(['tickets', 'pool'],     context.previousPool);
+      qc.setQueryData(['tickets', 'archive'],  context.previousArchive);
+      qc.setQueryData(['tickets'],             context.previousAll);
     },
   });
 }
@@ -102,5 +142,13 @@ export function useRerouteTicket() {
 export function usePreviewTicket() {
   return useMutation({
     mutationFn: (data) => previewTicket(data).then(r => r.data),
+  });
+}
+
+export function useAiLog(ticketId) {
+  return useQuery({
+    queryKey: ['ticket', ticketId, 'ai-log'],
+    queryFn: () => getAiLog(ticketId).then(r => r.status === 204 ? null : r.data),
+    enabled: !!ticketId,
   });
 }

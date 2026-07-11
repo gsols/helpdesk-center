@@ -75,6 +75,7 @@ function InitialReportCard({ ticket }) {
           padding: '12px 14px',
           fontSize: 14, color: '#0b1c30', lineHeight: 1.65,
           borderTop: 'none',
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word',
         }}>
           {ticket.description
             ? ticket.description
@@ -122,6 +123,7 @@ function OwnMessage({ comment }) {
         padding: '12px 14px',
         fontSize: 14, color: '#ffffff', lineHeight: 1.6,
         borderRadius: '8px 0 8px 8px',
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
         {comment.body}
       </div>
@@ -161,6 +163,7 @@ function TheirMessage({ comment }) {
         padding: '12px 14px',
         fontSize: 14, color: '#0b1c30', lineHeight: 1.6,
         borderRadius: '0 8px 8px 8px',
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
       }}>
         {comment.body}
       </div>
@@ -299,7 +302,13 @@ export default function CommentSection({ ticketId, ticket, onAttachFile }) {
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Type your reply here..."
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (message.trim() && !addMessage.isPending) handleSubmit(e);
+                  }
+                }}
+                placeholder="Type your reply here… (Shift+Enter for new line)"
                 style={{
                   flex: 1, width: '100%', border: 'none', outline: 'none',
                   fontSize: 14, color: '#0b1c30',

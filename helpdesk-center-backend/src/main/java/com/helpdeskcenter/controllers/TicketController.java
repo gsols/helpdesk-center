@@ -1,11 +1,13 @@
 package com.helpdeskcenter.controllers;
 
+import com.helpdeskcenter.entities.AiClassificationLog;
 import com.helpdeskcenter.entities.Ticket;
 import com.helpdeskcenter.security.AuthenticatedUser;
 import com.helpdeskcenter.services.TicketAuthorizationService;
 import com.helpdeskcenter.services.TicketService;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -81,6 +83,19 @@ public class TicketController {
         Ticket ticket = ticketService.getTicketById(id);
         authorizationService.assertCanRead(principal, ticket);
         return ResponseEntity.ok(ticket);
+    }
+
+    /** Returns the AI classification log entry for a ticket, if it exists. */
+    @GetMapping("/{id}/ai-log")
+    public ResponseEntity<AiClassificationLog> getAiLog(
+        @PathVariable Long id,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        Ticket ticket = ticketService.getTicketById(id);
+        authorizationService.assertCanRead(principal, ticket);
+        Optional<AiClassificationLog> log = ticketService.getAiLog(id);
+        return log.map(ResponseEntity::ok)
+                  .orElse(ResponseEntity.noContent().build());
     }
 
     @PutMapping("/{id}/status")

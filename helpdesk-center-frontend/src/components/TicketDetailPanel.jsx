@@ -13,7 +13,7 @@
  *    • Tags
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useTicket, useUpdateStatus } from '../hooks/useTickets';
+import { useTicket, useUpdateStatus, useAiLog } from '../hooks/useTickets';
 import { useMessages } from '../hooks/useMessages';
 import { useAuth } from '../context/AuthContext';
 import { getAttachments, uploadAttachment, fetchAttachmentBlob, downloadUrl } from '../api/attachmentsApi';
@@ -59,12 +59,6 @@ function AttachIcon({ fileName }) {
     </div>
   );
 }
-
-/* ── AI Classification confidence data (mocked) ───────────────────────────── */
-const AI_CLASSES = [
-  { label: 'Security',   pct: 92, primary: true  },
-  { label: 'IT Support', pct: 8,  primary: false },
-];
 
 /* ── Attachment viewer lightbox ───────────────────────────────────────────── */
 function AttachmentViewer({ attachment, onClose }) {
@@ -295,6 +289,7 @@ export default function TicketDetailPanel({ ticketId }) {
   const { user }                    = useAuth();
   const { data: ticket, isLoading } = useTicket(ticketId);
   const { data: messages = [] }     = useMessages(ticketId);
+  const { data: aiLog }             = useAiLog(ticketId);
   const updateStatus = useUpdateStatus();
   const [attachments, setAttachments]           = useState([]);
   const [viewingAttachment, setViewingAttachment] = useState(null);
@@ -394,11 +389,11 @@ export default function TicketDetailPanel({ ticketId }) {
                 disabled={isResolved || updateStatus.isPending}
                 style={{
                   ...actionSolidBtn,
-                  opacity: isResolved ? 0.5 : 1,
-                  cursor:  isResolved ? 'not-allowed' : 'pointer',
+                  opacity: isResolved || updateStatus.isPending ? 0.5 : 1,
+                  cursor:  isResolved || updateStatus.isPending ? 'not-allowed' : 'pointer',
                 }}
-                onMouseEnter={(e) => { if (!isResolved) e.currentTarget.style.background = '#1e293b'; }}
-                onMouseLeave={(e) => { if (!isResolved) e.currentTarget.style.background = '#0f172a'; }}
+                onMouseEnter={(e) => { if (!isResolved && !updateStatus.isPending) e.currentTarget.style.background = '#1e293b'; }}
+                onMouseLeave={(e) => { if (!isResolved && !updateStatus.isPending) e.currentTarget.style.background = '#0f172a'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <CheckCircle size={14} />
@@ -419,41 +414,51 @@ export default function TicketDetailPanel({ ticketId }) {
           <div style={{ padding: '14px 16px' }}>
             <div style={jiraCard}>
               <div style={{ padding: '12px 14px' }}>
-                {AI_CLASSES.map(({ label, pct, primary }) => (
-                  <div key={label} style={{ marginBottom: primary ? 14 : 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: primary ? 600 : 400,
-                        color: primary ? '#111827' : '#6b7280',
-                        fontFamily: 'inherit',
-                      }}>
-                        {label}
-                      </span>
-                      <span style={{
-                        fontSize: 11, fontWeight: primary ? 700 : 400,
-                        color: primary ? '#111827' : '#6b7280',
-                      }}>
-                        {pct}% Confidence
-                      </span>
-                    </div>
-                    <div style={{ height: 3, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', width: `${pct}%`,
-                        background: primary ? '#1f2937' : '#d1d5db',
-                        borderRadius: 2,
-                      }} />
-                    </div>
-                  </div>
-                ))}
-                <div style={{
-                  paddingTop: 10, marginTop: 10,
-                  borderTop: '1px solid #f1f5f9',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                  <span style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.4 }}>
-                    ⓘ Classified by watsonx.ai L3 model
-                  </span>
-                </div>
+                {!aiLog ? (
+                  <span style={{ fontSize: 12, color: '#9ca3af' }}>No classification data</span>
+                ) : (() => {
+                  const pct    = aiLog.confidenceScore != null ? Math.round(Number(aiLog.confidenceScore)) : null;
+                  const deptName = aiLog.predictedDepartment?.name ?? '—';
+                  const misclassified = aiLog.isMisclassified;
+                  const actualName    = aiLog.actualDepartment?.name;
+                  return (
+                    <>
+                      {/* Primary row */}
+                      <div style={{ marginBottom: pct != null ? 14 : 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#111827', fontFamily: 'inherit' }}>
+                            {deptName}
+                          </span>
+                          {pct != null && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#111827' }}>
+                              {pct}% Confidence
+                            </span>
+                          )}
+                        </div>
+                        {pct != null && (
+                          <div style={{ height: 3, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: '#1f2937', borderRadius: 2 }} />
+                          </div>
+                        )}
+                      </div>
+                      {/* Misclassification notice */}
+                      {misclassified && actualName && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>
+                              Corrected → {actualName}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ paddingTop: 10, marginTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.4 }}>
+                          ⓘ Classified by watsonx.ai L3 model
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -482,7 +487,7 @@ export default function TicketDetailPanel({ ticketId }) {
               </div>
             } />
             <MetaRow label="Date Created" value={fmtDate(ticket.createdAt)} />
-            <MetaRow label="Reporter"     value={`${ticket.creator?.name ?? 'Unknown'} (ID: ${ticket.creator?.id ?? '—'})`} />
+            <MetaRow label="Reporter"     value={ticket.creator?.name ?? 'Unknown'} />
           </div>
         </section>
 

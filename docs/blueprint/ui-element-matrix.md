@@ -76,3 +76,26 @@ Visible to all authenticated users, but the navigation anchors adapt dynamically
   - Numeric input parameters modifying the `target_resolution_hours` property directly on the backend database table.
 - **UI Elements (Tenant Integrations Panel)**:
   - Secure textual input box storing corporate target strings like Slack webhook endpoints.
+
+### D. Same-Department Teammate Directory Sub-Panel (`AppShell.jsx` Sidebar)
+- **Visibility**: Visible ONLY when `currentUser.role == 'AGENT'` or `DEPT_MANAGER`.
+- **Structure**: A sharp-edged, collapsible section header at the bottom of the navigation rail labeled "My Department Team".
+- **Dynamic Elements**: Loops through and displays rows of users where `user.department_id == currentUser.department_id AND user.role == 'AGENT'`.
+- **Action Target (Click Event)**: Clicking a teammate's name instantly re-routes the central data pane route to render the designated **Teammate Workspace panel view**, passing the target colleague's `user_id` as a filter parameter.
+
+### E. Teammate Workspace View (Scoped Read-Only + Takeover)
+- **When is it loaded?**: Active when an agent clicks a peer from the "My Department Team" sub-panel. Route pattern: `/agent/team/:teammateId`.
+- **Data Scope**: Executes a scoped backend lookup fetching all tickets where `department_id == currentAgent.department_id AND assignee_id == target_teammate.id`.
+- **Read-Only State Enforcement**: The detail view panel renders a persistent, non-dismissible overlay banner reading `[Viewing teammate's workspace — Read-Only]`. All reply inputs, status droppers, and re-route controls are disabled and visually muted.
+- **Action Target (The Takeover Override Button)**:
+  - **Label**: "Take Over Ticket"
+  - **Visibility**: Rendered on every ticket row card and inside the right-side detail panel header area, even while the read-only overlay is active.
+  - **Behavior on Click**: Executes a transactional backend `PATCH` request:
+    ```
+    SET assignee_id = currentUser.id, status = 'IN_PROGRESS'
+    ```
+  - **Post-Takeover State**: The system immediately:
+    1. Writes an audit event to the activity log (`TICKET_TAKEN_OVER` event type, recording previous `assignee_id`, new `assignee_id`, and timestamp).
+    2. Removes the ticket from the teammate's queue and moves it to the claiming agent's **My Queue** tab.
+    3. Lifts the read-only overlay on the detail panel, granting full Read/Write communication privileges to the claiming agent.
+    4. Navigates the claiming agent to `/agent/:ticketId` (their normal workspace route) for the taken-over ticket.

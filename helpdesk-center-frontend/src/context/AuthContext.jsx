@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState } from 'react';
 import { login as apiLogin, logout as apiLogout } from '../api/authApi';
+import { queryClient } from '../main';
 
 export const AuthContext = createContext(null);
 
@@ -25,6 +26,9 @@ export function AuthProvider({ children }) {
       departmentId: data.departmentId,
       departmentName: data.departmentName ?? null,
     };
+    // Clear any stale cache from a previous session before setting the new user —
+    // prevents React Query from serving empty/wrong data on first render after login.
+    queryClient.removeQueries();
     setUser(userData);
     setToken(data.token);
     localStorage.setItem('hd_user', JSON.stringify(userData));
@@ -34,6 +38,8 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try { await apiLogout(); } catch { /* ignore */ }
+    // Wipe all cached query data so the next login starts fresh
+    queryClient.removeQueries();
     setUser(null);
     setToken(null);
     localStorage.removeItem('hd_user');

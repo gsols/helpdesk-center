@@ -46,7 +46,7 @@ export default function TicketDetailPage() {
   }, [handleToggle]);
 
   return (
-    <AppShell title="Ticket Details" noPadding>
+    <AppShell title="Ticket Details" noPadding panelToggle={handleToggle} panelCollapsed={listCollapsed}>
       <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden' }}>
 
         <MyTicketsSidebar

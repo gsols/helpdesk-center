@@ -42,3 +42,6 @@ export const splitTicket = (id, splits) =>
 
 export const deleteAllTickets = () =>
   api.delete('/api/test/tickets');
+
+export const getAiLog = (id) =>
+  api.get(`/api/tickets/${id}/ai-log`);
