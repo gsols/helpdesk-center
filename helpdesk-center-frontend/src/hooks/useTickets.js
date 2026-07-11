@@ -9,9 +9,12 @@ import {
   getDepartmentArchive,
   getTriageQueue,
   assignToMe,
+  assignTicket,
   rerouteTicket,
   previewTicket,
   getAiLog,
+  getDeptQueue,
+  getRiskQueue,
 } from '../api/ticketsApi';
 
 export function useTickets() {
@@ -156,6 +159,7 @@ export function useAiLog(ticketId) {
 /**
  * Returns active (OPEN / IN_PROGRESS) tickets belonging to a peer agent.
  * Derived from the department archive so no new backend endpoint is needed.
+ * Used by agents viewing a teammate's workspace.
  */
 export function usePeerQueue(peerId) {
   const { data: archive = [], ...rest } = useArchive();
@@ -167,4 +171,64 @@ export function usePeerQueue(peerId) {
       )
     : [];
   return { data: tickets, ...rest };
+}
+
+/**
+ * Returns active tickets for a specific agent, derived from the dept-queue cache.
+ * Used by managers inspecting an agent's workspace — no extra network call.
+ */
+export function useAgentQueue(agentId) {
+  const { data: deptQueue = [], ...rest } = useDeptQueue();
+  const tickets = agentId != null
+    ? deptQueue.filter(t =>
+        t.assignee?.id != null &&
+        String(t.assignee.id) === String(agentId) &&
+        ['OPEN', 'IN_PROGRESS', 'PENDING_EMPLOYEE'].includes(t.status?.toUpperCase())
+      )
+    : [];
+  return { data: tickets, ...rest };
+}
+
+/**
+ * All active (non-resolved, non-closed) tickets in the manager's department.
+ * Polls every 30 s to keep the queue live.
+ */
+export function useDeptQueue() {
+  return useQuery({
+    queryKey: ['tickets', 'dept-queue'],
+    queryFn: () => getDeptQueue().then(r => r.data),
+    staleTime: 15_000,
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Risk queue: active tickets that are breached or within 60 min of breach.
+ * Polls every 60 s to keep countdowns accurate.
+ */
+export function useRiskQueue() {
+  return useQuery({
+    queryKey: ['tickets', 'risk-queue'],
+    queryFn: () => getRiskQueue().then(r => r.data),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Reassign a ticket to a different agent. Manager-only.
+ * Invalidates dept-queue and the individual ticket cache on success.
+ */
+export function useReassignTicket() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, agentId }) => assignTicket(id, agentId).then(r => r.data),
+    onSuccess: (_updated, { id }) => {
+      qc.invalidateQueries({ queryKey: ['tickets', 'dept-queue'] });
+      qc.invalidateQueries({ queryKey: ['ticket', id] });
+      qc.invalidateQueries({ queryKey: ['team'] });
+    },
+  });
 }

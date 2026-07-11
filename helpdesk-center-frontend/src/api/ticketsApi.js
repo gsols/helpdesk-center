@@ -45,3 +45,9 @@ export const deleteAllTickets = () =>
 
 export const getAiLog = (id) =>
   api.get(`/api/tickets/${id}/ai-log`);
+
+export const getDeptQueue = () =>
+  api.get('/api/tickets/dept-queue');
+
+export const getRiskQueue = () =>
+  api.get('/api/tickets/risk-queue');

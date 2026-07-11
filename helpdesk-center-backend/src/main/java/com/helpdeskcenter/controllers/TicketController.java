@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,6 +76,18 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getTriageQueue(principal));
     }
 
+    /**
+     * Dept Queue: all active (non-resolved, non-closed) tickets in the manager's department.
+     * Includes both assigned and unassigned tickets.
+     */
+    @GetMapping("/dept-queue")
+    @PreAuthorize("hasRole('DEPT_MANAGER')")
+    public ResponseEntity<List<Ticket>> getDeptQueue(
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.getDeptQueue(principal));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Ticket> getTicket(
         @PathVariable Long id,
@@ -133,6 +146,20 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.assignToMe(id, principal));
     }
 
+    /**
+     * Reassign a ticket to any agent in the manager's department.
+     * Body: { "agentId": <Long> }
+     */
+    @PutMapping("/{id}/assign")
+    @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
+    public ResponseEntity<Ticket> reassignTicket(
+        @PathVariable Long id,
+        @RequestBody Map<String, Long> body,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.reassignTicket(id, body.get("agentId"), principal));
+    }
+
     /** Re-route a misclassified ticket to the correct department (ADR-0002). */
     @PostMapping("/{id}/reroute")
     public ResponseEntity<Ticket> rerouteTicket(
@@ -141,5 +168,17 @@ public class TicketController {
         @AuthenticationPrincipal AuthenticatedUser principal
     ) {
         return ResponseEntity.ok(ticketService.rerouteTicket(id, body.get("targetDepartmentId"), principal));
+    }
+
+    /**
+     * Risk Queue: active tickets in the manager's department that are breached or within
+     * 60 minutes of their SLA deadline, ordered soonest-first.
+     */
+    @GetMapping("/risk-queue")
+    @PreAuthorize("hasRole('DEPT_MANAGER')")
+    public ResponseEntity<List<Ticket>> getRiskQueue(
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.getRiskQueue(principal));
     }
 }

@@ -18,7 +18,7 @@ import { useTickets } from '../hooks/useTickets';
 import {
   LayoutDashboard, Ticket, Settings, LogOut, Bell,
   BarChart2, Clock,
-  Menu, ShieldCheck, ArchiveIcon, Users,
+  Menu, ShieldCheck, Users,
 } from 'lucide-react';
 
 const SIDEBAR_KEY = 'hd_sidebar_collapsed';
@@ -34,11 +34,11 @@ const NAV = {
     { label: 'Team',      icon: Users,           to: '/agent/team'              },
   ],
   dept_manager: [
-    { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
-    { label: 'Tickets',    icon: Ticket,          to: '/tickets'  },
-    { label: 'Analytics',  icon: BarChart2,       to: '/manager'  },
-    { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager'  },
-    { label: 'Archive',    icon: ArchiveIcon,     to: '/manager'  },
+    { label: 'Queue',      icon: LayoutDashboard, to: '/manager',          exact: true },
+    { label: 'Team',       icon: Users,           to: '/manager/team'                  },
+    { label: 'Analytics',  icon: BarChart2,       to: '/manager/analytics'             },
+    { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager/risk'                  },
+    { label: 'Tickets',    icon: Ticket,          to: '/tickets'                       },
   ],
   sys_admin: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/admin'     },
@@ -55,11 +55,12 @@ function getInitials(name) {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-/** Role subtitle: agents get "Agent · <Department>", others get the role label. */
+/** Role subtitle: agents/managers get "Role · <Department>", others get the role label. */
 function roleSubtitle(user) {
   if (!user) return '';
   const base = user.role?.replace(/_/g, ' ') ?? '';
-  if ((user.role === 'agent' || user.role === 'AGENT') && user.departmentName) {
+  const isDeptRole = ['agent', 'AGENT', 'dept_manager', 'DEPT_MANAGER'].includes(user.role);
+  if (isDeptRole && user.departmentName) {
     return `${base} · ${user.departmentName}`;
   }
   return base;
@@ -368,8 +369,8 @@ function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
     s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ')
   )];
   if (title && crumbs.length > 0) {
-    const isAgent = user?.role === 'agent' || user?.role === 'AGENT';
-    crumbs[crumbs.length - 1] = isAgent && user?.departmentName
+    const isDeptRole = ['agent', 'AGENT', 'dept_manager', 'DEPT_MANAGER'].includes(user?.role);
+    crumbs[crumbs.length - 1] = isDeptRole && user?.departmentName
       ? `${user.departmentName} ${title}`
       : title;
   }

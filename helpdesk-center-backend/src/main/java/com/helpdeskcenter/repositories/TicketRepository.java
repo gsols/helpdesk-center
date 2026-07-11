@@ -117,6 +117,133 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
         """)
     int countActiveTicketsByAgent(@Param("agentId") Long agentId);
 
+    /** Count of OPEN + IN_PROGRESS tickets in a department (backlog). */
+    @Query("""
+        select count(t) from Ticket t
+        where t.company.id    = :companyId
+          and t.department.id = :departmentId
+          and t.status in (
+              com.helpdeskcenter.enums.TicketStatus.OPEN,
+              com.helpdeskcenter.enums.TicketStatus.IN_PROGRESS
+          )
+        """)
+    long countBacklogByDepartment(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /** Count of all non-resolved tickets in a department. */
+    @Query("""
+        select count(t) from Ticket t
+        where t.company.id    = :companyId
+          and t.department.id = :departmentId
+          and t.status not in (
+              com.helpdeskcenter.enums.TicketStatus.RESOLVED,
+              com.helpdeskcenter.enums.TicketStatus.CLOSED
+          )
+        """)
+    long countActiveByDepartment(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /**
+     * Count of active tickets in a department whose due_at is in the past (SLA breached).
+     * Uses a native query because JPQL does not support CURRENT_TIMESTAMP comparisons
+     * against nullable columns cleanly on all providers.
+     */
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM tickets t
+        WHERE t.company_id    = :companyId
+          AND t.department_id = :departmentId
+          AND t.status NOT IN ('RESOLVED','CLOSED')
+          AND t.due_at IS NOT NULL
+          AND t.due_at < NOW()
+        """, nativeQuery = true)
+    long countBreachedByDepartment(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /** MTTR in hours for a single department (resolved/closed tickets only). */
+    @Query(value = """
+        SELECT AVG(EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600)
+        FROM tickets t
+        WHERE t.company_id    = :companyId
+          AND t.department_id = :departmentId
+          AND t.status IN ('RESOLVED','CLOSED')
+        """, nativeQuery = true)
+    java.math.BigDecimal findMttrByDepartment(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /**
+     * All active (non-resolved, non-closed) tickets in a department, ordered newest first.
+     * Used by the Manager Queue tab.
+     */
+    @Query("""
+        select t from Ticket t
+        left join fetch t.assignee
+        where t.company.id    = :companyId
+          and t.department.id = :departmentId
+          and t.status not in (
+              com.helpdeskcenter.enums.TicketStatus.RESOLVED,
+              com.helpdeskcenter.enums.TicketStatus.CLOSED
+          )
+        order by t.createdAt desc
+        """)
+    List<Ticket> findActiveDeptQueue(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /**
+     * Risk queue: active tickets that are breached (due_at < now) OR near-breach
+     * (due within the next 60 minutes), ordered soonest-first.
+     * Used by the Manager Risk Queue tab.
+     */
+    @Query(value = """
+        SELECT t.*
+        FROM tickets t
+        WHERE t.company_id    = :companyId
+          AND t.department_id = :departmentId
+          AND t.status NOT IN ('RESOLVED','CLOSED')
+          AND t.due_at IS NOT NULL
+          AND t.due_at <= NOW() + INTERVAL '60 minutes'
+        ORDER BY t.due_at ASC
+        """, nativeQuery = true)
+    List<Ticket> findRiskQueue(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    /**
+     * Daily resolved/closed ticket counts for the last 7 days in a department.
+     * Returns rows of (dayLabel, count) ordered ascending.
+     */
+    @Query(value = """
+        SELECT TO_CHAR(t.updated_at AT TIME ZONE 'UTC', 'Dy') AS dayLabel,
+               COUNT(*) AS ticketCount
+        FROM tickets t
+        WHERE t.company_id    = :companyId
+          AND t.department_id = :departmentId
+          AND t.status IN ('RESOLVED','CLOSED')
+          AND t.updated_at >= NOW() - INTERVAL '7 days'
+        GROUP BY DATE_TRUNC('day', t.updated_at), TO_CHAR(t.updated_at AT TIME ZONE 'UTC', 'Dy')
+        ORDER BY DATE_TRUNC('day', t.updated_at) ASC
+        """, nativeQuery = true)
+    List<DailyCountView> findDailyResolutionCount(
+        @Param("companyId") Long companyId,
+        @Param("departmentId") Long departmentId
+    );
+
+    interface DailyCountView {
+        String getDayLabel();
+        Long getTicketCount();
+    }
+
     interface DepartmentMttrView {
 
         Long getDepartmentId();

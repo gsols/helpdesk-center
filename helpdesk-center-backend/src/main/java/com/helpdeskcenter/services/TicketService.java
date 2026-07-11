@@ -228,6 +228,26 @@ public class TicketService {
             principal.companyId(), principal.departmentId(), principal.userId());
     }
 
+    /**
+     * Full active queue for the manager's department: all non-resolved, non-closed tickets
+     * regardless of assignment state. Only accessible by DEPT_MANAGER.
+     */
+    public List<Ticket> getDeptQueue(AuthenticatedUser principal) {
+        if (principal.departmentId() == null) return List.of();
+        return ticketRepository.findActiveDeptQueue(
+            principal.companyId(), principal.departmentId());
+    }
+
+    /**
+     * Risk queue: active tickets in the manager's department that are breached or within
+     * 60 minutes of breach, ordered soonest-first.
+     */
+    public List<Ticket> getRiskQueue(AuthenticatedUser principal) {
+        if (principal.departmentId() == null) return List.of();
+        return ticketRepository.findRiskQueue(
+            principal.companyId(), principal.departmentId());
+    }
+
     public List<Ticket> getTriageQueue(AuthenticatedUser principal) {
         // Triage is only for managers and admins
         if (principal.role() != UserRole.DEPT_MANAGER && principal.role() != UserRole.SYS_ADMIN) {
@@ -247,6 +267,43 @@ public class TicketService {
         ticket.setAssignee(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
         return ticketRepository.save(ticket);
+    }
+
+    /**
+     * Reassign a ticket to a specific agent. Manager-only.
+     * Accepts null agentId to unassign (sets status back to OPEN).
+     */
+    @Transactional
+    public Ticket reassignTicket(Long ticketId, Long agentId, AuthenticatedUser principal) {
+        Ticket ticket = getTicketById(ticketId);
+        authorizationHelper(principal, ticket);
+
+        if (agentId == null) {
+            ticket.setAssignee(null);
+            ticket.setStatus(TicketStatus.OPEN);
+        } else {
+            User agent = userRepository.findById(agentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Agent not found"));
+            // Ensure the new agent belongs to the same company
+            if (!agent.getCompany().getId().equals(principal.companyId())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Agent belongs to a different company");
+            }
+            ticket.setAssignee(agent);
+            ticket.setStatus(TicketStatus.IN_PROGRESS);
+        }
+        return ticketRepository.save(ticket);
+    }
+
+    /** Shared dept/company check used by reassignTicket. */
+    private void authorizationHelper(AuthenticatedUser principal, Ticket ticket) {
+        if (!ticket.getCompany().getId().equals(principal.companyId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+        if (principal.role() == UserRole.DEPT_MANAGER
+                && ticket.getDepartment() != null
+                && !ticket.getDepartment().getId().equals(principal.departmentId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ticket is outside your department");
+        }
     }
 
     @Transactional

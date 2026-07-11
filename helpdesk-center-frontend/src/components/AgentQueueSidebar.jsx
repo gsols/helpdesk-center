@@ -36,7 +36,7 @@ function TicketStatusBadge({ status }) {
   );
 }
 
-export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle, width = 280, onDragHandleMouseDown }) {
+export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle, width = 280, onDragHandleMouseDown, onTabChange, onArchiveSelect, onPoolSelect }) {
   const navigate = useNavigate();
   const [tab,    setTab]    = useState('My Queue');
   const [search, setSearch] = useState('');
@@ -109,7 +109,7 @@ export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle,
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => { setTab(t); setSearch(''); }}
+            onClick={() => { setTab(t); setSearch(''); onTabChange?.(t); }}
             style={{
               flex: 1,
               padding: '8px 4px',
@@ -174,7 +174,11 @@ export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle,
           return (
             <div
               key={t.id}
-              onClick={() => navigate(`/agent/${t.id}`)}
+              onClick={() => {
+                if (tab === 'Archive') onArchiveSelect?.(t.id);
+                else if (tab === 'Dept Pool') onPoolSelect?.(t.id);
+                else navigate(`/agent/${t.id}`);
+              }}
               style={{
                 padding:     '12px 14px',
                 borderBottom: '1px solid #f1f5f9',
