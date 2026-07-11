@@ -104,14 +104,15 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     BigDecimal findAiClassificationAccuracy(@Param("companyId") Long companyId);
 
     /**
-     * Returns the count of active (OPEN or IN_PROGRESS) tickets assigned to a specific agent.
+     * Returns the count of active (OPEN, IN_PROGRESS, PENDING_EMPLOYEE) tickets assigned to a specific agent.
      */
     @Query("""
         select count(t) from Ticket t
         where t.assignee.id = :agentId
           and t.status in (
               com.helpdeskcenter.enums.TicketStatus.OPEN,
-              com.helpdeskcenter.enums.TicketStatus.IN_PROGRESS
+              com.helpdeskcenter.enums.TicketStatus.IN_PROGRESS,
+              com.helpdeskcenter.enums.TicketStatus.PENDING_EMPLOYEE
           )
         """)
     int countActiveTicketsByAgent(@Param("agentId") Long agentId);
