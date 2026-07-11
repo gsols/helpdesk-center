@@ -110,15 +110,17 @@ export default function TeamPage() {
             return (
               <div
                 key={member.id}
+                onClick={() => navigate(isMe ? '/agent' : `/agent/team/${member.id}`)}
                 style={{
                   display: 'flex', alignItems: 'center',
                   padding: '14px 24px',
                   borderBottom: i < team.length - 1 ? '1px solid #f1f5f9' : 'none',
                   background: isMe ? '#f8faff' : 'transparent',
                   transition: 'background 120ms',
+                  cursor: 'pointer',
                 }}
-                onMouseEnter={(e) => { if (!isMe) e.currentTarget.style.background = '#f8fafc'; }}
-                onMouseLeave={(e) => { if (!isMe) e.currentTarget.style.background = 'transparent'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = isMe ? '#f8faff' : 'transparent'; }}
               >
                 {/* Agent column */}
                 <div style={{ flex: 3, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
@@ -155,20 +157,7 @@ export default function TeamPage() {
 
                 {/* Action column */}
                 <div style={{ flex: 1, textAlign: 'right' }}>
-                  <button
-                    onClick={() => navigate(`/agent/${member.id}/queue`)}
-                    title={`View ${member.name}'s queue`}
-                    style={{
-                      background: 'transparent', border: 'none',
-                      color: '#94a3b8', cursor: 'pointer',
-                      padding: 6, display: 'inline-flex', alignItems: 'center',
-                      borderRadius: 4, transition: 'color 120ms, background 120ms',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = '#0b1c30'; e.currentTarget.style.background = '#f1f5f9'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <ExternalLink size={15} />
-                  </button>
+                  <ExternalLink size={15} style={{ color: '#94a3b8' }} />
                 </div>
               </div>
             );

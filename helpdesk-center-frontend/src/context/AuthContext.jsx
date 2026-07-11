@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
       email: data.email,
       role: data.role?.toLowerCase?.() ?? data.role,
       companyId: data.companyId,
+      companyName: data.companyName ?? null,
       departmentId: data.departmentId,
       departmentName: data.departmentName ?? null,
     };

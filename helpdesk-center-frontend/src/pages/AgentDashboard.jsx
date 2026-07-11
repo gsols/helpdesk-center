@@ -14,6 +14,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import AppShell from '../components/AppShell';
 import AgentQueueSidebar from '../components/AgentQueueSidebar';
 import TicketDetailPanel from '../components/TicketDetailPanel';
+import { useMyQueue } from '../hooks/useTickets';
 
 const LIST_MIN     = 200;
 const LIST_MAX     = 500;
@@ -22,6 +23,7 @@ const LIST_DEFAULT = 280;
 export default function AgentDashboard() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { data: myQueue = [] } = useMyQueue();
   const [listCollapsed, setListCollapsed] = useState(false);
   const [listWidth,     setListWidth]     = useState(LIST_DEFAULT);
   const dragStartX = useRef(null);
@@ -57,6 +59,13 @@ export default function AgentDashboard() {
     window.addEventListener('tickets-tab-click', handleToggle);
     return () => window.removeEventListener('tickets-tab-click', handleToggle);
   }, [handleToggle]);
+
+  // Auto-select the first ticket in My Queue when no ticket is open
+  useEffect(() => {
+    if (!id && myQueue.length > 0) {
+      navigate(`/agent/${myQueue[0].id}`, { replace: true });
+    }
+  }, [id, myQueue, navigate]);
 
   return (
     <AppShell title="Agent Workspace" noPadding panelToggle={handleToggle} panelCollapsed={listCollapsed}>

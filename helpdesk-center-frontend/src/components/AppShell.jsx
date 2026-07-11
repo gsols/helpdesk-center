@@ -438,15 +438,15 @@ function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        {user?.companyId && (
+        {(user?.companyName || user?.companyId) && (
           <span style={{
             fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
             border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8',
-            textTransform: 'uppercase', letterSpacing: '0.06em',
+            letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
-            Tenant #{user.companyId}
+            {user.companyName ?? `Company #${user.companyId}`}
           </span>
         )}
         <LiveClock />

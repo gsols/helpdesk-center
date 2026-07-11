@@ -152,3 +152,19 @@ export function useAiLog(ticketId) {
     enabled: !!ticketId,
   });
 }
+
+/**
+ * Returns active (OPEN / IN_PROGRESS) tickets belonging to a peer agent.
+ * Derived from the department archive so no new backend endpoint is needed.
+ */
+export function usePeerQueue(peerId) {
+  const { data: archive = [], ...rest } = useArchive();
+  const tickets = peerId != null
+    ? archive.filter(t =>
+        t.assignee?.id != null &&
+        String(t.assignee.id) === String(peerId) &&
+        ['OPEN', 'IN_PROGRESS', 'PENDING_EMPLOYEE'].includes(t.status?.toUpperCase())
+      )
+    : [];
+  return { data: tickets, ...rest };
+}

@@ -10,6 +10,7 @@ import SettingsPage from './pages/SettingsPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import ManagerDashboard from './pages/ManagerDashboard';
 import TeamPage from './pages/TeamPage';
+import TeammateWorkspacePage from './pages/TeammateWorkspacePage';
 
 /**
  * Guards the protected subtree.
@@ -56,7 +57,8 @@ const router = createBrowserRouter([
       { index: true,          element: <RoleRedirect /> },
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
-      { path: 'agent/team',   element: <TeamPage /> },
+      { path: 'agent/team',         element: <TeamPage /> },
+      { path: 'agent/team/:peerId', element: <TeammateWorkspacePage /> },
       { path: 'agent/:id',    element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets',      element: <TicketsIndexPage /> },
