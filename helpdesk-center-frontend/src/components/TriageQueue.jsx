@@ -3,11 +3,106 @@
  *  1. global_triage_triagequeue.jsx — unassigned ticket queue with metric banner + AI text extraction
  *  2. admin_ticket_inspection_panel — click ticket → 480px AI triage side-drawer (AI log + Administrative Overrides)
  */
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useTriageQueue, useRerouteTicket } from '../hooks/useTickets';
 import api from '../api/axiosInstance';
 import { useQuery } from '@tanstack/react-query';
-import { Search, RefreshCw, Filter, X, TriangleAlert, Terminal, ChevronDown } from 'lucide-react';
+import { Search, RefreshCw, Filter, X, TriangleAlert, Terminal, ChevronDown, ChevronUp } from 'lucide-react';
+
+/* ── Status filter config ────────────────────────────────────────────────── */
+const STATUS_OPTIONS = [
+  { value: 'OPEN',              label: 'Open',              color: '#3b82f6' },
+  { value: 'IN_PROGRESS',       label: 'In Progress',       color: '#8b5cf6' },
+  { value: 'PENDING_EMPLOYEE',  label: 'Pending Employee',  color: '#f59e0b' },
+  { value: 'RESOLVED',          label: 'Resolved',          color: '#22c55e' },
+  { value: 'CLOSED',            label: 'Closed',            color: '#94a3b8' },
+];
+
+/* ── StatusFilterDropdown ────────────────────────────────────────────────── */
+function StatusFilterDropdown({ selected, onToggle, onClear }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const hasFilter = selected.size > 0;
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          height: 28, padding: '0 10px',
+          background: hasFilter ? '#0f172a' : '#ffffff',
+          color: hasFilter ? '#ffffff' : '#64748b',
+          border: '1px solid #e2e8f0', borderRadius: 4,
+          fontSize: 11, fontWeight: 700, cursor: 'pointer',
+          letterSpacing: '0.04em',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        STATUS{hasFilter ? ` (${selected.size})` : ''}
+        {open ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+          background: '#ffffff', border: '1px solid #e2e8f0',
+          borderRadius: 6, boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+          minWidth: 180, zIndex: 40, padding: '4px 0',
+        }}>
+          {STATUS_OPTIONS.map(({ value, label, color }) => {
+            const checked = selected.has(value);
+            return (
+              <button
+                key={value}
+                onClick={() => onToggle(value)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+                  padding: '7px 12px', background: checked ? '#f8fafc' : 'transparent',
+                  border: 'none', cursor: 'pointer', textAlign: 'left',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = checked ? '#f8fafc' : 'transparent'; }}
+              >
+                <span style={{
+                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                  border: `2px solid ${checked ? color : '#cbd5e1'}`,
+                  background: checked ? color : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  {checked && <span style={{ color: '#fff', fontSize: 9, fontWeight: 900, lineHeight: 1 }}>✓</span>}
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, fontWeight: 500, color: '#0f172a' }}>{label}</span>
+                </span>
+              </button>
+            );
+          })}
+          {hasFilter && (
+            <>
+              <div style={{ borderTop: '1px solid #f1f5f9', margin: '4px 0' }} />
+              <button
+                onClick={() => { onClear(); setOpen(false); }}
+                style={{ width: '100%', padding: '6px 12px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#64748b', textAlign: 'left', letterSpacing: '0.04em' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#dc2626'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#64748b'; }}
+              >
+                CLEAR FILTER
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function useDepartments() {
   return useQuery({
@@ -195,16 +290,25 @@ export default function TriageQueue() {
   const { data: departments = [] }        = useDepartments();
   const rerouteTicket = useRerouteTicket();
 
-  const [selections,    setSelections]    = useState({});
-  const [search,        setSearch]        = useState('');
-  const [activeFilter,  setActiveFilter]  = useState('UNASSIGNED'); // UNASSIGNED | CRITICAL
-  const [selectedTicket,setSelectedTicket]= useState(null);
+  const [selections,      setSelections]      = useState({});
+  const [search,          setSearch]          = useState('');
+  const [activeFilter,    setActiveFilter]    = useState('UNASSIGNED'); // UNASSIGNED | CRITICAL
+  const [selectedStatuses,setSelectedStatuses]= useState(new Set());
+  const [selectedTicket,  setSelectedTicket]  = useState(null);
+
+  const toggleStatus = (v) => setSelectedStatuses(prev => {
+    const next = new Set(prev);
+    next.has(v) ? next.delete(v) : next.add(v);
+    return next;
+  });
+  const clearStatuses = () => setSelectedStatuses(new Set());
 
   const filtered = tickets.filter(t => {
     const q = search.toLowerCase().trim();
     const matchSearch = !q || String(t.id).toLowerCase().includes(q) || (t.title ?? '').toLowerCase().includes(q);
     const matchFilter = activeFilter === 'UNASSIGNED' ? !t.assigneeId : t.priority === 'CRITICAL';
-    return matchSearch && matchFilter;
+    const matchStatus = selectedStatuses.size === 0 || selectedStatuses.has(t.status);
+    return matchSearch && matchFilter && matchStatus;
   });
 
   const unassignedCount = tickets.filter(t => !t.assigneeId).length;
@@ -264,6 +368,11 @@ export default function TriageQueue() {
               {label}
             </button>
           ))}
+          <StatusFilterDropdown
+            selected={selectedStatuses}
+            onToggle={toggleStatus}
+            onClear={clearStatuses}
+          />
           <button style={{ height: 28, padding: '0 12px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: 4, fontSize: 11, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
             <RefreshCw size={11} /> Sync Queue
           </button>

@@ -252,4 +252,118 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
         BigDecimal getMeanTimeToResolutionHours();
     }
+
+    // ── Admin-overview queries ────────────────────────────────────────────────
+
+    /** Count tickets by a specific status for a company. */
+    @Query("select count(t) from Ticket t where t.company.id = :companyId and t.status = com.helpdeskcenter.enums.TicketStatus.OPEN")
+    long countOpenByCompany(@Param("companyId") Long companyId);
+
+    @Query("select count(t) from Ticket t where t.company.id = :companyId and t.status = com.helpdeskcenter.enums.TicketStatus.IN_PROGRESS")
+    long countInProgressByCompany(@Param("companyId") Long companyId);
+
+    @Query("select count(t) from Ticket t where t.company.id = :companyId and t.status = com.helpdeskcenter.enums.TicketStatus.RESOLVED")
+    long countResolvedByCompany(@Param("companyId") Long companyId);
+
+    @Query("select count(t) from Ticket t where t.company.id = :companyId and t.status = com.helpdeskcenter.enums.TicketStatus.CLOSED")
+    long countClosedByCompany(@Param("companyId") Long companyId);
+
+    /** Triage: no department assigned. */
+    @Query("select count(t) from Ticket t where t.company.id = :companyId and t.department is null")
+    long countTriageByCompany(@Param("companyId") Long companyId);
+
+    /** SLA-breached active tickets company-wide. */
+    @Query(value = """
+        SELECT COUNT(*)
+        FROM tickets t
+        WHERE t.company_id = :companyId
+          AND t.status NOT IN ('RESOLVED','CLOSED')
+          AND t.due_at IS NOT NULL
+          AND t.due_at < NOW()
+        """, nativeQuery = true)
+    long countBreachedByCompany(@Param("companyId") Long companyId);
+
+    /**
+     * SLA compliance rate: percentage of resolved/closed tickets completed before due_at.
+     * Returns null when no SLA-governed tickets exist.
+     */
+    @Query(value = """
+        SELECT COUNT(CASE WHEN t.due_at IS NULL OR t.updated_at <= t.due_at THEN 1 END) * 100.0
+               / NULLIF(COUNT(*), 0)
+        FROM tickets t
+        WHERE t.company_id = :companyId
+          AND t.status IN ('RESOLVED','CLOSED')
+        """, nativeQuery = true)
+    BigDecimal findSlaComplianceRate(@Param("companyId") Long companyId);
+
+    /**
+     * Per-department open/in-progress/resolved counts + MTTR.
+     * Returns one row per department.
+     */
+    @Query(value = """
+        SELECT
+            d.id               AS departmentId,
+            d.name             AS departmentName,
+            COUNT(CASE WHEN t.status = 'OPEN'        THEN 1 END) AS openCount,
+            COUNT(CASE WHEN t.status = 'IN_PROGRESS' THEN 1 END) AS inProgressCount,
+            COUNT(CASE WHEN t.status IN ('RESOLVED','CLOSED') THEN 1 END) AS resolvedCount,
+            AVG(CASE WHEN t.status IN ('RESOLVED','CLOSED')
+                     THEN EXTRACT(EPOCH FROM (t.updated_at - t.created_at)) / 3600
+                END) AS mttrHours
+        FROM departments d
+        LEFT JOIN tickets t ON t.department_id = d.id AND t.company_id = :companyId
+        WHERE d.company_id = :companyId
+        GROUP BY d.id, d.name
+        ORDER BY openCount DESC
+        """, nativeQuery = true)
+    List<DeptBreakdownView> findDeptBreakdown(@Param("companyId") Long companyId);
+
+    /**
+     * Per-agent active and resolved ticket counts company-wide.
+     */
+    @Query(value = """
+        SELECT
+            u.id               AS agentId,
+            u.name             AS agentName,
+            d.name             AS departmentName,
+            COUNT(CASE WHEN t.status IN ('OPEN','IN_PROGRESS','PENDING_EMPLOYEE') THEN 1 END) AS activeCount,
+            COUNT(CASE WHEN t.status IN ('RESOLVED','CLOSED') THEN 1 END) AS resolvedCount
+        FROM users u
+        LEFT JOIN departments d ON u.department_id = d.id
+        LEFT JOIN tickets t ON t.assignee_id = u.id AND t.company_id = :companyId
+        WHERE u.company_id = :companyId
+          AND u.role = 'AGENT'
+        GROUP BY u.id, u.name, d.name
+        ORDER BY activeCount DESC
+        """, nativeQuery = true)
+    List<AgentSummaryView> findAgentSummary(@Param("companyId") Long companyId);
+
+    /**
+     * 20 most recently updated tickets company-wide (for recent activity feed).
+     */
+    @Query("""
+        select t from Ticket t
+        left join fetch t.department
+        where t.company.id = :companyId
+        order by t.updatedAt desc
+        """)
+    List<Ticket> findRecentActivity(@Param("companyId") Long companyId,
+                                    org.springframework.data.domain.Pageable pageable);
+
+    interface DeptBreakdownView {
+        Long getDepartmentId();
+        String getDepartmentName();
+        Long getOpenCount();
+        Long getInProgressCount();
+        Long getResolvedCount();
+        BigDecimal getMttrHours();
+    }
+
+    interface AgentSummaryView {
+        Long getAgentId();
+        String getAgentName();
+        String getDepartmentName();
+        Long getActiveCount();
+        Long getResolvedCount();
+    }
 }

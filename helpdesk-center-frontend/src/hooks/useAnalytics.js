@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getFrt, getMttr, getAiAccuracy, getDeptSummary, getDeptDaily } from '../api/analyticsApi';
+import { getFrt, getMttr, getAiAccuracy, getDeptSummary, getDeptDaily, getAdminOverview } from '../api/analyticsApi';
 
 export function useFrt() {
   return useQuery({
@@ -35,5 +35,15 @@ export function useDeptDaily() {
     queryKey: ['analytics', 'dept-daily'],
     queryFn: () => getDeptDaily().then(r => r.data),
     staleTime: 60_000,
+  });
+}
+
+export function useAdminOverview() {
+  return useQuery({
+    queryKey: ['analytics', 'admin-overview'],
+    queryFn: () => getAdminOverview().then(r => r.data),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 }

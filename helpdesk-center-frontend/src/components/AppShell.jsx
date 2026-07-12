@@ -41,11 +41,8 @@ const NAV = {
     { label: 'Tickets',    icon: Ticket,          to: '/tickets'                       },
   ],
   sys_admin: [
-    { label: 'Dashboard', icon: LayoutDashboard, to: '/admin'     },
-    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
-    { label: 'Triage',    icon: Clock,           to: '/admin'     },
-    { label: 'Analytics', icon: BarChart2,       to: '/admin'     },
-    { label: 'SLA',       icon: ShieldCheck,     to: '/admin'     },
+    { label: 'Dashboard', icon: LayoutDashboard, to: '/admin', exact: true },
+    { label: 'Tickets',   icon: Ticket,          to: '/tickets'             },
   ],
 };
 

@@ -14,3 +14,6 @@ export const getDeptSummary = () =>
 
 export const getDeptDaily = () =>
   api.get('/api/analytics/dept-daily');
+
+export const getAdminOverview = () =>
+  api.get('/api/analytics/admin-overview');
