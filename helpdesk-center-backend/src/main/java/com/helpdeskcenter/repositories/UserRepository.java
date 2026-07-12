@@ -16,4 +16,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** All agents in a specific department, ordered by ID for stable round-robin. */
     List<User> findByCompanyIdAndDepartmentIdAndRoleOrderByIdAsc(Long companyId, Long departmentId, UserRole role);
+
+    /** All users of a given role across the entire company, ordered by name. Used by SYS_ADMIN. */
+    List<User> findByCompanyIdAndRoleOrderByNameAsc(Long companyId, UserRole role);
 }

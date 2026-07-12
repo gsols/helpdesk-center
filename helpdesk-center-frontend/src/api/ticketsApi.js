@@ -51,3 +51,15 @@ export const getDeptQueue = () =>
 
 export const getRiskQueue = () =>
   api.get('/api/tickets/risk-queue');
+
+/** Agent requests a gated takeover — sets status to PENDING_APPROVAL. */
+export const requestTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/request-takeover`);
+
+/** Manager approves the pending takeover. */
+export const approveTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/approve-takeover`);
+
+/** Manager rejects the pending takeover. */
+export const rejectTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/reject-takeover`);

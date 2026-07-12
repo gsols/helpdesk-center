@@ -8,3 +8,6 @@ export const createSlaRule = (data) =>
 
 export const updateSlaRule = (id, data) =>
   api.put(`/api/sla-rules/${id}`, data);
+
+export const deleteSlaRule = (id) =>
+  api.delete(`/api/sla-rules/${id}`);

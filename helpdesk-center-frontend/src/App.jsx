@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth, NavigateInjector } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
@@ -20,7 +20,14 @@ import TeammateWorkspacePage from './pages/TeammateWorkspacePage';
 function AuthGuard() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  return <Outlet />;
+  // NavigateInjector mounts inside the Router so it can call useNavigate(),
+  // then injects the navigate function into AuthProvider for force-logout.
+  return (
+    <>
+      <NavigateInjector />
+      <Outlet />
+    </>
+  );
 }
 
 /**

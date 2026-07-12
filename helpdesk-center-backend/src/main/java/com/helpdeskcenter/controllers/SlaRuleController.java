@@ -1,5 +1,6 @@
 package com.helpdeskcenter.controllers;
 
+import com.helpdeskcenter.dto.SlaRuleResponse;
 import com.helpdeskcenter.entities.Department;
 import com.helpdeskcenter.entities.SlaRule;
 import com.helpdeskcenter.enums.Priority;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -32,17 +34,20 @@ public class SlaRuleController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
-    public ResponseEntity<List<SlaRule>> getAll(
+    public ResponseEntity<List<SlaRuleResponse>> getAll(
         @AuthenticationPrincipal AuthenticatedUser principal
     ) {
-        return ResponseEntity.ok(
-            slaRuleRepository.findByDepartmentCompanyIdOrderByDepartmentIdAscPriorityAsc(principal.companyId())
-        );
+        List<SlaRuleResponse> rules = slaRuleRepository
+            .findByDepartmentCompanyIdOrderByDepartmentIdAscPriorityAsc(principal.companyId())
+            .stream()
+            .map(SlaRuleResponse::from)
+            .toList();
+        return ResponseEntity.ok(rules);
     }
 
     @PostMapping
     @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
-    public ResponseEntity<SlaRule> create(
+    public ResponseEntity<SlaRuleResponse> create(
         @RequestBody Map<String, Object> body,
         @AuthenticationPrincipal AuthenticatedUser principal
     ) {
@@ -61,12 +66,12 @@ public class SlaRuleController {
         rule.setDepartment(dept);
         rule.setPriority(priority);
         rule.setTargetResolutionHours(hours);
-        return ResponseEntity.status(201).body(slaRuleRepository.save(rule));
+        return ResponseEntity.status(201).body(SlaRuleResponse.from(slaRuleRepository.save(rule)));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
-    public ResponseEntity<SlaRule> update(
+    public ResponseEntity<SlaRuleResponse> update(
         @PathVariable Long id,
         @RequestBody Map<String, Object> body,
         @AuthenticationPrincipal AuthenticatedUser principal
@@ -79,6 +84,23 @@ public class SlaRuleController {
         }
 
         rule.setTargetResolutionHours(((Number) body.get("targetResolutionHours")).intValue());
-        return ResponseEntity.ok(slaRuleRepository.save(rule));
+        return ResponseEntity.ok(SlaRuleResponse.from(slaRuleRepository.save(rule)));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
+    public ResponseEntity<Void> delete(
+        @PathVariable Long id,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        SlaRule rule = slaRuleRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SLA rule not found"));
+
+        if (!rule.getDepartment().getCompany().getId().equals(principal.companyId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied");
+        }
+
+        slaRuleRepository.delete(rule);
+        return ResponseEntity.noContent().build();
     }
 }

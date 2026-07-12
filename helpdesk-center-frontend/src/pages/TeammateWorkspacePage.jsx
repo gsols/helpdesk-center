@@ -21,8 +21,8 @@ import PriorityBadge from '../components/PriorityBadge';
 import TicketInspectionDrawer from '../components/TicketInspectionDrawer';
 import { useAuth } from '../context/AuthContext';
 import { useAgentById, useTeam } from '../hooks/useUsers';
-import { usePeerQueue, useAgentQueue, useAssignToMe } from '../hooks/useTickets';
-import { ChevronLeft, Eye, AlertTriangle, UserCheck, X } from 'lucide-react';
+import { usePeerQueue, useAgentQueue, useRequestTakeover } from '../hooks/useTickets';
+import { ChevronLeft, Eye, AlertTriangle, Clock, X } from 'lucide-react';
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
 
@@ -32,9 +32,9 @@ function agentInitials(name) {
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-/* ── TakeOverModal ───────────────────────────────────────────────────────── */
+/* ── TakeOverRequestModal ────────────────────────────────────────────────── */
 
-function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
+function TakeOverRequestModal({ ticket, onConfirm, onCancel, isPending }) {
   return (
     <div style={{
       position: 'fixed', inset: 0,
@@ -62,14 +62,14 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
         {/* Icon row */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ width: 36, height: 36, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 3, flexShrink: 0 }}>
-            <UserCheck size={18} color="#ffffff" />
+            <Clock size={18} color="#ffffff" />
           </div>
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: '#0b1c30', margin: 0, lineHeight: '20px' }}>
-              Take Over This Ticket
+              Request Ticket Takeover
             </p>
             <p style={{ fontSize: 11, color: '#76777d', margin: 0 }}>
-              This action will reassign the ticket to you.
+              Your department manager must approve this request.
             </p>
           </div>
         </div>
@@ -84,7 +84,7 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
           <p style={{ fontSize: 12, color: '#92400e', margin: 0, lineHeight: '18px' }}>
             <strong>#{ticket?.id}</strong> — <em>{ticket?.title}</em>
             <br />
-            You will become the assigned agent for this ticket. The current assignee will lose write access.
+            This will notify your manager. The ticket will show <strong>Pending Approval</strong> until they decide.
           </p>
         </div>
 
@@ -117,8 +117,8 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
             onMouseEnter={(e) => { if (!isPending) e.currentTarget.style.background = '#1e293b'; }}
             onMouseLeave={(e) => { if (!isPending) e.currentTarget.style.background = '#0f172a'; }}
           >
-            <UserCheck size={14} />
-            {isPending ? 'Taking over…' : 'Confirm Take Over'}
+            <Clock size={14} />
+            {isPending ? 'Sending request…' : 'Send Takeover Request'}
           </button>
         </div>
       </div>
@@ -136,6 +136,8 @@ export default function TeammateWorkspacePage() {
 
   const [selectedId, setSelectedId]   = useState(null);
   const [modalTicket, setModalTicket] = useState(null);
+  /* tracks ticket IDs where a request has already been sent this session */
+  const [pendingIds, setPendingIds]   = useState(new Set());
 
   const { data: peer, isLoading: peerLoading } = useAgentById(peerId);
 
@@ -145,7 +147,7 @@ export default function TeammateWorkspacePage() {
   const { data: tickets = [], isLoading: ticketsLoading } = isManager ? managerResult : peerResult;
 
   const { data: team = [] } = useTeam();
-  const assignToMe = useAssignToMe();
+  const requestTakeover = useRequestTakeover();
 
   /* Derive effective selection — first ticket is auto-selected when none is chosen */
   const effectiveSelectedId = selectedId ?? (tickets.length > 0 ? tickets[0].id : null);
@@ -153,19 +155,20 @@ export default function TeammateWorkspacePage() {
   const handleRowClick = useCallback((id) => setSelectedId(id), []);
 
   const handleTakeOver = useCallback((ticket) => {
+    /* Managers bypass the request gate — they can take over directly via the queue table */
+    if (isManager) return;
     setModalTicket(ticket);
-  }, []);
+  }, [isManager]);
 
   const handleConfirmTakeOver = useCallback(() => {
     if (!modalTicket) return;
-    assignToMe.mutate(modalTicket.id, {
+    requestTakeover.mutate(modalTicket.id, {
       onSuccess: () => {
+        setPendingIds((prev) => new Set(prev).add(modalTicket.id));
         setModalTicket(null);
-        /* Managers land on manager queue; agents land on their own ticket view */
-        navigate(isManager ? '/manager' : `/agent/${modalTicket.id}`);
       },
     });
-  }, [modalTicket, assignToMe, navigate, isManager]);
+  }, [modalTicket, requestTakeover]);
 
   const handleCancelTakeOver = useCallback(() => {
     setModalTicket(null);
@@ -318,18 +321,19 @@ export default function TeammateWorkspacePage() {
               onTakeOver={handleTakeOver}
               isManager={isManager}
               team={team}
+              takeoverPending={pendingIds.has(effectiveSelectedId)}
             />
           )}
         </div>
       </div>
 
-      {/* ── Take-over confirmation modal ──────────────────────────────────── */}
+      {/* ── Take-over request confirmation modal ─────────────────────────── */}
       {modalTicket && (
-        <TakeOverModal
+        <TakeOverRequestModal
           ticket={modalTicket}
           onConfirm={handleConfirmTakeOver}
           onCancel={handleCancelTakeOver}
-          isPending={assignToMe.isPending}
+          isPending={requestTakeover.isPending}
         />
       )}
     </AppShell>

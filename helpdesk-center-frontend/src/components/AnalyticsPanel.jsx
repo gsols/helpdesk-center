@@ -14,6 +14,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useFrt, useMttr, useAiAccuracy } from '../hooks/useAnalytics';
 import { useTickets } from '../hooks/useTickets';
+import { useAllAgents, useDepartments } from '../hooks/useUsers';
 import StatusBadge            from './StatusBadge';
 import PriorityBadge          from './PriorityBadge';
 import TicketInspectionDrawer from './TicketInspectionDrawer';
@@ -217,10 +218,12 @@ export default function AnalyticsPanel() {
     Object.fromEntries(STATUS_VALUES.map(s => [s, true]))
   );
 
-  const { data: frtData }      = useFrt();
-  const { data: mttrData }     = useMttr();
-  const { data: aiData }       = useAiAccuracy();
+  const { data: frtData }         = useFrt();
+  const { data: mttrData }        = useMttr();
+  const { data: aiData }          = useAiAccuracy();
   const { data: allTickets = [] } = useTickets();
+  const { data: allAgents = [] }  = useAllAgents();
+  const { data: departments = [] } = useDepartments();
 
   const togglePriority    = t => setSelectedPriorities(p => ({ ...p, [t]: !p[t] }));
   const clearPriorities   = () => setSelectedPriorities(Object.fromEntries(PRIORITY_TIERS.map(t => [t, false])));
@@ -538,7 +541,8 @@ export default function AnalyticsPanel() {
             <TicketInspectionDrawer
               selectedTicketId={selectedTicketId}
               isManager
-              team={[]}
+              team={allAgents}
+              departments={departments}
               onTakeOver={() => {}}
               hideTakeOver
             />

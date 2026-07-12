@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -180,5 +181,36 @@ public class TicketController {
         @AuthenticationPrincipal AuthenticatedUser principal
     ) {
         return ResponseEntity.ok(ticketService.getRiskQueue(principal));
+    }
+
+    // ── Gated Takeover Pipeline ──────────────────────────────────────────────
+
+    /** Agent requests a takeover — sets status to PENDING_APPROVAL and notifies the manager. */
+    @PatchMapping("/{id}/request-takeover")
+    public ResponseEntity<Ticket> requestTakeover(
+        @PathVariable Long id,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.requestTakeover(id, principal));
+    }
+
+    /** Manager approves the pending takeover — re-assigns the ticket and notifies the agent. */
+    @PatchMapping("/{id}/approve-takeover")
+    @PreAuthorize("hasRole('DEPT_MANAGER')")
+    public ResponseEntity<Ticket> approveTakeover(
+        @PathVariable Long id,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.approveTakeover(id, principal));
+    }
+
+    /** Manager rejects the pending takeover — reverts the ticket and notifies the agent. */
+    @PatchMapping("/{id}/reject-takeover")
+    @PreAuthorize("hasRole('DEPT_MANAGER')")
+    public ResponseEntity<Ticket> rejectTakeover(
+        @PathVariable Long id,
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        return ResponseEntity.ok(ticketService.rejectTakeover(id, principal));
     }
 }

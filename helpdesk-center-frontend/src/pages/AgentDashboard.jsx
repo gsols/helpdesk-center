@@ -15,10 +15,10 @@ import TicketDetailPanel from '../components/TicketDetailPanel';
 import TicketInspectionDrawer from '../components/TicketInspectionDrawer';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
-import { useMyQueue, usePool, useArchive, useAssignToMe } from '../hooks/useTickets';
+import { useMyQueue, usePool, useArchive, useAssignToMe, useRequestTakeover } from '../hooks/useTickets';
 import { useTicket } from '../hooks/useTickets';
 import { useMessages } from '../hooks/useMessages';
-import { AlertTriangle, UserCheck, X } from 'lucide-react';
+import { AlertTriangle, UserCheck, Clock, X } from 'lucide-react';
 
 const LIST_MIN     = 200;
 const LIST_MAX     = 500;
@@ -202,9 +202,9 @@ function DeptPoolInspectionPanel({ selectedTicketId, onAssignToMe, isPending }) 
   );
 }
 
-/* ── TakeOverModal ───────────────────────────────────────────────────────── */
+/* ── TakeOverRequestModal ────────────────────────────────────────────────── */
 
-function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
+function TakeOverRequestModal({ ticket, onConfirm, onCancel, isPending }) {
   return (
     <div style={{
       position: 'fixed', inset: 0,
@@ -230,14 +230,14 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
           <div style={{ width: 36, height: 36, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 3, flexShrink: 0 }}>
-            <UserCheck size={18} color="#ffffff" />
+            <Clock size={18} color="#ffffff" />
           </div>
           <div>
             <p style={{ fontSize: 14, fontWeight: 700, color: '#0b1c30', margin: 0, lineHeight: '20px' }}>
-              Take Over This Ticket
+              Request Ticket Takeover
             </p>
             <p style={{ fontSize: 11, color: '#76777d', margin: 0 }}>
-              This action will reassign the ticket to you.
+              Your department manager must approve this request.
             </p>
           </div>
         </div>
@@ -251,7 +251,7 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
           <p style={{ fontSize: 12, color: '#92400e', margin: 0, lineHeight: '18px' }}>
             <strong>#{ticket?.id}</strong> — <em>{ticket?.title}</em>
             <br />
-            You will become the assigned agent for this ticket. The current assignee will lose write access.
+            This will notify your manager. The ticket will show <strong>Pending Approval</strong> until they decide.
           </p>
         </div>
 
@@ -281,8 +281,8 @@ function TakeOverModal({ ticket, onConfirm, onCancel, isPending }) {
             onMouseEnter={(e) => { if (!isPending) e.currentTarget.style.background = '#1e293b'; }}
             onMouseLeave={(e) => { if (!isPending) e.currentTarget.style.background = '#0f172a'; }}
           >
-            <UserCheck size={14} />
-            {isPending ? 'Taking over…' : 'Confirm Take Over'}
+            <Clock size={14} />
+            {isPending ? 'Sending request…' : 'Send Takeover Request'}
           </button>
         </div>
       </div>
@@ -298,7 +298,10 @@ export default function AgentDashboard() {
   const { data: myQueue = [] } = useMyQueue();
   const { data: pool    = [] } = usePool();
   const { data: archive = [] } = useArchive();
-  const assignToMe = useAssignToMe();
+  const assignToMe      = useAssignToMe();
+  const requestTakeover = useRequestTakeover();
+  /* tracks archive ticket IDs where a gated request has been sent this session */
+  const [archivePendingIds, setArchivePendingIds] = useState(new Set());
 
   const [listCollapsed, setListCollapsed] = useState(false);
   const [listWidth,     setListWidth]     = useState(LIST_DEFAULT);
@@ -386,13 +389,13 @@ export default function AgentDashboard() {
 
   const handleConfirmTakeOver = useCallback(() => {
     if (!modalTicket) return;
-    assignToMe.mutate(modalTicket.id, {
+    requestTakeover.mutate(modalTicket.id, {
       onSuccess: () => {
+        setArchivePendingIds((prev) => new Set(prev).add(modalTicket.id));
         setModalTicket(null);
-        navigate(`/agent/${modalTicket.id}`);
       },
     });
-  }, [modalTicket, assignToMe, navigate]);
+  }, [modalTicket, requestTakeover]);
 
   const handleCancelTakeOver = useCallback(() => {
     setModalTicket(null);
@@ -432,6 +435,7 @@ export default function AgentDashboard() {
               onTakeOver={handleTakeOver}
               isManager={false}
               team={[]}
+              takeoverPending={archivePendingIds.has(effectiveArchiveId)}
             />
           ) : id ? (
             <TicketDetailPanel ticketId={id} />
@@ -453,11 +457,11 @@ export default function AgentDashboard() {
       </div>
 
       {modalTicket && (
-        <TakeOverModal
+        <TakeOverRequestModal
           ticket={modalTicket}
           onConfirm={handleConfirmTakeOver}
           onCancel={handleCancelTakeOver}
-          isPending={assignToMe.isPending}
+          isPending={requestTakeover.isPending}
         />
       )}
     </AppShell>

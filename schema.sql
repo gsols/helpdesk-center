@@ -51,7 +51,8 @@ CREATE TABLE tickets (
     parent_id BIGINT REFERENCES tickets(id) ON DELETE CASCADE, -- Self-reference for multi-department splits
     title VARCHAR(255) NOT NULL,
     description TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'OPEN', -- OPEN, IN_PROGRESS, PENDING_EMPLOYEE, RESOLVED, CLOSED
+    status VARCHAR(50) NOT NULL DEFAULT 'OPEN',
+    CONSTRAINT tickets_status_check CHECK (status IN ('OPEN','IN_PROGRESS','PENDING_EMPLOYEE','PENDING_APPROVAL','RESOLVED','CLOSED')),
     priority VARCHAR(50) NOT NULL DEFAULT 'MEDIUM',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -93,10 +94,26 @@ CREATE TABLE ai_classification_logs (
 );
 
 -- ============================================================================
--- 5. PERFORMANCE DEPLOYMENT INDEXES
+-- 5. NOTIFICATION CENTER
 -- ============================================================================
-CREATE INDEX idx_tickets_company_dept ON tickets(company_id, department_id);
-CREATE INDEX idx_tickets_assignee ON tickets(assignee_id);
-CREATE INDEX idx_tickets_status ON tickets(status);
-CREATE INDEX idx_messages_ticket ON ticket_messages(ticket_id);
-CREATE INDEX idx_attachments_ticket ON attachments(ticket_id);
+
+CREATE TABLE notifications (
+    id BIGSERIAL PRIMARY KEY,
+    recipient_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    ticket_id    BIGINT REFERENCES tickets(id) ON DELETE CASCADE,
+    type         VARCHAR(50) NOT NULL, -- COMMENT, ASSIGNED, SLA_BREACH, SYSTEM
+    message      TEXT NOT NULL,
+    is_read      BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ============================================================================
+-- 6. PERFORMANCE DEPLOYMENT INDEXES
+-- ============================================================================
+CREATE INDEX idx_tickets_company_dept    ON tickets(company_id, department_id);
+CREATE INDEX idx_tickets_assignee        ON tickets(assignee_id);
+CREATE INDEX idx_tickets_status          ON tickets(status);
+CREATE INDEX idx_messages_ticket         ON ticket_messages(ticket_id);
+CREATE INDEX idx_attachments_ticket      ON attachments(ticket_id);
+CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
+CREATE INDEX idx_notifications_unread    ON notifications(recipient_id, is_read);

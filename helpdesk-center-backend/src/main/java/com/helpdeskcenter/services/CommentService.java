@@ -3,6 +3,7 @@ package com.helpdeskcenter.services;
 import com.helpdeskcenter.entities.Ticket;
 import com.helpdeskcenter.entities.TicketMessage;
 import com.helpdeskcenter.entities.User;
+import com.helpdeskcenter.enums.NotificationType;
 import com.helpdeskcenter.enums.TicketStatus;
 import com.helpdeskcenter.enums.UserRole;
 import com.helpdeskcenter.repositories.TicketMessageRepository;
@@ -24,6 +25,7 @@ public class CommentService {
     private final TicketMessageRepository ticketMessageRepository;
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public TicketMessage addComment(Long ticketId, String message, AuthenticatedUser principal) {
@@ -40,7 +42,18 @@ public class CommentService {
         // Auto-transition ticket status based on sender role (plan section 2D)
         applyStatusTransition(ticket, user.getRole());
 
-        return ticketMessageRepository.save(ticketMessage);
+        TicketMessage saved = ticketMessageRepository.save(ticketMessage);
+
+        // Notify the other party: if commenter is the creator → notify assignee; else notify creator.
+        User recipient = user.getId().equals(ticket.getCreator().getId())
+            ? ticket.getAssignee()
+            : ticket.getCreator();
+        if (recipient != null && !recipient.getId().equals(user.getId())) {
+            String notifMsg = user.getName() + " posted a comment on ticket TCK-" + ticket.getId();
+            notificationService.create(recipient, ticket, NotificationType.COMMENT, notifMsg);
+        }
+
+        return saved;
     }
 
     public List<TicketMessage> getComments(Long ticketId) {

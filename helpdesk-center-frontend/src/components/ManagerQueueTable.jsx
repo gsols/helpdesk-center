@@ -10,7 +10,7 @@
  * Columns: TICKET ID | SUBJECT | PRIORITY | STATUS | ASSIGNED AGENT | SLA TRACKING
  */
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useDeptQueue, useAssignToMe } from '../hooks/useTickets';
+import { useDeptQueue } from '../hooks/useTickets';
 import { useTeam }       from '../hooks/useUsers';
 import { useQueryClient } from '@tanstack/react-query';
 import StatusBadge from './StatusBadge';
@@ -138,10 +138,7 @@ export default function ManagerQueueTable() {
   const qc = useQueryClient();
   const { data: tickets = [], isLoading, dataUpdatedAt } = useDeptQueue();
   const { data: team = [] } = useTeam();
-  const assignToMe = useAssignToMe();
-
   const [selectedId,   setSelectedId]   = useState(null);
-  const [modalTicket,  setModalTicket]  = useState(null);
   const [search,       setSearch]       = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterAgent,  setFilterAgent]  = useState('');
@@ -163,7 +160,8 @@ export default function ManagerQueueTable() {
     const q      = search.toLowerCase().trim();
     const matchQ = !q || t.title?.toLowerCase().includes(q) || String(t.id).includes(q);
     const matchS = !filterStatus || t.status === filterStatus;
-    const matchA = !filterAgent  || t.assignee?.name === filterAgent;
+    const matchA = !filterAgent
+      || (filterAgent === '__unassigned__' ? !t.assignee : t.assignee?.name === filterAgent);
     return matchQ && matchS && matchA;
   });
 
@@ -181,48 +179,8 @@ export default function ManagerQueueTable() {
     qc.invalidateQueries({ queryKey: ['tickets', 'dept-queue'] });
   };
 
-  const handleTakeOver = (ticket) => setModalTicket(ticket);
-  const handleConfirmTakeOver = () => {
-    if (!modalTicket) return;
-    assignToMe.mutate(modalTicket.id, {
-      onSuccess: () => {
-        setModalTicket(null);
-        qc.invalidateQueries({ queryKey: ['tickets', 'dept-queue'] });
-      },
-    });
-  };
-
-  /* TakeOverModal — reuse the same pattern as TeammateWorkspacePage */
-  const TakeOverModal = modalTicket ? (
-    <div style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-    }}>
-      <div style={{ background: '#ffffff', border: '1px solid #e5e7eb', width: 420, padding: '28px 28px 24px', position: 'relative' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 36, height: 36, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 3, flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          </div>
-          <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: '#0b1c30', margin: 0 }}>Take Over Ticket #{modalTicket.id}</p>
-            <p style={{ fontSize: 11, color: '#76777d', margin: 0 }}>This will reassign the ticket to you.</p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={() => setModalTicket(null)} style={{ padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer', background: '#fff', border: '1px solid #e5e7eb', color: '#0b1c30', borderRadius: 3 }}>
-            Cancel
-          </button>
-          <button onClick={handleConfirmTakeOver} disabled={assignToMe.isPending} style={{ padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer', background: '#0f172a', border: 'none', color: '#fff', borderRadius: 3, opacity: assignToMe.isPending ? 0.6 : 1 }}>
-            {assignToMe.isPending ? 'Taking over…' : 'Confirm Take Over'}
-          </button>
-        </div>
-      </div>
-    </div>
-  ) : null;
-
   return (
     <>
-    {TakeOverModal}
     {/* Full-height split container — fills the noPadding AppShell main area */}
     <div
       ref={containerRef}
@@ -447,9 +405,9 @@ export default function ManagerQueueTable() {
     <div style={{ width: `calc(${100 - pct}% - ${DIVIDER_W}px)`, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <TicketInspectionDrawer
         selectedTicketId={effectiveSelectedId}
-        onTakeOver={handleTakeOver}
         isManager
         team={team}
+        hideTakeOver
       />
     </div>
     </div>

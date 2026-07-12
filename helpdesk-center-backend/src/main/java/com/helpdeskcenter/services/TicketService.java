@@ -6,6 +6,7 @@ import com.helpdeskcenter.entities.Department;
 import com.helpdeskcenter.entities.SlaRule;
 import com.helpdeskcenter.entities.Ticket;
 import com.helpdeskcenter.entities.User;
+import com.helpdeskcenter.enums.NotificationType;
 import com.helpdeskcenter.enums.Priority;
 import com.helpdeskcenter.enums.TicketStatus;
 import com.helpdeskcenter.enums.UserRole;
@@ -38,6 +39,7 @@ public class TicketService {
     private final AIService aiService;
     private final PriorityService priorityService;
     private final RoundRobinAssignmentService roundRobin;
+    private final NotificationService notificationService;
 
     @Transactional
     public Ticket createTicket(Map<String, String> body, AuthenticatedUser principal) {
@@ -266,7 +268,17 @@ public class TicketService {
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         ticket.setAssignee(agent);
         ticket.setStatus(TicketStatus.IN_PROGRESS);
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Notify the ticket creator that their ticket has been claimed
+        User creator = ticket.getCreator();
+        if (creator != null && !creator.getId().equals(agent.getId())) {
+            notificationService.create(
+                creator, saved, NotificationType.ASSIGNED,
+                agent.getName() + " assigned ticket TCK-" + saved.getId() + " to your queue"
+            );
+        }
+        return saved;
     }
 
     /**
@@ -277,6 +289,8 @@ public class TicketService {
     public Ticket reassignTicket(Long ticketId, Long agentId, AuthenticatedUser principal) {
         Ticket ticket = getTicketById(ticketId);
         authorizationHelper(principal, ticket);
+
+        User manager = userRepository.findById(principal.userId()).orElse(null);
 
         if (agentId == null) {
             ticket.setAssignee(null);
@@ -291,7 +305,17 @@ public class TicketService {
             ticket.setAssignee(agent);
             ticket.setStatus(TicketStatus.IN_PROGRESS);
         }
-        return ticketRepository.save(ticket);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Notify new assignee of the reassignment
+        if (agentId != null && saved.getAssignee() != null) {
+            String managerName = manager != null ? manager.getName() : "A manager";
+            notificationService.create(
+                saved.getAssignee(), saved, NotificationType.ASSIGNED,
+                managerName + " assigned ticket TCK-" + saved.getId() + " to your queue"
+            );
+        }
+        return saved;
     }
 
     /** Shared dept/company check used by reassignTicket. */
@@ -311,6 +335,101 @@ public class TicketService {
         Ticket ticket = getTicketById(id);
         ticket.setStatus(TicketStatus.valueOf(newStatus.toUpperCase()));
         return ticketRepository.save(ticket);
+    }
+
+    // ── Gated Takeover Pipeline ──────────────────────────────────────────────
+
+    /**
+     * Step 1 — Agent requests a takeover.
+     * Sets status → PENDING_APPROVAL, records the requesting agent, dispatches a
+     * TAKEOVER_APPROVAL_REQUEST notification to the department manager.
+     */
+    @Transactional
+    public Ticket requestTakeover(Long ticketId, AuthenticatedUser principal) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (ticket.getStatus() == TicketStatus.PENDING_APPROVAL) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A takeover request is already pending for this ticket");
+        }
+
+        User requestingAgent = userRepository.findById(principal.userId())
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        ticket.setStatus(TicketStatus.PENDING_APPROVAL);
+        ticket.setTakeoverRequestedBy(requestingAgent);
+        Ticket saved = ticketRepository.save(ticket);
+
+        // Dispatch notification to the department manager
+        if (saved.getDepartment() != null) {
+            userRepository
+                .findByCompanyIdAndDepartmentIdAndRoleOrderByIdAsc(
+                    principal.companyId(), saved.getDepartment().getId(), UserRole.DEPT_MANAGER)
+                .forEach(manager -> notificationService.create(
+                    manager, saved, NotificationType.TAKEOVER_APPROVAL_REQUEST,
+                    requestingAgent.getName() + " requests takeover approval for TCK-" + saved.getId()
+                ));
+        }
+
+        return saved;
+    }
+
+    /**
+     * Step 2a — Manager approves the takeover.
+     * Sets assignee_id to the requesting agent, status → IN_PROGRESS, clears the pending field,
+     * and notifies the requesting agent.
+     */
+    @Transactional
+    public Ticket approveTakeover(Long ticketId, AuthenticatedUser principal) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (ticket.getStatus() != TicketStatus.PENDING_APPROVAL || ticket.getTakeoverRequestedBy() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No pending takeover request on this ticket");
+        }
+
+        User requestingAgent = ticket.getTakeoverRequestedBy();
+        ticket.setAssignee(requestingAgent);
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        ticket.setTakeoverRequestedBy(null);
+        Ticket saved = ticketRepository.save(ticket);
+
+        String managerName = userRepository.findById(principal.userId())
+            .map(User::getName).orElse("Your manager");
+
+        notificationService.create(
+            requestingAgent, saved, NotificationType.ASSIGNED,
+            managerName + " approved your takeover request for TCK-" + saved.getId()
+        );
+
+        return saved;
+    }
+
+    /**
+     * Step 2b — Manager rejects the takeover.
+     * Reverts status → IN_PROGRESS (original assignee keeps the ticket), clears the pending field,
+     * and notifies the requesting agent.
+     */
+    @Transactional
+    public Ticket rejectTakeover(Long ticketId, AuthenticatedUser principal) {
+        Ticket ticket = getTicketById(ticketId);
+
+        if (ticket.getStatus() != TicketStatus.PENDING_APPROVAL || ticket.getTakeoverRequestedBy() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "No pending takeover request on this ticket");
+        }
+
+        User requestingAgent = ticket.getTakeoverRequestedBy();
+        ticket.setStatus(TicketStatus.IN_PROGRESS);
+        ticket.setTakeoverRequestedBy(null);
+        Ticket saved = ticketRepository.save(ticket);
+
+        String managerName = userRepository.findById(principal.userId())
+            .map(User::getName).orElse("Your manager");
+
+        notificationService.create(
+            requestingAgent, saved, NotificationType.ASSIGNED,
+            managerName + " rejected your takeover request for TCK-" + saved.getId()
+        );
+
+        return saved;
     }
 
     /**

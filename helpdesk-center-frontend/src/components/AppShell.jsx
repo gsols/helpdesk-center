@@ -16,10 +16,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../hooks/useTickets';
 import {
-  LayoutDashboard, Ticket, Settings, LogOut, Bell,
+  LayoutDashboard, Ticket, Settings, LogOut,
   BarChart2, Clock,
   Menu, ShieldCheck, Users,
 } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
 
 const SIDEBAR_KEY = 'hd_sidebar_collapsed';
 
@@ -38,11 +39,9 @@ const NAV = {
     { label: 'Team',       icon: Users,           to: '/manager/team'                  },
     { label: 'Analytics',  icon: BarChart2,       to: '/manager/analytics'             },
     { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager/risk'                  },
-    { label: 'Tickets',    icon: Ticket,          to: '/tickets'                       },
   ],
   sys_admin: [
     { label: 'Dashboard', icon: LayoutDashboard, to: '/admin', exact: true },
-    { label: 'Tickets',   icon: Ticket,          to: '/tickets'             },
   ],
 };
 
@@ -448,9 +447,7 @@ function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
           </span>
         )}
         <LiveClock />
-        <button style={{ background: 'transparent', border: 'none', color: '#76777d', cursor: 'pointer', padding: 4, borderRadius: 6 }}>
-          <Bell size={18} />
-        </button>
+        <NotificationPanel />
         <div
           style={{
             width: 30, height: 30, borderRadius: '50%',

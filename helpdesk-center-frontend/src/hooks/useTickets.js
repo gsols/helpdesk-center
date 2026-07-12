@@ -15,6 +15,9 @@ import {
   getAiLog,
   getDeptQueue,
   getRiskQueue,
+  requestTakeover,
+  approveTakeover,
+  rejectTakeover,
 } from '../api/ticketsApi';
 
 export function useTickets() {
@@ -214,6 +217,52 @@ export function useRiskQueue() {
     staleTime: 30_000,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,
+  });
+}
+
+/**
+ * Agent requests a gated takeover.
+ * Invalidates the individual ticket + queues so the status flip is reflected immediately.
+ */
+export function useRequestTakeover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => requestTakeover(id).then(r => r.data),
+    onSuccess: (_ticket, id) => {
+      qc.invalidateQueries({ queryKey: ['ticket', id] });
+      qc.invalidateQueries({ queryKey: ['tickets', 'archive'] });
+      qc.invalidateQueries({ queryKey: ['tickets', 'my-queue'] });
+    },
+  });
+}
+
+/**
+ * Manager approves a pending takeover.
+ * Invalidates dept-queue, the individual ticket, and team so everything refreshes.
+ */
+export function useApproveTakeover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => approveTakeover(id).then(r => r.data),
+    onSuccess: (_ticket, id) => {
+      qc.invalidateQueries({ queryKey: ['tickets', 'dept-queue'] });
+      qc.invalidateQueries({ queryKey: ['ticket', id] });
+    },
+  });
+}
+
+/**
+ * Manager rejects a pending takeover.
+ * Invalidates dept-queue and the individual ticket.
+ */
+export function useRejectTakeover() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id) => rejectTakeover(id).then(r => r.data),
+    onSuccess: (_ticket, id) => {
+      qc.invalidateQueries({ queryKey: ['tickets', 'dept-queue'] });
+      qc.invalidateQueries({ queryKey: ['ticket', id] });
+    },
   });
 }
 

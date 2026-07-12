@@ -39,6 +39,31 @@ public class UsersController {
     }
 
     /**
+     * GET /api/users/all-agents — SYS_ADMIN only.
+     * Returns all agents across every department in the company as TeamMemberResponse,
+     * used by the Admin Analytics drawer agent assignment dropdown.
+     */
+    @GetMapping("/all-agents")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<TeamMemberResponse>> getAllAgents(
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        List<TeamMemberResponse> agents = userRepository
+            .findByCompanyIdAndRoleOrderByNameAsc(principal.companyId(), UserRole.AGENT)
+            .stream()
+            .map(u -> new TeamMemberResponse(
+                u.getId(),
+                u.getName(),
+                u.getEmail(),
+                u.getRole().name(),
+                u.getDepartment() != null ? u.getDepartment().getName() : null,
+                ticketRepository.countActiveTicketsByAgent(u.getId())
+            ))
+            .toList();
+        return ResponseEntity.ok(agents);
+    }
+
+    /**
      * GET /api/users/team — returns all agents in the caller's own department
      * with their current active ticket count (OPEN + IN_PROGRESS).
      * Only accessible by agents.
