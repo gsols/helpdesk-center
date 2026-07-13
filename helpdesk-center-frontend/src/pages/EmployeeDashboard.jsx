@@ -567,7 +567,7 @@ export default function EmployeeDashboard() {
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              {['ID', 'TITLE', 'DEPARTMENT', 'DATE CREATED', 'STATUS', ''].map((h, i) => (
+              {['ID', 'TITLE', 'DEPARTMENT', 'ASSIGNED AGENT', 'DATE CREATED', 'STATUS', ''].map((h, i) => (
                 <th key={i} style={thStyle}>{h}</th>
               ))}
             </tr>
@@ -575,7 +575,7 @@ export default function EmployeeDashboard() {
           <tbody>
             {myTickets.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
+                <td colSpan={7} style={{ padding: '40px 20px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
                   No tickets found. Submit your first ticket above.
                 </td>
               </tr>
@@ -599,6 +599,23 @@ export default function EmployeeDashboard() {
                   )}
                 </td>
                 <td style={tdStyle}>{t.department?.name ?? '—'}</td>
+                <td style={tdStyle}>
+                  {t.assignee ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: '#1e293b',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 9, fontWeight: 700, color: '#94a3b8', flexShrink: 0,
+                      }}>
+                        {t.assignee.name?.[0]?.toUpperCase() ?? '?'}
+                      </div>
+                      <span>{t.assignee.name}</span>
+                    </div>
+                  ) : (
+                    <span style={{ color: '#94a3b8' }}>Unassigned</span>
+                  )}
+                </td>
                 <td style={{ ...tdStyle, color: '#64748b' }}>{fmtDate(t.createdAt)}</td>
                 <td style={tdStyle}><StatusBadge status={t.status} /></td>
                 <td style={{ ...tdStyle, textAlign: 'right' }}>

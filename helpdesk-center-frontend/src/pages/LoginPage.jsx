@@ -17,12 +17,26 @@ import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
 /* ── Sample accounts matching the data seeder ───────────────────────────── */
 const SAMPLE_ACCOUNTS = [
-  { label: 'Employee',       role: 'EMPLOYEE',     email: 'employee@ibm.com',       color: '#3b82f6' },
-  { label: 'HR Agent',       role: 'AGENT',        email: 'hr.agent@ibm.com',        color: '#8b5cf6' },
-  { label: 'Software Agent', role: 'AGENT',        email: 'software.agent@ibm.com',  color: '#8b5cf6' },
-  { label: 'Hardware Agent', role: 'AGENT',        email: 'hardware.agent@ibm.com',  color: '#8b5cf6' },
-  { label: 'HR Manager',     role: 'DEPT_MANAGER', email: 'hr.manager@ibm.com',      color: '#f59e0b' },
-  { label: 'Admin',          role: 'SYS_ADMIN',    email: 'admin@ibm.com',           color: '#ef4444' },
+  // Employee
+  { label: 'Alex Rivera',   role: 'EMPLOYEE',     email: 'employee@ibm.com',              color: '#3b82f6' },
+  // HR Agents
+  { label: 'Jordan Lee',    role: 'AGENT',        email: 'hr.agent.alpha@ibm.com',        color: '#8b5cf6' },
+  { label: 'Dana Kim',      role: 'AGENT',        email: 'hr.agent.beta@ibm.com',         color: '#8b5cf6' },
+  { label: 'Marcus Reid',   role: 'AGENT',        email: 'hr.agent.gamma@ibm.com',        color: '#8b5cf6' },
+  // IT Software Agents
+  { label: 'Morgan Chen',   role: 'AGENT',        email: 'software.agent.alpha@ibm.com',  color: '#8b5cf6' },
+  { label: 'Riley Nguyen',  role: 'AGENT',        email: 'software.agent.beta@ibm.com',   color: '#8b5cf6' },
+  { label: 'Priya Patel',   role: 'AGENT',        email: 'software.agent.gamma@ibm.com',  color: '#8b5cf6' },
+  // IT Hardware Agents
+  { label: 'Casey Park',    role: 'AGENT',        email: 'hardware.agent.alpha@ibm.com',  color: '#8b5cf6' },
+  { label: 'Avery Brooks',  role: 'AGENT',        email: 'hardware.agent.beta@ibm.com',   color: '#8b5cf6' },
+  { label: 'Devon Reyes',   role: 'AGENT',        email: 'hardware.agent.gamma@ibm.com',  color: '#8b5cf6' },
+  // Department Managers
+  { label: 'Sam Torres',    role: 'DEPT_MANAGER', email: 'hr.manager@ibm.com',            color: '#f59e0b' },
+  { label: 'Taylor Owens',  role: 'DEPT_MANAGER', email: 'software.manager@ibm.com',      color: '#f59e0b' },
+  { label: 'Jamie Flores',  role: 'DEPT_MANAGER', email: 'hardware.manager@ibm.com',      color: '#f59e0b' },
+  // Admin
+  { label: 'System Admin',  role: 'SYS_ADMIN',    email: 'admin@ibm.com',                 color: '#ef4444' },
 ];
 
 const ROLE_BADGE = {

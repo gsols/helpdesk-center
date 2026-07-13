@@ -9,5 +9,7 @@ public record LoginResponse(
     String email,
     UserRole role,
     Long companyId,
-    Long departmentId
+    String companyName,
+    Long departmentId,
+    String departmentName
 ) {}

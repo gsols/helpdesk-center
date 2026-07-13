@@ -1,269 +1,289 @@
 /**
- * AgentDashboard — wireframe "agent_workspace_panel_actions_support_engine_1 + _2"
+ * AgentDashboard — agent workspace with three queue tabs.
  *
- * Layout: Full-height 3-pane workspace
- *  Left (380px): Search bar + My Queue / Dept Pool / Archive tabs + ticket list
- *  Center (fluid): Ticket header (TCK-XXXX / dept, title, reporter, SLA bar) + description card + comment thread + reply box
- *  Right (270px): PRIMARY ACTIONS + CUSTOMER INSIGHTS + TICKET METADATA + RECENT ACTIVITY
- *
- * Uses:  useMyQueue, usePool, useArchive, useRerouteTicket, useUpdateStatus
+ * Layout: AppShell (noPadding) → AgentQueueSidebar (collapsible, drag-resize)
+ *         + right pane — context-sensitive per active tab:
+ *             My Queue  → TicketDetailPanel (full chat + actions)
+ *             Dept Pool → DeptPoolInspectionPanel (read-only + Assign to Me)
+ *             Archive   → TicketInspectionDrawer  (read-only + Take Over)
  */
-import { useState } from 'react';
-import { useAuth }        from '../context/AuthContext';
-import { useMyQueue, usePool, useArchive, useUpdateStatus, useRerouteTicket } from '../hooks/useTickets';
-import StatusBadge    from '../components/StatusBadge';
-import PriorityBadge  from '../components/PriorityBadge';
-import CommentSection from '../components/CommentSection';
-import RerouteModal   from '../components/RerouteModal';
-import SlaProgressBar from '../components/SlaProgressBar';
-import {
-  Search, Filter, ArrowLeftRight, CheckCircle, ChevronRight,
-  Cpu, LayoutGrid, AlertTriangle,
-} from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import AppShell from '../components/AppShell';
+import AgentQueueSidebar from '../components/AgentQueueSidebar';
+import TicketDetailPanel from '../components/TicketDetailPanel';
+import TicketInspectionDrawer from '../components/TicketInspectionDrawer';
+import StatusBadge from '../components/StatusBadge';
+import PriorityBadge from '../components/PriorityBadge';
+import { useMyQueue, usePool, useArchive, useAssignToMe, useRequestTakeover } from '../hooks/useTickets';
+import { useTicket } from '../hooks/useTickets';
+import { useMessages } from '../hooks/useMessages';
+import { AlertTriangle, UserCheck, Clock, X } from 'lucide-react';
 
-const TABS = ['My Queue', 'Dept Pool', 'Archive'];
+const LIST_MIN     = 200;
+const LIST_MAX     = 500;
+const LIST_DEFAULT = 280;
 
-function getInitials(name) {
+/* ── shared style helpers ────────────────────────────────────────────────── */
+
+const drawerStyle = {
+  flex: 1,
+  borderLeft: '1px solid #e2e8f0',
+  background: '#ffffff',
+  display: 'flex', flexDirection: 'column',
+  overflow: 'hidden',
+  minHeight: 0,
+  minWidth: 0,
+};
+
+const sectionLabelStyle = {
+  fontSize: 9, fontWeight: 700, letterSpacing: '0.1em',
+  textTransform: 'uppercase', color: '#76777d',
+  margin: '0 0 8px',
+};
+
+function agentInitials(name) {
   if (!name) return '?';
-  const p = name.trim().split(/\s+/);
-  return (p[0][0] + (p[1]?.[0] ?? '')).toUpperCase();
+  const parts = name.trim().split(/\s+/);
+  return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
 }
 
-function relTime(d) {
-  if (!d) return '';
-  const mins = Math.floor((Date.now() - new Date(d)) / 60000);
-  if (mins < 60)  return `${mins}m ago`;
-  if (mins < 1440) return `${Math.floor(mins / 60)}h ago`;
-  return `${Math.floor(mins / 1440)}d ago`;
+function fmtTime(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-/* ── Left pane: ticket list ──────────────────────────────────────────────── */
-function TicketListPane({ tab, onTabChange, tickets, selectedId, onSelect, query, onQuery }) {
-  return (
-    <div style={{
-      width: 380, flexShrink: 0,
-      background: '#ffffff',
-      borderRight: '1px solid #e2e8f0',
-      display: 'flex', flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
-      {/* Search */}
-      <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 6, padding: '0 10px', height: 34 }}>
-          <Search size={14} color="#94a3b8" />
-          <input
-            type="text"
-            placeholder="Search tickets…"
-            value={query}
-            onChange={(e) => onQuery(e.target.value)}
-            style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 13, color: '#0f172a' }}
-          />
-        </div>
-      </div>
+/* ── DeptPoolInspectionPanel ─────────────────────────────────────────────── */
 
-      {/* Tabs */}
-      <div style={{ display: 'flex', borderBottom: '1px solid #e2e8f0', padding: '0 14px' }}>
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => onTabChange(t)}
-            style={{
-              padding: '10px 12px',
-              fontSize: 13, fontWeight: tab === t ? 700 : 400,
-              color: tab === t ? '#0f172a' : '#64748b',
-              background: 'transparent', border: 'none', cursor: 'pointer',
-              borderBottom: tab === t ? '2px solid #0f172a' : '2px solid transparent',
-              marginBottom: -1,
-            }}
-          >
-            {t}
-          </button>
-        ))}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', padding: '10px 0' }}>
-          <Filter size={14} color="#94a3b8" />
-        </div>
-      </div>
+function DeptPoolInspectionPanel({ selectedTicketId, onAssignToMe, isPending }) {
+  const { data: ticket, isLoading } = useTicket(selectedTicketId);
+  const { data: messages = [] }     = useMessages(selectedTicketId);
 
-      {/* Ticket count */}
-      <div style={{ padding: '8px 14px', fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #f1f5f9' }}>
-        {tickets.length} Tickets
-      </div>
-
-      {/* List */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {tickets.length === 0 && (
-          <div style={{ padding: '32px 14px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
-            No tickets in this queue.
-          </div>
-        )}
-        {tickets.filter(t => !query || t.title?.toLowerCase().includes(query.toLowerCase())).map((ticket) => {
-          const active = ticket.id === selectedId;
-          return (
-            <div
-              key={ticket.id}
-              onClick={() => onSelect(ticket)}
-              style={{
-                padding: '12px 14px',
-                borderBottom: '1px solid #f1f5f9',
-                borderLeft: active ? '3px solid #0f172a' : '3px solid transparent',
-                background: active ? '#f8fafc' : 'transparent',
-                cursor: 'pointer',
-                position: 'relative',
-              }}
-              onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = '#f8fafc'; }}
-              onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-            >
-              {/* Ticket ID + priority */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 12, fontWeight: 600, color: '#475569' }}>
-                  #TK-{ticket.id}
-                </span>
-                <PriorityBadge priority={ticket.priority} />
-              </div>
-              {/* Title */}
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', lineHeight: '18px', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {ticket.title}
-              </div>
-              {/* Footer: avatar + name + time */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {ticket.reporter?.name ? (
-                  <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#94a3b8', flexShrink: 0 }}>
-                    {getInitials(ticket.reporter.name)}
-                  </div>
-                ) : null}
-                <span style={{ fontSize: 12, color: '#64748b', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {ticket.reporter?.name ?? 'Unknown'}
-                </span>
-                <span style={{ fontSize: 11, color: '#94a3b8', flexShrink: 0 }}>{relTime(ticket.createdAt)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ── Right action pane ───────────────────────────────────────────────────── */
-function RightPane({ ticket, onReroute, onMarkResolved }) {
-  if (!ticket) {
+  if (!selectedTicketId) {
     return (
-      <div style={{ width: 270, background: '#f8fafc', borderLeft: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13, padding: 16, textAlign: 'center' }}>
-        Select a ticket to see actions
-      </div>
+      <aside style={drawerStyle}>
+        <div style={{ padding: '16px 16px 12px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc' }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#0b1c30', margin: 0 }}>Ticket Inspection</p>
+        </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 12 }}>
+          Select a ticket to inspect
+        </div>
+      </aside>
     );
   }
 
-  const initials = getInitials(ticket.reporter?.name);
-
   return (
-    <div style={{ width: 270, flexShrink: 0, background: '#f8fafc', borderLeft: '1px solid #e2e8f0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-
-      {/* PRIMARY ACTIONS */}
-      <div style={rpSectionStyle}>
-        <div style={rpHeaderStyle}>PRIMARY ACTIONS</div>
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button
-            onClick={onReroute}
-            style={{
-              width: '100%', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px',
-              background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6,
-              fontSize: 13, fontWeight: 600, color: '#0f172a', cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <ArrowLeftRight size={15} />
-              <span>Re-Route</span>
-            </div>
-            <ChevronRight size={14} color="#94a3b8" />
-          </button>
-          <button
-            onClick={onMarkResolved}
-            style={{
-              width: '100%', height: 40, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 14px',
-              background: '#0f172a', border: 'none', borderRadius: 6,
-              fontSize: 13, fontWeight: 700, color: '#ffffff', cursor: 'pointer',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircle size={15} />
-              <span>Mark Resolved</span>
-            </div>
-            <CheckCircle size={14} color="rgba(255,255,255,0.5)" />
-          </button>
-        </div>
+    <aside style={drawerStyle}>
+      {/* Header */}
+      <div style={{
+        padding: '10px 16px', borderBottom: '1px solid #e2e8f0',
+        background: '#f8fafc', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#64748b' }}>
+          Ticket Inspection
+        </span>
+        {ticket && (
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: '#94a3b8' }}>
+            #{ticket.id}
+          </span>
+        )}
       </div>
 
-      {/* CUSTOMER INSIGHTS */}
-      <div style={rpSectionStyle}>
-        <div style={rpHeaderStyle}>CUSTOMER INSIGHTS</div>
-        <div style={{ padding: '12px 16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#94a3b8', flexShrink: 0 }}>
-              {initials}
-            </div>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>{ticket.reporter?.name ?? 'Unknown'}</div>
-              <div style={{ fontSize: 12, color: '#64748b' }}>{ticket.reporter?.role ?? 'Employee'}</div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <InsightRow label="Organization" value={ticket.reporter?.companyId ? `Tenant #${ticket.reporter.companyId}` : '—'} />
-            <InsightRow label="Location"     value="—" />
-          </div>
-        </div>
-      </div>
+      {/* Scrollable body */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+        {isLoading ? (
+          <p style={{ fontSize: 12, color: '#94a3b8' }}>Loading ticket…</p>
+        ) : !ticket ? (
+          <p style={{ fontSize: 12, color: '#94a3b8' }}>Ticket not found.</p>
+        ) : (
+          <>
+            {/* Title */}
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: '#0b1c30', lineHeight: '22px', margin: '0 0 12px' }}>
+              {ticket.title}
+            </h2>
 
-      {/* TICKET METADATA */}
-      <div style={rpSectionStyle}>
-        <div style={rpHeaderStyle}>TICKET METADATA</div>
-        <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <div style={rpMetaLabel}>ASSIGNED AGENT</div>
-            <div style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', height: 32, alignItems: 'center', paddingLeft: 10, paddingRight: 8, fontSize: 13, color: '#0f172a' }}>
-              <span style={{ flex: 1 }}>{ticket.assignee?.name ?? 'Agent Alpha (Me)'}</span>
-              <span style={{ color: '#94a3b8', fontSize: 12 }}>▾</span>
+            {/* Badges */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+              <StatusBadge status={ticket.status} />
+              <PriorityBadge priority={ticket.priority} />
             </div>
-          </div>
-          <div>
-            <div style={rpMetaLabel}>DEPARTMENT</div>
-            <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6, height: 32, display: 'flex', alignItems: 'center', padding: '0 10px', fontSize: 13, color: '#0f172a' }}>
-              {ticket.department?.name ?? ticket.departmentName ?? '—'}
-            </div>
-          </div>
-          <div>
-            <div style={rpMetaLabel}>TAGS</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-              {(ticket.tags ?? ['VPN', 'CONNECTIVITY']).map((tag) => (
-                <span key={tag} style={{ padding: '2px 8px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 4, fontSize: 11, fontWeight: 600, color: '#475569' }}>
-                  {tag}
+
+            {/* Assigned Agent */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={sectionLabelStyle}>Assigned Agent</p>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '8px 10px', background: '#f8fafc',
+                border: '1px solid #e2e8f0', borderRadius: 4,
+              }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                  background: '#1e293b', border: '1.5px solid #334155',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700, color: '#94a3b8',
+                }}>
+                  {agentInitials(ticket.assignee?.name)}
+                </div>
+                <span style={{ fontSize: 13, color: '#0f172a', fontWeight: 500 }}>
+                  {ticket.assignee?.name ?? <em style={{ color: '#94a3b8' }}>Unassigned</em>}
                 </span>
-              ))}
-              <button style={{ padding: '2px 8px', background: '#f1f5f9', border: '1px dashed #e2e8f0', borderRadius: 4, fontSize: 11, color: '#94a3b8', cursor: 'pointer' }}>
-                + ADD
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* RECENT ACTIVITY */}
-      <div style={{ ...rpSectionStyle, borderBottom: 'none' }}>
-        <div style={rpHeaderStyle}>RECENT ACTIVITY</div>
-        <div style={{ padding: '8px 16px' }}>
-          {[
-            { color: '#3b82f6', text: 'Ticket opened by John Doe',   time: 'Today at 10:42 AM' },
-            { color: '#94a3b8', text: 'Agent Alpha assigned',        time: 'Today at 10:43 AM' },
-            { color: '#f59e0b', text: 'Status: Pending Employee',    time: 'Today at 10:45 AM' },
-          ].map((ev, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: ev.color, marginTop: 5, flexShrink: 0 }} />
-              <div>
-                <div style={{ fontSize: 12, color: '#374151' }}>{ev.text}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>{ev.time}</div>
               </div>
             </div>
-          ))}
+
+            {/* Description */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={sectionLabelStyle}>Description</p>
+              <div style={{
+                padding: '12px 14px', background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                fontSize: 13, lineHeight: '20px', color: '#45464d',
+              }}>
+                {ticket.description || <em style={{ color: '#94a3b8' }}>No description provided.</em>}
+              </div>
+            </div>
+
+            {/* Activity log — greyed, read-only */}
+            <div style={{ opacity: 0.55, pointerEvents: 'none', userSelect: 'none' }}>
+              <p style={sectionLabelStyle}>Activity Log</p>
+              {messages.length === 0 ? (
+                <p style={{ fontSize: 12, color: '#94a3b8' }}>No activity yet.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {messages.map((msg) => (
+                    <div key={msg.id} style={{ display: 'flex', gap: 10 }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        background: msg.authorRole === 'SYSTEM' ? '#bfdbfe' : '#e2e8f0',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 10, fontWeight: 700, color: '#475569',
+                      }}>
+                        {msg.authorRole === 'SYSTEM' ? 'SB' : agentInitials(msg.authorName)}
+                      </div>
+                      <div style={{ flex: 1, background: '#f1f5f9', padding: '8px 10px', borderRadius: 4 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>{msg.authorName ?? 'Unknown'}</span>
+                          <span style={{ fontSize: 10, color: '#94a3b8' }}>{fmtTime(msg.createdAt)}</span>
+                        </div>
+                        <p style={{ margin: 0, fontSize: 12, lineHeight: '17px', color: '#475569' }}>
+                          {msg.message ?? msg.body ?? msg.content ?? ''}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Footer — Assign to Me */}
+      <div style={{ borderTop: '1px solid #e2e8f0', background: '#f8fafc', flexShrink: 0, padding: '10px 12px' }}>
+        <button
+          onClick={() => ticket && onAssignToMe(ticket)}
+          disabled={!ticket || isPending}
+          style={{
+            width: '100%', padding: '8px 0',
+            background: '#0f172a', border: 'none', color: '#ffffff',
+            fontSize: 12, fontWeight: 700,
+            cursor: ticket && !isPending ? 'pointer' : 'not-allowed',
+            borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            opacity: ticket && !isPending ? 1 : 0.4,
+          }}
+          onMouseEnter={(e) => { if (ticket && !isPending) e.currentTarget.style.background = '#1e293b'; }}
+          onMouseLeave={(e) => { if (ticket && !isPending) e.currentTarget.style.background = '#0f172a'; }}
+        >
+          <UserCheck size={13} />
+          {isPending ? 'Assigning…' : 'Assign to Me'}
+        </button>
+      </div>
+    </aside>
+  );
+}
+
+/* ── TakeOverRequestModal ────────────────────────────────────────────────── */
+
+function TakeOverRequestModal({ ticket, onConfirm, onCancel, isPending }) {
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      background: 'rgba(0,0,0,0.45)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 1000,
+    }}>
+      <div style={{
+        background: '#ffffff',
+        border: '1px solid #e5e7eb',
+        width: 420,
+        padding: '28px 28px 24px',
+        position: 'relative',
+      }}>
+        <button
+          onClick={onCancel}
+          style={{ position: 'absolute', top: 14, right: 14, background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 2 }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#0f172a'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; }}
+        >
+          <X size={16} />
+        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 3, flexShrink: 0 }}>
+            <Clock size={18} color="#ffffff" />
+          </div>
+          <div>
+            <p style={{ fontSize: 14, fontWeight: 700, color: '#0b1c30', margin: 0, lineHeight: '20px' }}>
+              Request Ticket Takeover
+            </p>
+            <p style={{ fontSize: 11, color: '#76777d', margin: 0 }}>
+              Your department manager must approve this request.
+            </p>
+          </div>
+        </div>
+
+        <div style={{
+          display: 'flex', gap: 10, alignItems: 'flex-start',
+          background: '#fffbeb', border: '1px solid #fcd34d',
+          padding: '10px 14px', marginBottom: 20,
+        }}>
+          <AlertTriangle size={14} color="#b45309" style={{ flexShrink: 0, marginTop: 1 }} />
+          <p style={{ fontSize: 12, color: '#92400e', margin: 0, lineHeight: '18px' }}>
+            <strong>#{ticket?.id}</strong> — <em>{ticket?.title}</em>
+            <br />
+            This will notify your manager. The ticket will show <strong>Pending Approval</strong> until they decide.
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+          <button
+            onClick={onCancel}
+            disabled={isPending}
+            style={{
+              padding: '8px 18px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              background: '#ffffff', border: '1px solid #e5e7eb', color: '#0b1c30',
+              borderRadius: 3, opacity: isPending ? 0.5 : 1,
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isPending}
+            style={{
+              padding: '8px 18px', fontSize: 13, fontWeight: 700, cursor: isPending ? 'not-allowed' : 'pointer',
+              background: '#0f172a', border: 'none', color: '#ffffff',
+              borderRadius: 3, opacity: isPending ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+            onMouseEnter={(e) => { if (!isPending) e.currentTarget.style.background = '#1e293b'; }}
+            onMouseLeave={(e) => { if (!isPending) e.currentTarget.style.background = '#0f172a'; }}
+          >
+            <Clock size={14} />
+            {isPending ? 'Sending request…' : 'Send Takeover Request'}
+          </button>
         </div>
       </div>
     </div>
@@ -271,176 +291,179 @@ function RightPane({ ticket, onReroute, onMarkResolved }) {
 }
 
 /* ── AgentDashboard ──────────────────────────────────────────────────────── */
+
 export default function AgentDashboard() {
-  const { user } = useAuth();
-  const [tab,           setTab]           = useState('My Queue');
-  const [selectedTicket,setSelectedTicket]= useState(null);
-  const [query,         setQuery]         = useState('');
-  const [rerouteOpen,   setRerouteOpen]   = useState(false);
-  const [replyText,     setReplyText]     = useState('');
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { data: myQueue = [] } = useMyQueue();
+  const { data: pool    = [] } = usePool();
+  const { data: archive = [] } = useArchive();
+  const assignToMe      = useAssignToMe();
+  const requestTakeover = useRequestTakeover();
+  /* tracks archive ticket IDs where a gated request has been sent this session */
+  const [archivePendingIds, setArchivePendingIds] = useState(new Set());
 
-  const { data: myQueue  = [] } = useMyQueue();
-  const { data: deptPool = [] } = usePool();
-  const { data: archive  = [] } = useArchive();
-  const updateStatus  = useUpdateStatus();
-  const rerouteTicket = useRerouteTicket();
+  const [listCollapsed, setListCollapsed] = useState(false);
+  const [listWidth,     setListWidth]     = useState(LIST_DEFAULT);
+  const [activeTab,     setActiveTab]     = useState('My Queue');
+  const [poolSelectedId,    setPoolSelectedId]    = useState(null);
+  const [archiveSelectedId, setArchiveSelectedId] = useState(null);
+  const [modalTicket, setModalTicket] = useState(null);
 
-  const ticketMap = { 'My Queue': myQueue, 'Dept Pool': deptPool, 'Archive': archive };
-  const tickets   = ticketMap[tab] ?? [];
+  const dragStartX = useRef(null);
+  const dragStartW = useRef(null);
 
-  const handleMarkResolved = () => {
-    if (!selectedTicket) return;
-    updateStatus.mutate({ id: selectedTicket.id, status: 'RESOLVED' });
-  };
+  const isPool    = activeTab === 'Dept Pool';
+  const isArchive = activeTab === 'Archive';
 
-  const t = selectedTicket;
+  const handleToggle = useCallback(() => {
+    setListCollapsed(prev => !prev);
+  }, []);
+
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+  }, []);
+
+  const handleDragStart = useCallback((e) => {
+    e.preventDefault();
+    dragStartX.current = e.clientX;
+    dragStartW.current = listWidth;
+    document.body.style.cursor    = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev) => {
+      const delta = ev.clientX - dragStartX.current;
+      setListWidth(Math.min(LIST_MAX, Math.max(LIST_MIN, dragStartW.current + delta)));
+    };
+    const onUp = () => {
+      document.body.style.cursor    = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',  onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  }, [listWidth]);
+
+  useEffect(() => {
+    window.addEventListener('tickets-tab-click', handleToggle);
+    return () => window.removeEventListener('tickets-tab-click', handleToggle);
+  }, [handleToggle]);
+
+  // Auto-select first ticket in My Queue when no ticket is open
+  useEffect(() => {
+    if (!isPool && !isArchive && !id && myQueue.length > 0) {
+      navigate(`/agent/${myQueue[0].id}`, { replace: true });
+    }
+  }, [id, myQueue, navigate, isPool, isArchive]);
+
+  // Auto-select first pool ticket when switching to Dept Pool
+  useEffect(() => {
+    if (isPool && poolSelectedId === null && pool.length > 0) {
+      setPoolSelectedId(pool[0].id);
+    }
+  }, [isPool, pool, poolSelectedId]);
+
+  // Auto-select first archive ticket when switching to Archive
+  useEffect(() => {
+    if (isArchive && archiveSelectedId === null && archive.length > 0) {
+      setArchiveSelectedId(archive[0].id);
+    }
+  }, [isArchive, archive, archiveSelectedId]);
+
+  /* Pool — assign to me and navigate into the ticket */
+  const handleAssignToMe = useCallback((ticket) => {
+    assignToMe.mutate(ticket.id, {
+      onSuccess: () => {
+        setActiveTab('My Queue');
+        setPoolSelectedId(null);
+        navigate(`/agent/${ticket.id}`);
+      },
+    });
+  }, [assignToMe, navigate]);
+
+  /* Archive — take-over modal */
+  const handleTakeOver = useCallback((ticket) => {
+    setModalTicket(ticket);
+  }, []);
+
+  const handleConfirmTakeOver = useCallback(() => {
+    if (!modalTicket) return;
+    requestTakeover.mutate(modalTicket.id, {
+      onSuccess: () => {
+        setArchivePendingIds((prev) => new Set(prev).add(modalTicket.id));
+        setModalTicket(null);
+      },
+    });
+  }, [modalTicket, requestTakeover]);
+
+  const handleCancelTakeOver = useCallback(() => {
+    setModalTicket(null);
+  }, []);
+
+  const effectivePoolId    = poolSelectedId    ?? (pool.length    > 0 ? pool[0].id    : null);
+  const effectiveArchiveId = archiveSelectedId ?? (archive.length > 0 ? archive[0].id : null);
+
+  /* Which ticket id is highlighted in the sidebar */
+  const sidebarActiveId = isPool ? effectivePoolId : isArchive ? effectiveArchiveId : id;
 
   return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', fontFamily: "'Hanken Grotesk', system-ui, sans-serif" }}>
+    <AppShell title="Agent Workspace" noPadding panelToggle={handleToggle} panelCollapsed={listCollapsed}>
+      <div style={{ display: 'flex', flex: 1, height: '100%', overflow: 'hidden' }}>
 
-      {/* Left pane */}
-      <TicketListPane
-        tab={tab}
-        onTabChange={(v) => { setTab(v); setSelectedTicket(null); }}
-        tickets={tickets}
-        selectedId={t?.id}
-        onSelect={setSelectedTicket}
-        query={query}
-        onQuery={setQuery}
-      />
+        <AgentQueueSidebar
+          activeTicketId={sidebarActiveId}
+          collapsed={listCollapsed}
+          onToggle={handleToggle}
+          width={listWidth}
+          onDragHandleMouseDown={handleDragStart}
+          onTabChange={handleTabChange}
+          onPoolSelect={setPoolSelectedId}
+          onArchiveSelect={setArchiveSelectedId}
+        />
 
-      {/* Center pane */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#ffffff', minWidth: 0 }}>
-
-        {!t ? (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: 13, flexDirection: 'column', gap: 8 }}>
-            <LayoutGrid size={32} color="#e2e8f0" />
-            Select a ticket from the queue to begin
-          </div>
-        ) : (
-          <>
-            {/* Ticket header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-              {/* Breadcrumb: TCK-XXXX / Department */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: 13 }}>
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: '#475569' }}>
-                  #TK-{t.id}
-                </span>
-                <span style={{ color: '#94a3b8' }}>/</span>
-                <span style={{ color: '#64748b' }}>{t.department?.name ?? '—'}</span>
-              </div>
-              {/* Status + priority badges */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                <StatusBadge status={t.status} />
-                <PriorityBadge priority={t.priority} />
-                {t.status === 'PENDING_EMPLOYEE' && (
-                  <span style={{ padding: '2px 8px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 4, fontSize: 11, fontWeight: 700, color: '#c2410c' }}>
-                    PENDING_EMPLOYEE
-                  </span>
-                )}
-              </div>
-              {/* Title */}
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px', lineHeight: '24px' }}>
-                {t.title}
-              </h1>
-              {/* Reporter + date */}
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 12 }}>
-                Reported by <strong style={{ color: '#374151' }}>{t.reporter?.name ?? 'Unknown'}</strong>
-                {t.reporter?.departmentName && ` (${t.reporter.departmentName})`}
-                {t.createdAt && ` · Created ${new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-              </div>
-              {/* SLA bar */}
-              <SlaProgressBar ticket={t} />
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0, background: '#fff' }}>
+          {isPool ? (
+            <DeptPoolInspectionPanel
+              selectedTicketId={effectivePoolId}
+              onAssignToMe={handleAssignToMe}
+              isPending={assignToMe.isPending}
+            />
+          ) : isArchive ? (
+            <TicketInspectionDrawer
+              selectedTicketId={effectiveArchiveId}
+              onTakeOver={handleTakeOver}
+              isManager={false}
+              team={[]}
+              takeoverPending={archivePendingIds.has(effectiveArchiveId)}
+            />
+          ) : id ? (
+            <TicketDetailPanel ticketId={id} />
+          ) : (
+            <div style={{
+              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexDirection: 'column', gap: 8,
+              color: '#94a3b8', fontSize: 13,
+            }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" strokeWidth="1.5">
+                <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+              </svg>
+              Select a ticket from the queue to begin
             </div>
+          )}
+        </div>
 
-            {/* Description card */}
-            <div style={{ padding: '12px 20px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', flexShrink: 0 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase' }}>TICKET DESCRIPTION</span>
-                <button style={{ background: 'transparent', border: 'none', fontSize: 11, fontWeight: 700, color: '#94a3b8', cursor: 'pointer' }}>MINIMIZE ▲</button>
-              </div>
-              <p style={{ fontSize: 13, color: '#374151', lineHeight: '20px', margin: 0 }}>
-                {t.description ?? 'No description provided.'}
-              </p>
-            </div>
-
-            {/* Comment thread */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
-              <CommentSection ticketId={t.id} ticket={t} />
-            </div>
-
-            {/* Reply box */}
-            <div style={{ borderTop: '1px solid #e2e8f0', padding: '12px 20px', flexShrink: 0, background: '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {['B','I','🔗','📎','≡'].map((icon, i) => (
-                    <button key={i} style={{ background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px 4px', fontSize: 14, borderRadius: 4 }}>{icon}</button>
-                  ))}
-                </div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em' }}>REPLYING AS AGENT ALPHA</span>
-              </div>
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="Type your response…"
-                rows={3}
-                style={{ width: '100%', border: 'none', outline: 'none', resize: 'none', fontSize: 13, color: '#0f172a', fontFamily: 'inherit', background: 'transparent', lineHeight: 1.6, boxSizing: 'border-box' }}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748b', cursor: 'pointer' }}>
-                  <input type="checkbox" style={{ borderRadius: 3 }} />
-                  Internal Note
-                </label>
-                <button
-                  style={{ height: 34, padding: '0 16px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                  Send Reply ▶
-                </button>
-              </div>
-            </div>
-          </>
-        )}
       </div>
 
-      {/* Right pane */}
-      <RightPane
-        ticket={t}
-        onReroute={() => setRerouteOpen(true)}
-        onMarkResolved={handleMarkResolved}
-      />
-
-      {/* Reroute modal */}
-      {rerouteOpen && t && (
-        <RerouteModal
-          ticket={t}
-          onClose={() => setRerouteOpen(false)}
-          onSubmit={(deptId) => {
-            rerouteTicket.mutate({ id: t.id, targetDepartmentId: deptId });
-            setRerouteOpen(false);
-          }}
+      {modalTicket && (
+        <TakeOverRequestModal
+          ticket={modalTicket}
+          onConfirm={handleConfirmTakeOver}
+          onCancel={handleCancelTakeOver}
+          isPending={requestTakeover.isPending}
         />
       )}
-    </div>
+    </AppShell>
   );
 }
-
-/* ── Sub-components ───────────────────────────────────────────────────────── */
-function InsightRow({ label, value }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-      <span style={{ color: '#64748b' }}>{label}</span>
-      <span style={{ color: '#0f172a', fontWeight: 500 }}>{value}</span>
-    </div>
-  );
-}
-
-const rpSectionStyle = { borderBottom: '1px solid #e2e8f0' };
-const rpHeaderStyle = {
-  padding: '10px 16px', fontSize: 10, fontWeight: 700,
-  letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: '#94a3b8', background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
-};
-const rpMetaLabel = {
-  fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-  textTransform: 'uppercase', color: '#94a3b8', marginBottom: 4,
-};

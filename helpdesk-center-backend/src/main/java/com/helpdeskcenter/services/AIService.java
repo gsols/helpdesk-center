@@ -207,10 +207,17 @@ public class AIService {
         else if (sw >= hw && sw >= hr) category = "software";
         else                           category = "hr";
 
-        // Fallback confidence is capped at 55% — always below production threshold
-        double confidence = Math.min(max * 15.0, 55.0);
-        log.info("[AIService] Fallback matched '{}' with {:.1f}% — below threshold, routing to triage", category, confidence);
-        // Always returns empty because fallback can't clear the 60% gate
+        // Each matching keyword contributes 20% confidence, capped at 95%.
+        // Two or more keyword hits (e.g. "login" + "password") reliably clears the 60% gate.
+        double confidence = Math.min(max * 20.0, 95.0);
+        log.info("[AIService] Fallback matched '{}' with {:.1f}%", category, confidence);
+        if (confidence >= CONFIDENCE_THRESHOLD) {
+            return Optional.of(new AiClassificationResult(
+                category,
+                BigDecimal.valueOf(confidence).setScale(2, java.math.RoundingMode.HALF_UP)
+            ));
+        }
+        log.info("[AIService] Fallback confidence {:.1f}% below threshold — routing to triage", confidence);
         return Optional.empty();
     }
 

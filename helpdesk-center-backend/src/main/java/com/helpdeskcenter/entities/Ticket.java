@@ -62,6 +62,11 @@ public class Ticket {
     @JoinColumn(name = "assignee_id")
     private User assignee;
 
+    /** Set when an agent requests a gated takeover — cleared on approve/reject. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "takeover_requested_by_id")
+    private User takeoverRequestedBy;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")
     private Ticket parent;

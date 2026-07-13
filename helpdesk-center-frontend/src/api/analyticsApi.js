@@ -8,3 +8,12 @@ export const getMttr = () =>
 
 export const getAiAccuracy = () =>
   api.get('/api/analytics/ai-accuracy');
+
+export const getDeptSummary = () =>
+  api.get('/api/analytics/dept-summary');
+
+export const getDeptDaily = () =>
+  api.get('/api/analytics/dept-daily');
+
+export const getAdminOverview = () =>
+  api.get('/api/analytics/admin-overview');

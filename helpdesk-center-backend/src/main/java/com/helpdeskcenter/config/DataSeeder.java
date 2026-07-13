@@ -48,17 +48,32 @@ public class DataSeeder {
         hrDepartment = departmentRepository.save(hrDepartment);
 
         // Employee
-        userRepository.save(createUser(company, null,           "Alex Rivera",  "employee@ibm.com",       UserRole.EMPLOYEE));
-        // Agents
-        userRepository.save(createUser(company, hrDepartment,   "Jordan Lee",   "hr.agent@ibm.com",       UserRole.AGENT));
-        userRepository.save(createUser(company, itSoftwareDept, "Morgan Chen",  "software.agent@ibm.com", UserRole.AGENT));
-        userRepository.save(createUser(company, itHardwareDept, "Casey Park",   "hardware.agent@ibm.com", UserRole.AGENT));
-        // Manager
-        userRepository.save(createUser(company, hrDepartment,   "Sam Torres",   "hr.manager@ibm.com",     UserRole.DEPT_MANAGER));
-        // Admin
-        userRepository.save(createUser(company, null,           "System Admin", "admin@ibm.com",          UserRole.SYS_ADMIN));
+        userRepository.save(createUser(company, null,           "Alex Rivera",   "employee@ibm.com",              UserRole.EMPLOYEE));
 
-        System.out.println("✅ Seeded IBM, 3 departments, and 6 test users");
+        // HR Agents (3)
+        userRepository.save(createUser(company, hrDepartment,   "Jordan Lee",    "hr.agent.alpha@ibm.com",        UserRole.AGENT));
+        userRepository.save(createUser(company, hrDepartment,   "Dana Kim",      "hr.agent.beta@ibm.com",         UserRole.AGENT));
+        userRepository.save(createUser(company, hrDepartment,   "Marcus Reid",   "hr.agent.gamma@ibm.com",        UserRole.AGENT));
+
+        // IT Software Agents (3)
+        userRepository.save(createUser(company, itSoftwareDept, "Morgan Chen",   "software.agent.alpha@ibm.com",  UserRole.AGENT));
+        userRepository.save(createUser(company, itSoftwareDept, "Riley Nguyen",  "software.agent.beta@ibm.com",   UserRole.AGENT));
+        userRepository.save(createUser(company, itSoftwareDept, "Priya Patel",   "software.agent.gamma@ibm.com",  UserRole.AGENT));
+
+        // IT Hardware Agents (3)
+        userRepository.save(createUser(company, itHardwareDept, "Casey Park",    "hardware.agent.alpha@ibm.com",  UserRole.AGENT));
+        userRepository.save(createUser(company, itHardwareDept, "Avery Brooks",  "hardware.agent.beta@ibm.com",   UserRole.AGENT));
+        userRepository.save(createUser(company, itHardwareDept, "Devon Reyes",   "hardware.agent.gamma@ibm.com",  UserRole.AGENT));
+
+        // Department Managers
+        userRepository.save(createUser(company, hrDepartment,   "Sam Torres",    "hr.manager@ibm.com",            UserRole.DEPT_MANAGER));
+        userRepository.save(createUser(company, itSoftwareDept, "Taylor Owens",  "software.manager@ibm.com",      UserRole.DEPT_MANAGER));
+        userRepository.save(createUser(company, itHardwareDept, "Jamie Flores",  "hardware.manager@ibm.com",      UserRole.DEPT_MANAGER));
+
+        // Admin
+        userRepository.save(createUser(company, null,           "System Admin",  "admin@ibm.com",                 UserRole.SYS_ADMIN));
+
+        System.out.println("✅ Seeded IBM, 3 departments, and 14 test users");
     }
 
     private User createUser(Company company, Department department, String name, String email, UserRole role) {

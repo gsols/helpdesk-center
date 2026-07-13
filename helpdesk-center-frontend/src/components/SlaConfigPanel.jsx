@@ -1,225 +1,283 @@
 /**
- * SlaConfigPanel — wireframe: admin_sla_policy_integrations_support_engine
+ * SlaConfigPanel — Admin SLA Rules tab
  *
- * Sections:
- *   1. Dynamic SLA Deadline Parameters — colored-dot priority table with number inputs + Update buttons
- *   2. Third-Party Messaging Rails — Company name + Slack webhook inputs
- *   3. Summary stat widgets — Active Configs · Success Rate · Pending Sync
+ * Layout:
+ *   Top    — page title + "Policy Active" pill
+ *   Dept tabs (when > 1 department)
+ *   Center — Dynamic SLA Deadline Parameters table
+ *   Bottom — Notification Channels strip + stat bar
  */
 import { useState } from 'react';
-import { useSlaRules, useUpsertSlaRule } from '../hooks/useSlaRules';
+import { useSlaRules, useUpsertSlaRule, useDeleteSlaRule, useDepartments } from '../hooks/useSlaRules';
 
 const PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-// Wireframe priority descriptions
-const PRIORITY_META = {
-  LOW:      { dot: 'bg-emerald-500',          pulse: false, description: 'General advice and non-blocking requests.'         },
-  MEDIUM:   { dot: 'bg-blue-500',             pulse: false, description: 'Standard operational bugs impacting daily work.'   },
-  HIGH:     { dot: 'bg-amber-500',            pulse: false, description: 'Severe workflow restrictions or portal blockages.' },
-  CRITICAL: { dot: 'bg-red-600 animate-pulse',pulse: true,  description: 'Company-wide system outages or data line leaks.'  },
+const P_META = {
+  LOW:      { dot: '#22c55e', label: 'LOW Priority',      description: 'General advice and non-blocking requests.',          defaultHrs: 48 },
+  MEDIUM:   { dot: '#3b82f6', label: 'MEDIUM Priority',   description: 'Standard operational bugs impacting daily work.',    defaultHrs: 24 },
+  HIGH:     { dot: '#f59e0b', label: 'HIGH Priority',     description: 'Severe workflow restrictions or portal blockages.',  defaultHrs: 4  },
+  CRITICAL: { dot: '#ef4444', label: 'CRITICAL Priority', description: 'Company-wide system outages or data line leaks.',    defaultHrs: 1  },
 };
 
 function groupRulesByDept(rules) {
   const map = {};
   rules.forEach(r => {
-    const deptId = r.department?.id;
-    if (!map[deptId]) map[deptId] = { dept: r.department, rules: {} };
-    map[deptId].rules[r.priority] = r;
+    const key = r.departmentId ?? 0;
+    if (!map[key]) map[key] = { deptId: r.departmentId, deptName: r.departmentName, rules: {} };
+    map[key].rules[r.priority] = r;
   });
   return Object.values(map);
 }
 
-export default function SlaConfigPanel() {
-  const { data: rules = [], isLoading } = useSlaRules();
-  const upsert = useUpsertSlaRule();
+/* ── Notification Channels strip ─────────────────────────────────────────── */
+function NotificationStrip({ company, setCompany, slackUrl, setSlackUrl, railSaved, onSave }) {
+  const [focusedCompany, setFocusedCompany] = useState(false);
+  const [focusedSlack,   setFocusedSlack]   = useState(false);
 
-  const [edits, setEdits] = useState({});
-  const [saved,  setSaved]  = useState({});
-
-  // Messaging rails state
-  const [company,  setCompany]  = useState('');
-  const [slackUrl, setSlackUrl] = useState('');
-  const [railSaved, setRailSaved] = useState(false);
-
-  const groups = groupRulesByDept(rules);
-
-  const handleSave = async (rule) => {
-    const hours = edits[rule.id];
-    if (hours == null) return;
-    try {
-      await upsert.mutateAsync({ id: rule.id, targetResolutionHours: Number(hours) });
-      setSaved(prev => ({ ...prev, [rule.id]: true }));
-      setEdits(prev => { const n = { ...prev }; delete n[rule.id]; return n; });
-      setTimeout(() => setSaved(prev => { const n = { ...prev }; delete n[rule.id]; return n; }), 2000);
-    } catch {
-      alert('Failed to save SLA rule');
-    }
-  };
-
-  const handleSaveRails = (e) => {
-    e.preventDefault();
-    setRailSaved(true);
-    setTimeout(() => setRailSaved(false), 2500);
-  };
-
-  if (isLoading) return <p className="text-sm text-[#45464d]">Loading SLA rules…</p>;
-
-  // Use first group or a placeholder when no backend data yet
-  const displayGroups = groups.length > 0 ? groups : [{ dept: { id: 0, name: 'Default' }, rules: {} }];
+  const fieldStyle = (focused) => ({
+    width: '100%', height: 36, paddingLeft: 12, paddingRight: 12,
+    background: '#f8fafc', border: `1px solid ${focused ? '#0b1c30' : '#e2e8f0'}`,
+    borderRadius: 4, fontSize: 12, color: '#0b1c30', outline: 'none',
+    boxSizing: 'border-box', transition: 'border-color 0.15s',
+  });
 
   return (
-    <div className="space-y-6">
-
-      {/* ── Section 1: Dynamic SLA Deadline Parameters ── */}
-      {displayGroups.map(({ dept, rules: deptRules }) => (
-        <section key={dept?.id} className="bg-white border border-[#c6c6cd] rounded-none overflow-hidden">
-          <div className="p-6 border-b border-[#c6c6cd] bg-white">
-            <h2 className="text-[18px] font-bold text-[#0b1c30]">Dynamic SLA Deadline Parameters</h2>
-            <p className="text-[13px] text-[#45464d] mt-1">
-              Configure the absolute target resolution hours mapped per ticket impact tier
-              {dept?.name ? ` — ${dept.name}` : ''}.
-            </p>
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, marginTop: 16 }}>
+      <div style={{ padding: '12px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#0b1c30' }}>Notification Channels</div>
+        <div style={{ fontSize: 12, color: '#94a3b8' }}>— Webhook &amp; messaging rails</div>
+        {railSaved && (
+          <span style={{ marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#16a34a', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            Saved
+          </span>
+        )}
+      </div>
+      <form onSubmit={onSave}>
+        <div style={{ padding: '14px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>Company Display Name</label>
+            <input value={company} onChange={e => setCompany(e.target.value)} placeholder="Acme Corporation"
+              onFocus={() => setFocusedCompany(true)} onBlur={() => setFocusedCompany(false)}
+              style={fieldStyle(focusedCompany)} />
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-[#eff4ff] border-b border-[#c6c6cd]">
-                  <th className="px-6 py-3 text-[11px] font-bold text-[#45464d] uppercase tracking-widest">Priority Tier</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-[#45464d] uppercase tracking-widest">Description</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-[#45464d] uppercase tracking-widest w-32 text-center">Deadline (Hrs)</th>
-                  <th className="px-6 py-3 text-[11px] font-bold text-[#45464d] uppercase tracking-widest w-32 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#e5eeff]/60">
-                {PRIORITIES.map(p => {
-                  const rule = deptRules[p];
-                  const currentValue = rule ? (edits[rule.id] ?? rule.targetResolutionHours) : '';
-                  const isDirty = rule && edits[rule.id] != null && Number(edits[rule.id]) !== rule.targetResolutionHours;
-                  const meta = PRIORITY_META[p];
-                  return (
-                    <tr key={p} className="hover:bg-[#f8f9ff] transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full shrink-0 ${meta.dot}`} />
-                          <span className="text-[14px] font-semibold text-[#0b1c30]">{p} Priority</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-[13px] text-[#45464d]">{meta.description}</td>
-                      <td className="px-6 py-4">
-                        <input
-                          type="number"
-                          min="1"
-                          value={currentValue}
-                          onChange={e => rule && setEdits(prev => ({ ...prev, [rule.id]: e.target.value }))}
-                          className="w-20 h-8 text-center border border-[#c6c6cd] font-mono text-[13px] bg-white text-[#0b1c30] focus:outline-none focus:border-[#0b1c30] focus:ring-1 focus:ring-[#0b1c30] rounded-lg"
-                        />
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {rule && (
-                          <button
-                            onClick={() => isDirty ? handleSave(rule) : undefined}
-                            disabled={upsert.isPending}
-                            className={[
-                              'text-[13px] font-semibold px-3 py-1 rounded-lg border transition-all',
-                              saved[rule.id]
-                                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                                : 'text-[#0b1c30] border-[#c6c6cd] hover:bg-[#e5eeff] disabled:opacity-50',
-                            ].join(' ')}
-                          >
-                            {saved[rule.id] ? '✓ Updated' : 'Update'}
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>Slack Webhook URL</label>
+            <input type="url" value={slackUrl} onChange={e => setSlackUrl(e.target.value)} placeholder="https://hooks.slack.com/services/…"
+              onFocus={() => setFocusedSlack(true)} onBlur={() => setFocusedSlack(false)}
+              style={{ ...fieldStyle(focusedSlack), fontFamily: "'JetBrains Mono', monospace" }} />
           </div>
-        </section>
-      ))}
-
-      {/* ── Section 2: Third-Party Messaging Rails ── */}
-      <section className="bg-white border border-[#c6c6cd] rounded-none overflow-hidden">
-        <div className="p-6 border-b border-[#c6c6cd] bg-white">
-          <h2 className="text-[18px] font-bold text-[#0b1c30]">Third-Party Messaging Rails</h2>
-          <p className="text-[13px] text-[#45464d] mt-1">Configure external webhooks for asynchronous background notification routing.</p>
+          <button type="submit" style={{
+            height: 36, padding: '0 18px', borderRadius: 4,
+            background: '#0b1c30', color: '#fff', border: 'none',
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+          }}>
+            Save Configuration
+          </button>
         </div>
-        <form onSubmit={handleSaveRails}>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Company name */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#45464d] uppercase tracking-widest">
-                Multi-Tenant Company Display Name
-              </label>
-              <div className="relative">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#c6c6cd]">
-                  <path fillRule="evenodd" d="M4 16.5v-13h-.25a.75.75 0 0 1 0-1.5h12.5a.75.75 0 0 1 0 1.5H16v13h.25a.75.75 0 0 1 0 1.5h-3.5a.75.75 0 0 1-.75-.75v-2.5a.75.75 0 0 0-.75-.75h-2.5a.75.75 0 0 0-.75.75v2.5a.75.75 0 0 1-.75.75h-3.5a.75.75 0 0 1 0-1.5H4Z" clipRule="evenodd" />
-                </svg>
-                <input
-                  type="text"
-                  value={company}
-                  onChange={e => setCompany(e.target.value)}
-                  placeholder="Acme Corporation"
-                  className="w-full pl-10 pr-4 py-2 bg-[#eff4ff] border border-[#c6c6cd] text-[14px] text-[#0b1c30] placeholder:text-[#45464d] focus:outline-none focus:border-[#0b1c30] focus:ring-1 focus:ring-[#0b1c30] rounded-lg"
-                />
-              </div>
-            </div>
-            {/* Slack webhook */}
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold text-[#45464d] uppercase tracking-widest">
-                Incoming Corporate Slack Webhook URL
-              </label>
-              <div className="relative">
-                <svg viewBox="0 0 20 20" fill="currentColor" className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#c6c6cd]">
-                  <path fillRule="evenodd" d="M14.5 2A1.5 1.5 0 0 0 13 3.5v.75h-.75a1.5 1.5 0 0 0 0 3H13v.75a1.5 1.5 0 0 0 3 0V7.25h.75a1.5 1.5 0 0 0 0-3H16V3.5A1.5 1.5 0 0 0 14.5 2ZM8 4.75A3.75 3.75 0 0 0 4.25 8.5v3a3.75 3.75 0 0 0 7.5 0v-3A3.75 3.75 0 0 0 8 4.75Z" clipRule="evenodd" />
-                </svg>
-                <input
-                  type="url"
-                  value={slackUrl}
-                  onChange={e => setSlackUrl(e.target.value)}
-                  placeholder="https://hooks.slack.com/services/…"
-                  className="w-full pl-10 pr-4 py-2 bg-[#eff4ff] border border-[#c6c6cd] font-mono text-[13px] text-[#0b1c30] placeholder:text-[#45464d] focus:outline-none focus:border-[#0b1c30] focus:ring-1 focus:ring-[#0b1c30] rounded-lg"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center justify-between p-6 bg-white border-t border-[#c6c6cd]">
-            <div className="flex items-center gap-2 text-[#45464d]">
-              <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.75a.75.75 0 0 1 1.5 0v4a.75.75 0 0 1-1.5 0v-4Zm.75 7a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-              </svg>
-              <span className="text-[13px] italic">These settings affect all child tenants under the master account.</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="submit"
-                className="bg-slate-900 text-white font-semibold text-[14px] px-8 py-3 hover:bg-black transition-colors rounded-none flex items-center gap-2 active:scale-95 duration-75"
-              >
-                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                  <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-                </svg>
-                Save Global Configurations
-              </button>
-              {railSaved && <span className="text-xs font-semibold text-emerald-600">✓ Saved</span>}
-            </div>
-          </div>
-        </form>
-      </section>
+      </form>
+    </div>
+  );
+}
 
-      {/* ── Section 3: Summary stat widgets ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[
-          { label: 'Active Configs', value: '12',    icon: '⚙',  accent: '' },
-          { label: 'Success Rate',   value: '99.8%', icon: '✓',  accent: 'text-emerald-600' },
-          { label: 'Pending Sync',   value: '0',     icon: '⟳',  accent: '' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-[#e5eeff] border border-[#c6c6cd] p-4 flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-bold text-[#45464d] uppercase tracking-widest">{stat.label}</p>
-              <p className={`text-[24px] font-bold leading-8 tracking-tight text-[#0b1c30] ${stat.accent}`}>{stat.value}</p>
+/* ══════════════════════════════════════════════════════════════════════════ */
+export default function SlaConfigPanel() {
+  const { data: rules = [], isLoading: rulesLoading } = useSlaRules();
+  const { data: departments = [], isLoading: deptsLoading } = useDepartments();
+  const upsert         = useUpsertSlaRule();
+  const deleteMutation = useDeleteSlaRule();
+
+  const [inputs,     setInputs]     = useState({});
+  const [saved,      setSaved]      = useState({});
+  const [activeDept, setActiveDept] = useState(null);
+  const [company,    setCompany]    = useState('');
+  const [slackUrl,   setSlackUrl]   = useState('');
+  const [railSaved,  setRailSaved]  = useState(false);
+
+  const isLoading = rulesLoading || deptsLoading;
+  const isPending = upsert.isPending || deleteMutation.isPending;
+
+  const ruleGroups = groupRulesByDept(rules);
+  const displayGroups = (() => {
+    if (ruleGroups.length > 0) {
+      const covered = new Set(ruleGroups.map(g => g.deptId));
+      const missing = departments.filter(d => !covered.has(d.id)).map(d => ({ deptId: d.id, deptName: d.name, rules: {} }));
+      // Drop any group whose deptName is absent (e.g. rules with a NULL department_id)
+      return [...ruleGroups, ...missing].filter(g => !!g.deptName);
+    }
+    if (departments.length > 0) return departments.map(d => ({ deptId: d.id, deptName: d.name, rules: {} }));
+    return [{ deptId: 0, deptName: 'All Departments', rules: {} }];
+  })();
+  const activeGroup  = displayGroups.find(g => g.deptId === activeDept) ?? displayGroups[0];
+  const activeRules  = Object.values(activeGroup.rules);
+  const configuredCount = activeRules.filter(r => r.targetResolutionHours).length;
+  const avgHrs = activeRules.length
+    ? (activeRules.reduce((s, r) => s + (r.targetResolutionHours || 0), 0) / activeRules.length).toFixed(1)
+    : '—';
+
+  const handleUpdate = async (rule) => {
+    const hrs = Number(inputs[rule.id] ?? rule.targetResolutionHours);
+    if (!hrs || hrs < 1) return;
+    try {
+      await upsert.mutateAsync({ id: rule.id, targetResolutionHours: hrs });
+      setInputs(prev => { const n = { ...prev }; delete n[rule.id]; return n; });
+      setSaved(prev => ({ ...prev, [rule.id]: true }));
+      setTimeout(() => setSaved(prev => { const n = { ...prev }; delete n[rule.id]; return n; }), 2000);
+    } catch { alert('Failed to update SLA rule.'); }
+  };
+
+  const handleCreate = async (priority) => {
+    const key = `new_${priority}`;
+    const hrs = Number(inputs[key] ?? P_META[priority].defaultHrs);
+    if (!hrs || hrs < 1) return;
+    try {
+      await upsert.mutateAsync({ departmentId: activeGroup.deptId, priority, targetResolutionHours: hrs });
+      setInputs(prev => { const n = { ...prev }; delete n[key]; return n; });
+    } catch { alert('Failed to create SLA rule.'); }
+  };
+
+  if (isLoading) return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8', fontSize: 13, padding: 32 }}>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ animation: 'spin 1s linear infinite' }}>
+        <circle cx="8" cy="8" r="6" stroke="#e2e8f0" strokeWidth="2.5"/>
+        <path d="M8 2a6 6 0 0 1 6 6" stroke="#64748b" strokeWidth="2.5" strokeLinecap="round"/>
+      </svg>
+      Loading SLA configuration…
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
+  return (
+    <div style={{ maxWidth: 900 }}>
+
+      {/* ── Page header ──────────────────────────────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#0b1c30', letterSpacing: '-0.02em' }}>SLA Deadline Configuration</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>Define resolution targets per priority tier and manage notification integrations.</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: 20 }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Policy Active</span>
+        </div>
+      </div>
+
+      {/* ── Dept tabs ────────────────────────────────────────────────────── */}
+      {displayGroups.length > 1 && (
+        <div style={{ display: 'flex', gap: 2, marginBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+          {displayGroups.map(g => {
+            const isActive = g.deptId === (activeDept ?? displayGroups[0].deptId);
+            return (
+              <button key={g.deptId} onClick={() => setActiveDept(g.deptId)} style={{
+                padding: '7px 16px', border: 'none', cursor: 'pointer', background: 'transparent',
+                borderBottom: isActive ? '2px solid #0b1c30' : '2px solid transparent',
+                color: isActive ? '#0b1c30' : '#76777d',
+                fontSize: 13, fontWeight: 600, marginBottom: -1, transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { if (!isActive) e.currentTarget.style.color = '#0b1c30'; }}
+              onMouseLeave={e => { if (!isActive) e.currentTarget.style.color = '#76777d'; }}
+              >{g.deptName}</button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── SLA table card ───────────────────────────────────────────────── */}
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+
+        {/* Card header */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#0b1c30', marginBottom: 3 }}>Dynamic SLA Deadline Parameters</div>
+          <div style={{ fontSize: 12, color: '#64748b' }}>Configure the absolute target resolution hours mapped per ticket impact tier.</div>
+        </div>
+
+        {/* Table header */}
+        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr 130px 100px', padding: '9px 24px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+          {[['PRIORITY TIER', 'left'], ['DESCRIPTION', 'left'], ['DEADLINE (HRS)', 'center'], ['ACTION', 'center']].map(([h, align]) => (
+            <div key={h} style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: '#64748b', textTransform: 'uppercase', textAlign: align }}>{h}</div>
+          ))}
+        </div>
+
+        {/* Table rows */}
+        {PRIORITIES.map((p, idx) => {
+          const meta     = P_META[p];
+          const rule     = activeGroup.rules[p];
+          const hasRule  = !!rule;
+          const inputKey = hasRule ? rule.id : `new_${p}`;
+          const inputVal = inputs[inputKey] ?? String(hasRule ? rule.targetResolutionHours : meta.defaultHrs);
+          const wasSaved = hasRule && saved[rule.id];
+
+          return (
+            <div key={p} style={{
+              display: 'grid', gridTemplateColumns: '200px 1fr 130px 100px',
+              padding: '16px 24px', alignItems: 'center',
+              borderBottom: idx < PRIORITIES.length - 1 ? '1px solid #f1f5f9' : 'none',
+              transition: 'background 0.12s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#fafbfc'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 9, height: 9, borderRadius: '50%', background: hasRule ? meta.dot : '#cbd5e1', flexShrink: 0 }} />
+                <span style={{ fontSize: 13, fontWeight: 600, color: hasRule ? '#0b1c30' : '#94a3b8' }}>{meta.label}</span>
+              </div>
+
+              <div style={{ fontSize: 13, color: '#64748b', paddingRight: 16 }}>{meta.description}</div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <input type="number" min="1" value={inputVal}
+                  onChange={e => setInputs(prev => ({ ...prev, [inputKey]: e.target.value }))}
+                  style={{ width: 76, height: 32, border: '1px solid #e2e8f0', borderRadius: 4, textAlign: 'center', fontSize: 14, fontWeight: 600, color: '#0b1c30', background: '#f8fafc', outline: 'none', fontFamily: 'inherit' }}
+                  onFocus={e => { e.target.style.borderColor = '#0b1c30'; e.target.style.background = '#fff'; }}
+                  onBlur={e =>  { e.target.style.borderColor = '#e2e8f0'; e.target.style.background = '#f8fafc'; }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <button disabled={isPending} onClick={() => hasRule ? handleUpdate(rule) : handleCreate(p)}
+                  style={{
+                    height: 30, padding: '0 14px', borderRadius: 4, fontSize: 12, fontWeight: 600,
+                    border: wasSaved ? '1px solid #bbf7d0' : '1px solid #cbd5e1',
+                    background: wasSaved ? '#f0fdf4' : '#fff',
+                    color: wasSaved ? '#16a34a' : '#374151',
+                    cursor: isPending ? 'default' : 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    transition: 'border-color 0.15s, color 0.15s',
+                  }}
+                  onMouseEnter={e => { if (!isPending && !wasSaved) { e.currentTarget.style.borderColor = '#0b1c30'; e.currentTarget.style.color = '#0b1c30'; } }}
+                  onMouseLeave={e => { if (!wasSaved) { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#374151'; } }}
+                >
+                  {wasSaved
+                    ? <><svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#16a34a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>Saved</>
+                    : hasRule ? 'Update' : 'Set'
+                  }
+                </button>
+              </div>
             </div>
-            <span className="text-4xl opacity-20 text-[#0b1c30]">{stat.icon}</span>
+          );
+        })}
+      </div>
+
+      {/* ── Notification Channels ────────────────────────────────────────── */}
+      <NotificationStrip
+        company={company} setCompany={setCompany}
+        slackUrl={slackUrl} setSlackUrl={setSlackUrl}
+        railSaved={railSaved}
+        onSave={e => { e.preventDefault(); setRailSaved(true); setTimeout(() => setRailSaved(false), 2800); }}
+      />
+
+      {/* ── Bottom stat bar ──────────────────────────────────────────────── */}
+      <div style={{ marginTop: 16, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, background: '#e2e8f0', border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+        {[
+          { label: 'Configured Tiers', value: `${configuredCount} / 4`, sub: 'priority tiers set' },
+          { label: 'Avg Deadline',     value: avgHrs === '—' ? '—' : `${avgHrs}h`, sub: 'across configured tiers', mono: true },
+          { label: 'Policy Compliance',value: '99.8%', sub: 'trailing 30 days', mono: true, accent: '#16a34a' },
+          { label: 'Pending Sync',     value: '0', sub: 'changes awaiting push', mono: true },
+        ].map((s, i) => (
+          <div key={s.label} style={{ background: '#fff', padding: '14px 20px', borderRight: i < 3 ? '1px solid #e2e8f0' : 'none' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>{s.label}</div>
+            <div style={{ fontFamily: s.mono ? "'JetBrains Mono', monospace" : 'inherit', fontSize: 24, fontWeight: 700, color: s.accent ?? '#0b1c30', lineHeight: 1.1 }}>{s.value}</div>
+            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 3 }}>{s.sub}</div>
           </div>
         ))}
       </div>

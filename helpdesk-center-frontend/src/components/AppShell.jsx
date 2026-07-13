@@ -16,10 +16,11 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../hooks/useTickets';
 import {
-  LayoutDashboard, Ticket, Settings, LogOut, Bell,
+  LayoutDashboard, Ticket, Settings, LogOut,
   BarChart2, Clock,
-  Menu, ShieldCheck, ArchiveIcon,
+  Menu, ShieldCheck, Users,
 } from 'lucide-react';
+import NotificationPanel from './NotificationPanel';
 
 const SIDEBAR_KEY = 'hd_sidebar_collapsed';
 
@@ -30,23 +31,17 @@ const NAV = {
     { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
   ],
   agent: [
-    { label: 'Queue',     icon: LayoutDashboard, to: '/agent'     },
-    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
-    { label: 'Analytics', icon: BarChart2,       to: '/agent'     },
+    { label: 'Dashboard', icon: LayoutDashboard, to: '/agent',      exact: true },
+    { label: 'Team',      icon: Users,           to: '/agent/team'              },
   ],
   dept_manager: [
-    { label: 'Queue',      icon: LayoutDashboard, to: '/manager'  },
-    { label: 'Tickets',    icon: Ticket,          to: '/tickets'  },
-    { label: 'Analytics',  icon: BarChart2,       to: '/manager'  },
-    { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager'  },
-    { label: 'Archive',    icon: ArchiveIcon,     to: '/manager'  },
+    { label: 'Queue',      icon: LayoutDashboard, to: '/manager',          exact: true },
+    { label: 'Team',       icon: Users,           to: '/manager/team'                  },
+    { label: 'Analytics',  icon: BarChart2,       to: '/manager/analytics'             },
+    { label: 'Risk Queue', icon: ShieldCheck,     to: '/manager/risk'                  },
   ],
   sys_admin: [
-    { label: 'Dashboard', icon: LayoutDashboard, to: '/admin'     },
-    { label: 'Tickets',   icon: Ticket,          to: '/tickets'   },
-    { label: 'Triage',    icon: Clock,           to: '/admin'     },
-    { label: 'Analytics', icon: BarChart2,       to: '/admin'     },
-    { label: 'SLA',       icon: ShieldCheck,     to: '/admin'     },
+    { label: 'Dashboard', icon: LayoutDashboard, to: '/admin', exact: true },
   ],
 };
 
@@ -54,6 +49,17 @@ function getInitials(name) {
   if (!name) return '?';
   const parts = name.trim().split(/\s+/);
   return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+}
+
+/** Role subtitle: agents/managers get "Role · <Department>", others get the role label. */
+function roleSubtitle(user) {
+  if (!user) return '';
+  const base = user.role?.replace(/_/g, ' ') ?? '';
+  const isDeptRole = ['agent', 'AGENT', 'dept_manager', 'DEPT_MANAGER'].includes(user.role);
+  if (isDeptRole && user.departmentName) {
+    return `${base} · ${user.departmentName}`;
+  }
+  return base;
 }
 
 /* ── Live clock ──────────────────────────────────────────────────────────── */
@@ -166,7 +172,9 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
       <nav style={{ flex: 1, padding: collapsed ? '4px 0' : '4px 8px', overflowY: 'auto' }}>
         {navItems.map((item) => {
           const Icon = item.icon;
-          const active = pathname === item.to || pathname.startsWith(item.to + '/');
+          const active = item.exact
+            ? pathname === item.to
+            : pathname === item.to || pathname.startsWith(item.to + '/');
           const handleNavClick = () => {
             if (active && item.to === '/tickets') {
               // Already on tickets — toggle the sidebar instead of re-navigating
@@ -302,7 +310,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
                 {user?.name ?? user?.email}
               </div>
               <div style={{ fontSize: 11, color: 'rgba(100,116,139,1)', lineHeight: '14px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user?.role?.replace('_', ' ')}
+                {roleSubtitle(user)}
               </div>
             </div>
             <button
@@ -325,7 +333,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 11, fontWeight: 700, color: '#94a3b8',
               }}
-              title={user?.name ?? user?.email}
+              title={`${user?.name ?? user?.email}${user?.departmentName ? ` · ${user.departmentName}` : ''}`}
             >
               {initials}
             </div>
@@ -347,7 +355,7 @@ function Sidebar({ user, collapsed, onToggle, onLogout }) {
 }
 
 /* ── Top Header ──────────────────────────────────────────────────────────── */
-function TopHeader({ title, sidebarWidth }) {
+function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
   const { user } = useAuth();
   const initials = getInitials(user?.name ?? user?.email);
   const { pathname } = useLocation();
@@ -356,7 +364,12 @@ function TopHeader({ title, sidebarWidth }) {
   const crumbs = ['Helpdesk', ...segments.map(s =>
     s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ')
   )];
-  if (title && crumbs.length > 0) crumbs[crumbs.length - 1] = title;
+  if (title && crumbs.length > 0) {
+    const isDeptRole = ['agent', 'AGENT', 'dept_manager', 'DEPT_MANAGER'].includes(user?.role);
+    crumbs[crumbs.length - 1] = isDeptRole && user?.departmentName
+      ? `${user.departmentName} ${title}`
+      : title;
+  }
 
   return (
     <header
@@ -377,6 +390,34 @@ function TopHeader({ title, sidebarWidth }) {
       }}
     >
       <nav style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, minWidth: 0, flex: 1 }}>
+        {panelToggle && (
+          <button
+            onClick={panelToggle}
+            title={panelCollapsed ? 'Expand panel' : 'Collapse panel'}
+            style={{
+              background: panelCollapsed ? '#f1f5f9' : 'transparent',
+              border: '1px solid',
+              borderColor: panelCollapsed ? '#cbd5e1' : 'transparent',
+              borderRadius: 5,
+              padding: 4,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: panelCollapsed ? '#334155' : '#94a3b8',
+              marginRight: 4,
+              flexShrink: 0,
+              transition: 'background 150ms, border-color 150ms, color 150ms',
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#334155'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = panelCollapsed ? '#f1f5f9' : 'transparent'; e.currentTarget.style.borderColor = panelCollapsed ? '#cbd5e1' : 'transparent'; e.currentTarget.style.color = panelCollapsed ? '#334155' : '#94a3b8'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="1" y="1" width="14" height="14" rx="2.5" stroke="currentColor" strokeWidth="1.3"/>
+              <line x1="5.5" y1="1" x2="5.5" y2="15" stroke="currentColor" strokeWidth="1.3"/>
+            </svg>
+          </button>
+        )}
         {crumbs.map((crumb, i) => (
           <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
             {i > 0 && <span style={{ color: '#94a3b8', fontSize: 12 }}>›</span>}
@@ -394,21 +435,19 @@ function TopHeader({ title, sidebarWidth }) {
       </nav>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        {user?.companyId && (
+        {(user?.companyName || user?.companyId) && (
           <span style={{
             fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
             border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8',
-            textTransform: 'uppercase', letterSpacing: '0.06em',
+            letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', gap: 4,
           }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }} />
-            Tenant #{user.companyId}
+            {user.companyName ?? `Company #${user.companyId}`}
           </span>
         )}
         <LiveClock />
-        <button style={{ background: 'transparent', border: 'none', color: '#76777d', cursor: 'pointer', padding: 4, borderRadius: 6 }}>
-          <Bell size={18} />
-        </button>
+        <NotificationPanel />
         <div
           style={{
             width: 30, height: 30, borderRadius: '50%',
@@ -428,7 +467,7 @@ function TopHeader({ title, sidebarWidth }) {
 }
 
 /* ── AppShell ─────────────────────────────────────────────────────────────── */
-export default function AppShell({ title = 'Support Engine', children, noPadding = false }) {
+export default function AppShell({ title = 'Support Engine', children, noPadding = false, panelToggle, panelCollapsed }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -487,7 +526,7 @@ export default function AppShell({ title = 'Support Engine', children, noPadding
           transition:    'margin-left 200ms ease-in-out',
         }}
       >
-        <TopHeader title={title} sidebarWidth={sidebarWidth} />
+        <TopHeader title={title} sidebarWidth={sidebarWidth} panelToggle={panelToggle} panelCollapsed={panelCollapsed} />
 
         <main
           ref={mainRef}

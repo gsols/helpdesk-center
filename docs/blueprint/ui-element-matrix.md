@@ -76,3 +76,75 @@ Visible to all authenticated users, but the navigation anchors adapt dynamically
   - Numeric input parameters modifying the `target_resolution_hours` property directly on the backend database table.
 - **UI Elements (Tenant Integrations Panel)**:
   - Secure textual input box storing corporate target strings like Slack webhook endpoints.
+
+### D. Same-Department Teammate Directory Sub-Panel (`AppShell.jsx` Sidebar)
+- **Visibility**: Visible ONLY when `currentUser.role == 'AGENT'` or `DEPT_MANAGER`.
+- **Structure**: A sharp-edged, collapsible section header at the bottom of the navigation rail labeled "My Department Team".
+- **Dynamic Elements**: Loops through and displays rows of users where `user.department_id == currentUser.department_id AND user.role == 'AGENT'`.
+- **Action Target (Click Event)**: Clicking a teammate's name instantly re-routes the central data pane route to render the designated **Teammate Workspace panel view**, passing the target colleague's `user_id` as a filter parameter.
+
+### E. Gated Teammate Ticket Takeover Pipeline (`TeammateWorkspaceView.jsx`)
+- **When is it loaded?**: Active when an agent clicks a peer from the "My Department Team" sub-panel. Route pattern: `/agent/team/:teammateId`.
+- **Data Scope**: Executes a scoped backend lookup fetching all tickets where `department_id == currentAgent.department_id AND assignee_id == target_teammate.id`.
+- **Read-Only State Enforcement**: The detail view panel renders a persistent, non-dismissible overlay banner reading `[Viewing teammate's workspace — Read-Only]`. All reply inputs, status droppers, and re-route controls are disabled and visually muted.
+
+#### Action Target — "Take Over Ticket" Button (Agent-Side Trigger)
+- **Label**: "Take Over Ticket"
+- **Visibility**: Rendered on every ticket row card and inside the right-side detail panel header area, even while the read-only overlay is active.
+- **Behavior on Click (Gated — NOT an instant ownership transfer)**:
+  1. Fires a backend `PATCH` request that mutates `ticket.status` to `'PENDING_APPROVAL'` only — **does not** change `assignee_id` yet.
+  2. Dispatches a high-priority `TAKEOVER_APPROVAL_REQUEST` notification row directly to the `DEPT_MANAGER` of the current department.
+  3. Immediately disables the button in-place and replaces the label with the caption text: **"Awaiting Manager Approval…"** (muted style, non-interactive).
+
+#### Action Behavior — Manager Notification Click (Approval Gate)
+- **Alert Row Text**: *"Agent [Name] requests takeover approval for [TCK-XXXX]"*
+- **Notification Type**: `TAKEOVER_APPROVAL_REQUEST` — structural alert variant; renders the ⚠️ flag indicator instead of the standard sapphire dot.
+- **Interaction Target (Click)**:
+  1. Triggers `PATCH /api/notifications/{id}/read` to clear the unread indicator.
+  2. The frontend router intercepts the `TAKEOVER_APPROVAL_REQUEST` payload claim and **overrides standard ticket navigation**. Instead of routing to `/tickets/{ticketId}`, it forces the main workspace panel to load the **Administrative/Manager Inspection Drawer Panel** (`TicketInspectionDrawer.jsx`) for the referenced ticket.
+  3. The detail drawer dynamically exposes a prominent binary action button control row in the drawer footer:
+     - **[ Approve Takeover ]** — Green theme (`bg-green-600 text-white`). On click: executes `PATCH /api/tickets/{id}/approve-takeover`, sets `assignee_id = requestingAgent.id`, sets `status = 'IN_PROGRESS'`, writes a `TICKET_TAKEN_OVER` audit event (recording previous `assignee_id`, new `assignee_id`, and timestamp), and dispatches an `ASSIGNED` notification to the requesting agent.
+     - **[ Reject Takeover ]** — Red theme (`bg-red-600 text-white`). On click: executes `PATCH /api/tickets/{id}/reject-takeover`, reverts `status` back to `'IN_PROGRESS'` (original assignee retains ownership), and dispatches a rejection notification to the requesting agent.
+  4. After either action, both buttons are disabled and replaced with a confirmation caption ("Takeover Approved" or "Takeover Rejected") and the drawer closes after a short delay.
+
+---
+
+## 4. Global Notifications Center (`NotificationPanel.jsx`)
+An interactive dropdown panel triggered by a bell icon in the `TopHeader` of `AppShell.jsx`. Visible to **all authenticated roles**.
+
+### Trigger
+- **Bell Icon**: Located in the top-right header bar. Displays a sapphire-blue circular badge (`bg-[#3b82d4]`) showing the live unread count (polled every 30 seconds via `GET /api/notifications/unread-count`). Badge is hidden when count is zero. Clicking opens/closes the dropdown.
+
+### UI Elements & Interactive Targets:
+- **Header Section**: Displays title text reading "Activity Feed" paired with an unread count badge. Includes a text button target reading "Mark all as read" (triggers `PATCH /api/notifications/mark-all-read`).
+- **The Filter Tabs Toolbar**: Low-contrast, rounded pill tabs:
+  - **"All Feed"**: Shows every notification. Visible to **all roles**.
+  - **"Unread Only"**: Shows only unread notifications. Visible to **all roles**.
+  - **"System Flags"**: Shows `SLA_BREACH` and `SYSTEM` type notifications only. Visible **ONLY** to `DEPT_MANAGER` and `SYS_ADMIN`.
+- **The Alert Rows List**: Borderless horizontal layout blocks separated by faint bottom lines (`border-b #f3f4f6`).
+  - **Unread Status Indicator**: A vibrant, rounded sapphire-blue dot (`8×8px, bg-[#3b82d4], rounded-full`) anchoring the left margin. Hidden (transparent placeholder) for read notifications.
+  - **System Flag Indicator**: A ⚠️ emoji icon replaces the dot for `SLA_BREACH` and `SYSTEM` type notifications.
+  - **Text Title Block**: Typography showing event intent text with monospace ticket link rendered in blue (e.g., *Manager Alex Rivera assigned ticket* `TCK-1089` *to your queue*).
+  - **Timestamp Caption**: Relative chronological string (e.g., *5 mins ago*, *2 hrs ago*).
+- **Interaction Target**: Clicking an alert row:
+  1. Triggers `PATCH /api/notifications/{id}/read` to clear the unread dot.
+  2. Navigates the UI router directly to `/tickets/{ticketId}` (the full `TicketDetailPage`).
+  3. If the notification has no `ticketId` (e.g. system-only), clicking has no navigation effect.
+- **"View full history" Footer Link**: Text button at the bottom of the panel.
+
+### Notification Types & Who Receives Them
+| Type         | Trigger                              | Recipient           |
+|--------------|--------------------------------------|---------------------|
+| `COMMENT`    | New comment posted on a ticket       | The other party (creator ↔ assignee) |
+| `ASSIGNED`   | Ticket claimed or reassigned         | The new assignee (agent) or ticket creator |
+| `SLA_BREACH` | SLA breach risk event                | DEPT_MANAGER, SYS_ADMIN |
+| `SYSTEM`     | System-level event (e.g. integration) | SYS_ADMIN only     |
+| `TAKEOVER_APPROVAL_REQUEST` | Agent requests ticket takeover approval | `DEPT_MANAGER` of the ticket's department only |
+
+### Backend API
+- `GET  /api/notifications` — fetch all for current user
+- `GET  /api/notifications/unread-count` — lightweight badge poll
+- `PATCH /api/notifications/{id}/read` — mark one read
+- `PATCH /api/notifications/mark-all-read` — mark all read
+- `PATCH /api/tickets/{id}/approve-takeover` — approve a pending takeover; sets `assignee_id`, sets `status = 'IN_PROGRESS'`, fires `ASSIGNED` notification to requesting agent
+- `PATCH /api/tickets/{id}/reject-takeover` — reject a pending takeover; reverts `status = 'IN_PROGRESS'` for original assignee, fires rejection notification to requesting agent

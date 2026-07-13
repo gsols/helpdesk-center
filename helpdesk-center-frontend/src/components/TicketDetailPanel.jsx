@@ -13,13 +13,16 @@
  *    • Tags
  */
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useTicket, useUpdateStatus } from '../hooks/useTickets';
+import { useTicket, useUpdateStatus, useAiLog } from '../hooks/useTickets';
+import { useMessages } from '../hooks/useMessages';
+import { useAuth } from '../context/AuthContext';
 import { getAttachments, uploadAttachment, fetchAttachmentBlob, downloadUrl } from '../api/attachmentsApi';
 import StatusBadge from './StatusBadge';
 import PriorityBadge from './PriorityBadge';
 import CommentSection from './CommentSection';
 import SlaProgressBar from './SlaProgressBar';
-import { FileText, ImageIcon, Plus, Sparkles, X, Download, Loader } from 'lucide-react';
+import RerouteModal from './RerouteModal';
+import { FileText, ImageIcon, Plus, Sparkles, X, Download, Loader, ArrowLeftRight, CheckCircle, ChevronRight } from 'lucide-react';
 
 /* ── SLA remaining time helper (mirrors SlaProgressBar logic) ─────────────── */
 function useSlaRemaining(createdAt, dueAt) {
@@ -56,12 +59,6 @@ function AttachIcon({ fileName }) {
     </div>
   );
 }
-
-/* ── AI Classification confidence data (mocked) ───────────────────────────── */
-const AI_CLASSES = [
-  { label: 'Security',   pct: 92, primary: true  },
-  { label: 'IT Support', pct: 8,  primary: false },
-];
 
 /* ── Attachment viewer lightbox ───────────────────────────────────────────── */
 function AttachmentViewer({ attachment, onClose }) {
@@ -212,15 +209,98 @@ function AttachmentViewer({ attachment, onClose }) {
   );
 }
 
+/* ── build a chronological activity feed from real data ──────────────────── */
+function useActivityFeed(ticket, messages) {
+  return useMemo(() => {
+    const events = [];
+    const fmt = (d) => d
+      ? new Date(d).toLocaleString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric',
+          hour: 'numeric', minute: '2-digit', hour12: true,
+        })
+      : '—';
+
+    // 1. Ticket opened
+    if (ticket?.createdAt) {
+      events.push({
+        key:   'opened',
+        color: '#3b82f6',
+        text:  `Ticket opened by ${ticket.creator?.name ?? 'Unknown'}`,
+        time:  fmt(ticket.createdAt),
+        ts:    new Date(ticket.createdAt).getTime(),
+      });
+    }
+
+    // 2. Agent assigned (only when assignee is present)
+    if (ticket?.assignee) {
+      // Use updatedAt as best approximation; offset +1 ms so it sorts after "opened"
+      const ts = new Date(ticket.updatedAt ?? ticket.createdAt).getTime() + 1;
+      events.push({
+        key:   'assigned',
+        color: '#8b5cf6',
+        text:  `${ticket.assignee.name} assigned`,
+        time:  fmt(ticket.updatedAt ?? ticket.createdAt),
+        ts,
+      });
+    }
+
+    // 3. Every real message from the thread
+    (messages ?? []).forEach((m) => {
+      const isAgent = m.sender?.role && m.sender.role !== 'EMPLOYEE';
+      events.push({
+        key:   `msg-${m.id}`,
+        color: isAgent ? '#6b7280' : '#0ea5e9',
+        text:  `${m.sender?.name ?? 'Unknown'} replied`,
+        time:  fmt(m.createdAt),
+        ts:    new Date(m.createdAt).getTime(),
+      });
+    });
+
+    // 4. Current status — only interesting if not the default OPEN
+    const st = ticket?.status?.toUpperCase();
+    if (st && st !== 'OPEN' && ticket?.updatedAt) {
+      const statusLabels = {
+        IN_PROGRESS:      'Status changed to In Progress',
+        PENDING_EMPLOYEE: 'Status changed to Pending Employee',
+        RESOLVED:         'Ticket resolved',
+        CLOSED:           'Ticket closed',
+      };
+      const color = st === 'RESOLVED' || st === 'CLOSED'
+        ? '#10b981'
+        : st === 'PENDING_EMPLOYEE'
+          ? '#f59e0b'
+          : '#6b7280';
+      // Use updatedAt + 2 ms offset so it always sorts last among same-timestamp events
+      events.push({
+        key:   `status-${st}`,
+        color,
+        text:  statusLabels[st] ?? `Status: ${st}`,
+        time:  fmt(ticket.updatedAt),
+        ts:    new Date(ticket.updatedAt).getTime() + 2,
+      });
+    }
+
+    events.sort((a, b) => a.ts - b.ts);
+    return events;
+  }, [ticket, messages]);
+}
+
 export default function TicketDetailPanel({ ticketId }) {
+  const { user }                    = useAuth();
   const { data: ticket, isLoading } = useTicket(ticketId);
+  const { data: messages = [] }     = useMessages(ticketId);
+  const { data: aiLog }             = useAiLog(ticketId);
   const updateStatus = useUpdateStatus();
   const [attachments, setAttachments]           = useState([]);
   const [viewingAttachment, setViewingAttachment] = useState(null);
   const [uploading, setUploading]               = useState(false);
   const [uploadErr, setUploadErr]               = useState(null);
   const [dragOver, setDragOver]                 = useState(false);
+  const [rerouteOpen, setRerouteOpen]           = useState(false);
   const fileInputRef = useRef(null);
+
+  const isAgent    = user?.role === 'agent';
+  const isResolved = ['RESOLVED', 'CLOSED'].includes(ticket?.status?.toUpperCase());
 
   const handleCloseViewer = useCallback(() => setViewingAttachment(null), []);
 
@@ -287,6 +367,44 @@ export default function TicketDetailPanel({ ticketId }) {
         display: 'flex', flexDirection: 'column',
       }}>
 
+        {/* ── PRIMARY ACTIONS — agent only ── */}
+        {isAgent && (
+          <section style={sectionStyle}>
+            <div style={sectionHeaderStyle}>Primary Actions</div>
+            <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button
+                onClick={() => setRerouteOpen(true)}
+                style={actionOutlineBtn}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#f8fafc'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#ffffff'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <ArrowLeftRight size={14} />
+                  <span>Re-Route Ticket</span>
+                </div>
+                <ChevronRight size={13} color="#9ca3af" />
+              </button>
+              <button
+                onClick={() => updateStatus.mutate({ id: ticket.id, status: 'RESOLVED' })}
+                disabled={isResolved || updateStatus.isPending}
+                style={{
+                  ...actionSolidBtn,
+                  opacity: isResolved || updateStatus.isPending ? 0.5 : 1,
+                  cursor:  isResolved || updateStatus.isPending ? 'not-allowed' : 'pointer',
+                }}
+                onMouseEnter={(e) => { if (!isResolved && !updateStatus.isPending) e.currentTarget.style.background = '#1e293b'; }}
+                onMouseLeave={(e) => { if (!isResolved && !updateStatus.isPending) e.currentTarget.style.background = '#0f172a'; }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <CheckCircle size={14} />
+                  <span>{isResolved ? 'Resolved' : updateStatus.isPending ? 'Saving…' : 'Mark Resolved'}</span>
+                </div>
+                <CheckCircle size={13} color="rgba(255,255,255,0.35)" />
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* ── AI CLASSIFICATION ── */}
         <section style={sectionStyle}>
           <div style={sectionHeaderStyle}>
@@ -296,41 +414,51 @@ export default function TicketDetailPanel({ ticketId }) {
           <div style={{ padding: '14px 16px' }}>
             <div style={jiraCard}>
               <div style={{ padding: '12px 14px' }}>
-                {AI_CLASSES.map(({ label, pct, primary }) => (
-                  <div key={label} style={{ marginBottom: primary ? 14 : 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                      <span style={{
-                        fontSize: 12, fontWeight: primary ? 600 : 400,
-                        color: primary ? '#111827' : '#6b7280',
-                        fontFamily: 'inherit',
-                      }}>
-                        {label}
-                      </span>
-                      <span style={{
-                        fontSize: 11, fontWeight: primary ? 700 : 400,
-                        color: primary ? '#111827' : '#6b7280',
-                      }}>
-                        {pct}% Confidence
-                      </span>
-                    </div>
-                    <div style={{ height: 3, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%', width: `${pct}%`,
-                        background: primary ? '#1f2937' : '#d1d5db',
-                        borderRadius: 2,
-                      }} />
-                    </div>
-                  </div>
-                ))}
-                <div style={{
-                  paddingTop: 10, marginTop: 10,
-                  borderTop: '1px solid #f1f5f9',
-                  display: 'flex', alignItems: 'center', gap: 5,
-                }}>
-                  <span style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.4 }}>
-                    ⓘ Classified by watsonx.ai L3 model
-                  </span>
-                </div>
+                {!aiLog ? (
+                  <span style={{ fontSize: 12, color: '#9ca3af' }}>No classification data</span>
+                ) : (() => {
+                  const pct    = aiLog.confidenceScore != null ? Math.round(Number(aiLog.confidenceScore)) : null;
+                  const deptName = aiLog.predictedDepartment?.name ?? '—';
+                  const misclassified = aiLog.isMisclassified;
+                  const actualName    = aiLog.actualDepartment?.name;
+                  return (
+                    <>
+                      {/* Primary row */}
+                      <div style={{ marginBottom: pct != null ? 14 : 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: '#111827', fontFamily: 'inherit' }}>
+                            {deptName}
+                          </span>
+                          {pct != null && (
+                            <span style={{ fontSize: 11, fontWeight: 700, color: '#111827' }}>
+                              {pct}% Confidence
+                            </span>
+                          )}
+                        </div>
+                        {pct != null && (
+                          <div style={{ height: 3, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct}%`, background: '#1f2937', borderRadius: 2 }} />
+                          </div>
+                        )}
+                      </div>
+                      {/* Misclassification notice */}
+                      {misclassified && actualName && (
+                        <div style={{ marginBottom: 10 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                            <span style={{ fontSize: 12, fontWeight: 400, color: '#6b7280' }}>
+                              Corrected → {actualName}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      <div style={{ paddingTop: 10, marginTop: 10, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 10, color: '#9ca3af', lineHeight: 1.4 }}>
+                          ⓘ Classified by watsonx.ai L3 model
+                        </span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -359,7 +487,7 @@ export default function TicketDetailPanel({ ticketId }) {
               </div>
             } />
             <MetaRow label="Date Created" value={fmtDate(ticket.createdAt)} />
-            <MetaRow label="Reporter"     value={`${ticket.creator?.name ?? 'Unknown'} (ID: ${ticket.creator?.id ?? '—'})`} />
+            <MetaRow label="Reporter"     value={ticket.creator?.name ?? 'Unknown'} />
           </div>
         </section>
 
@@ -456,41 +584,7 @@ export default function TicketDetailPanel({ ticketId }) {
         </section>
 
         {/* ── RECENT ACTIVITY ── */}
-        <section style={sectionStyle}>
-          <div style={sectionHeaderStyle}>Recent Activity</div>
-          <div style={{ padding: '12px 16px 16px', position: 'relative' }}>
-            {/* vertical line — starts at first dot, ends at last */}
-            <div style={{
-              position: 'absolute',
-              left: 19, top: 18, bottom: 18,
-              width: 1, background: '#e5e7eb',
-            }} />
-            {[
-              { color: '#3b82f6', text: 'Ticket opened by John Doe',  time: 'Today at 10:42 AM' },
-              { color: '#6b7280', text: 'Agent Alpha assigned',        time: 'Today at 10:43 AM' },
-              { color: '#f59e0b', text: 'Status: Pending Employee',   time: 'Today at 10:45 AM' },
-            ].map((ev, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'flex-start',
-                gap: 10, paddingBottom: 14, position: 'relative',
-              }}>
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: ev.color, flexShrink: 0,
-                  marginTop: 3, position: 'relative', zIndex: 1,
-                }} />
-                <div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', lineHeight: '16px' }}>
-                    {ev.text}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
-                    {ev.time}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+        <RecentActivity ticket={ticket} messages={messages} />
 
         {/* ── TAGS ── */}
         <section style={{ ...sectionStyle, borderBottom: 'none' }}>
@@ -516,11 +610,59 @@ export default function TicketDetailPanel({ ticketId }) {
       {viewingAttachment && (
         <AttachmentViewer attachment={viewingAttachment} onClose={handleCloseViewer} />
       )}
+
+      {/* ── Reroute modal — agent only ── */}
+      {rerouteOpen && ticket && (
+        <RerouteModal ticket={ticket} onClose={() => setRerouteOpen(false)} />
+      )}
     </div>
   );
 }
 
 /* ── Sub-components ───────────────────────────────────────────────────────── */
+
+/* RecentActivity — renders the wired timeline section */
+function RecentActivity({ ticket, messages }) {
+  const events = useActivityFeed(ticket, messages);
+  return (
+    <section style={sectionStyle}>
+      <div style={sectionHeaderStyle}>Recent Activity</div>
+      <div style={{ padding: '12px 16px 16px', position: 'relative' }}>
+        {/* vertical connector line */}
+        {events.length > 1 && (
+          <div style={{
+            position: 'absolute',
+            left: 19, top: 18, bottom: 18,
+            width: 1, background: '#e5e7eb',
+          }} />
+        )}
+        {events.length === 0 ? (
+          <div style={{ fontSize: 12, color: '#9ca3af', padding: '4px 0' }}>No activity yet.</div>
+        ) : events.map((ev) => (
+          <div key={ev.key} style={{
+            display: 'flex', alignItems: 'flex-start',
+            gap: 10, paddingBottom: 14, position: 'relative',
+          }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: ev.color, flexShrink: 0,
+              marginTop: 3, position: 'relative', zIndex: 1,
+            }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#111827', lineHeight: '16px' }}>
+                {ev.text}
+              </div>
+              <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
+                {ev.time}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MetaRow({ label, value }) {
   return (
     <div>
@@ -550,6 +692,24 @@ const sectionHeaderStyle = {
   display: 'flex', alignItems: 'center', gap: 6,
 };
 const jiraCard = { border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.04)', background: '#ffffff' };
+
+const actionOutlineBtn = {
+  width: '100%', height: 36,
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '0 12px',
+  background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 6,
+  fontSize: 13, fontWeight: 600, color: '#0f172a', cursor: 'pointer',
+  transition: 'background 150ms',
+};
+
+const actionSolidBtn = {
+  width: '100%', height: 36,
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '0 12px',
+  background: '#0f172a', border: 'none', borderRadius: 6,
+  fontSize: 13, fontWeight: 700, color: '#ffffff',
+  transition: 'background 150ms',
+};
 
 /* ── TicketHeader ─────────────────────────────────────────────────────────── */
 function TicketHeader({ ticket }) {

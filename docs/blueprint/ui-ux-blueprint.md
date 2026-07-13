@@ -49,6 +49,19 @@ The universal app shell acts as the boundary container wrapping all screens post
   - Integrates the live **SLA Timeline Tracking Bar**. If a ticket status flips to `PENDING_EMPLOYEE`, the bar displays an animated amber pause state indicator.
   - **Reroute Trigger Overlay (`RerouteModal.jsx`)**: A rounded click modal window that lets agents override classification mistakes. Choosing a target department instantly clears the ticket from the agent's view.
 
+### Flow 3B: Teammate Workspace View (`/agent/team/:teammateId`)
+- **Entry Point**: Triggered when the agent clicks a peer's name in the "My Department Team" collapsible sub-panel in the navigation rail.
+- **Layout Topology**: Identical three-pane layout as the main Agent Command Center. The left pane lists tickets scoped to the selected teammate (`assignee_id == teammateId AND department_id == currentAgent.department_id`).
+- **Read-Only Overlay State**:
+  - A non-dismissible top banner persists across all ticket views in this route: `[Viewing teammate's workspace — Read-Only]`.
+  - All text inputs, send buttons, status droppers, re-route controls, and attachment uploaders are visually disabled (reduced opacity, `pointer-events: none`).
+- **Takeover Interaction Flow**:
+  1. A **"Take Over Ticket"** button is visible on each ticket card in the left pane list and in the right detail panel's primary action area — displayed even under the read-only overlay.
+  2. Agent clicks **"Take Over Ticket"**.
+  3. A brief confirmation modal appears: *"You are about to take over this ticket from [teammate name]. This will move it to your My Queue and grant you full access."* — with **Confirm** and **Cancel** targets.
+  4. On **Confirm**: fires `PATCH /api/tickets/:id/takeover`, which atomically sets `assignee_id = currentUser.id` and `status = 'IN_PROGRESS'`, and writes a `TICKET_TAKEN_OVER` audit event.
+  5. On success: the read-only overlay is lifted, the ticket is removed from the teammate view list, and the router navigates the claiming agent to `/agent/:ticketId` (their normal full-access workspace).
+
 ### Flow 4: Core Conversation & Collaborative Thread (`CommentSection.jsx`)
 - **Visual Structure**: Threaded discussion logs. Employee comments align to the left margins; internal Agent entries use subtle slate callout shading backgrounds and align to the right margins.
 - **State Machine Trigger Mechanics**:

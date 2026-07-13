@@ -13,25 +13,25 @@ axiosInstance.interceptors.request.use((config) => {
   return config;
 });
 
-// On 401 — token is missing, expired, or invalid.
-// Clear the stored session and redirect to login so the user re-authenticates.
-// Skip auth endpoints so a failed login attempt doesn't trigger a redirect loop.
+// On 401 — only treat GET background polls as session-expiry signals.
+// PATCH/POST/PUT/DELETE mutations can legitimately return 401 for authorization
+// reasons unrelated to the session (e.g. endpoint-level access control).
+// Firing auth:unauthorized on those would log the user out during normal use.
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    const isAuthEndpoint  = error.config?.url?.startsWith('/api/auth');
-    // Blob responses (e.g. attachment downloads/views) carry their own error
-    // state in the UI — never redirect to login from them, and never try to
-    // read error.response.status directly (it arrives as a Blob, not JSON).
-    const isBlobRequest   = error.config?.responseType === 'blob';
-    const hadToken        = !!localStorage.getItem('hd_token');
+    const isAuthEndpoint = error.config?.url?.startsWith('/api/auth');
+    const isBlobRequest  = error.config?.responseType === 'blob';
+    // Only background GET reads are safe session-expiry indicators.
+    const isGetRequest   = error.config?.method?.toLowerCase() === 'get';
 
-    if (!isBlobRequest && error.response?.status === 401 && !isAuthEndpoint && hadToken) {
-      localStorage.removeItem('hd_token');
-      localStorage.removeItem('hd_user');
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.href = '/login';
-      }
+    if (
+      isGetRequest &&
+      !isBlobRequest &&
+      !isAuthEndpoint &&
+      error.response?.status === 401
+    ) {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
     return Promise.reject(error);
   }

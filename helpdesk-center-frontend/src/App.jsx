@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth, NavigateInjector } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
@@ -9,6 +9,8 @@ import TicketsIndexPage from './pages/TicketsIndexPage';
 import SettingsPage from './pages/SettingsPage';
 import ForbiddenPage from './pages/ForbiddenPage';
 import ManagerDashboard from './pages/ManagerDashboard';
+import TeamPage from './pages/TeamPage';
+import TeammateWorkspacePage from './pages/TeammateWorkspacePage';
 
 /**
  * Guards the protected subtree.
@@ -18,7 +20,14 @@ import ManagerDashboard from './pages/ManagerDashboard';
 function AuthGuard() {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  return <Outlet />;
+  // NavigateInjector mounts inside the Router so it can call useNavigate(),
+  // then injects the navigate function into AuthProvider for force-logout.
+  return (
+    <>
+      <NavigateInjector />
+      <Outlet />
+    </>
+  );
 }
 
 /**
@@ -55,10 +64,17 @@ const router = createBrowserRouter([
       { index: true,          element: <RoleRedirect /> },
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
+      { path: 'agent/team',              element: <TeamPage /> },
+      { path: 'agent/team/:peerId',      element: <TeammateWorkspacePage /> },
+      { path: 'manager/team/:peerId',    element: <TeammateWorkspacePage /> },
+      { path: 'agent/:id',    element: <AgentDashboard /> },
       { path: 'admin',        element: <AdminDashboard /> },
       { path: 'tickets',      element: <TicketsIndexPage /> },
       { path: 'tickets/:id',  element: <TicketDetailPage /> },
       { path: 'manager',      element: <ManagerDashboard /> },
+      { path: 'manager/team',      element: <ManagerDashboard tab="team" /> },
+      { path: 'manager/analytics', element: <ManagerDashboard tab="analytics" /> },
+      { path: 'manager/risk',      element: <ManagerDashboard tab="risk" /> },
       { path: 'settings',     element: <SettingsPage /> },
       { path: '403',          element: <ForbiddenPage /> },
       { path: '*',            element: <RoleRedirect /> },

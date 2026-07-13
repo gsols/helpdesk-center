@@ -39,3 +39,27 @@ export const rerouteTicket = (id, targetDepartmentId) =>
 
 export const splitTicket = (id, splits) =>
   api.post(`/api/tickets/${id}/split`, splits);
+
+export const deleteAllTickets = () =>
+  api.delete('/api/test/tickets');
+
+export const getAiLog = (id) =>
+  api.get(`/api/tickets/${id}/ai-log`);
+
+export const getDeptQueue = () =>
+  api.get('/api/tickets/dept-queue');
+
+export const getRiskQueue = () =>
+  api.get('/api/tickets/risk-queue');
+
+/** Agent requests a gated takeover — sets status to PENDING_APPROVAL. */
+export const requestTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/request-takeover`);
+
+/** Manager approves the pending takeover. */
+export const approveTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/approve-takeover`);
+
+/** Manager rejects the pending takeover. */
+export const rejectTakeover = (id) =>
+  api.patch(`/api/tickets/${id}/reject-takeover`);

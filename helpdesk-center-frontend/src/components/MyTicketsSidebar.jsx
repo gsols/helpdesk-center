@@ -13,7 +13,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTickets } from '../hooks/useTickets';
-import { ChevronLeft, Search } from 'lucide-react';
+import { ChevronLeft, Plus, Search } from 'lucide-react';
 
 function TicketStatusBadge({ status }) {
   const s = status?.toUpperCase() ?? '';
@@ -64,7 +64,7 @@ export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle, 
         display:    'flex',
         flexDirection: 'column',
         overflow:   'hidden',
-        transition: collapsed ? 'width 200ms ease-in-out, min-width 200ms ease-in-out' : 'none',
+        transition: 'width 200ms ease-in-out, min-width 200ms ease-in-out',
         flexShrink: 0,
         position:   'relative',
       }}
@@ -123,6 +123,27 @@ export default function MyTicketsSidebar({ activeTicketId, collapsed, onToggle, 
             }}
           />
         </div>
+      </div>
+
+      {/* ── New Ticket button ──────────────────────────────────────────── */}
+      <div style={{ padding: '10px 12px', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            width: '100%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+            background: '#0f172a', color: '#ffffff',
+            border: 'none', borderRadius: 4,
+            padding: '7px 10px',
+            fontSize: 12, fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#1e293b'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#0f172a'; }}
+        >
+          <Plus size={13} />
+          New Ticket
+        </button>
       </div>
 
       {/* ── Ticket list ────────────────────────────────────────────────── */}
