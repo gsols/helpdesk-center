@@ -7,11 +7,11 @@ FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
 # Copy dependency descriptors first so Docker can cache the dep-download layer.
-COPY pom.xml .
+COPY helpdesk-center-backend/pom.xml .
 RUN mvn dependency:go-offline -q
 
 # Copy source and build the fat JAR, skipping tests (run tests in CI instead).
-COPY src ./src
+COPY helpdesk-center-backend/src ./src
 RUN mvn clean package -DskipTests -q
 
 # ── Stage 2: Runtime ─────────────────────────────────────────────────────────
