@@ -46,7 +46,7 @@ The universal app shell acts as the boundary container wrapping all screens post
   - **Tab C: Department Archive (Teammate View)**: Pulls tickets matching `department_id == agent.department_id AND assignee_id != current_user.id`. Enforces a persistent overlay banner alert: `[Read-Only Mode: Teammate Assigned Workspace]`.
 - **The Interactive Right Detail View (`TicketDetailPanel.jsx`)**:
   - Displays the active conversation thread (`CommentSection.jsx`).
-  - Integrates the live **SLA Timeline Tracking Bar**. If a ticket status flips to `PENDING_EMPLOYEE`, the bar displays an animated amber pause state indicator.
+  - Integrates the live **SLA Timeline Tracking Bar**. The bar evaluates five mutually exclusive render states (`SAFE`, `WARNING`, `ALERT`, `PAUSED`, `BREACHED`) defined in full in `frontend-design-system.md § 2B`. If a ticket status flips to `PENDING_EMPLOYEE`, the bar enters the **PAUSED** state and freezes width with a muted opacity and italic caption. If `CURRENT_TIMESTAMP > due_at` and status is not `RESOLVED` or `CLOSED`, the bar enters **BREACHED** state and drains to 0% with a **"⚠️ SLA BREACHED / EXPIRED"** header flag.
   - **Reroute Trigger Overlay (`RerouteModal.jsx`)**: A rounded click modal window that lets agents override classification mistakes. Choosing a target department instantly clears the ticket from the agent's view.
 
 ### Flow 3B: Teammate Workspace View (`/agent/team/:teammateId`)
@@ -65,8 +65,8 @@ The universal app shell acts as the boundary container wrapping all screens post
 ### Flow 4: Core Conversation & Collaborative Thread (`CommentSection.jsx`)
 - **Visual Structure**: Threaded discussion logs. Employee comments align to the left margins; internal Agent entries use subtle slate callout shading backgrounds and align to the right margins.
 - **State Machine Trigger Mechanics**:
-  - **Action A: Agent Posts Comment**: Backend saves message payload, fires async background update email notification threads, and auto-mutates `ticket.status` state to `PENDING_EMPLOYEE`.
-  - **Action B: Employee Posts Comment**: Reverts state instantly back to `IN_PROGRESS`, restarting the SLA tracking timer math routines in the database.
+  - **Action A: Agent Posts Comment**: Backend saves message payload, fires async background update email notification threads, and auto-mutates `ticket.status` state to `PENDING_EMPLOYEE`. This transition triggers the **PAUSED** render state on `SlaProgressBar.jsx` (see `frontend-design-system.md § 2B`).
+  - **Action B: Employee Posts Comment**: Reverts state instantly back to `IN_PROGRESS`, restarting the SLA tracking timer math routines in the database. The progress bar exits the **PAUSED** state and resumes live percentage evaluation.
 
 ### Flow 5: Operational Governance & Management Hub (`AdminDashboard.jsx`)
 - **Analytics Management Engine (`AnalyticsPanel.jsx`)**:

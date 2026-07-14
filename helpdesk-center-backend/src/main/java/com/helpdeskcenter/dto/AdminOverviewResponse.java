@@ -14,6 +14,7 @@ public record AdminOverviewResponse(
     long closedCount,
     long triageCount,
     long breachedCount,
+    boolean slaConfigured,
     BigDecimal slaComplianceRate,
     BigDecimal avgFrtHours,
     BigDecimal aiAccuracyPct,

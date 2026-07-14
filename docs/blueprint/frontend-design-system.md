@@ -44,6 +44,38 @@ The agent workspace is structured into a fluid, side-by-side layout:
 
 ---
 
+## 2B. SLA Progress Bar UI State Engine
+
+All rendering loops inside `SlaProgressBar.jsx`, `TicketCard.jsx`, and `TicketDetailPanel.jsx` **must** evaluate the `due_at` timestamp and the ticket `status` field to derive one of the following five mutually exclusive states. States are evaluated in priority order — **BREACHED** and **PAUSED** are checked before percentage thresholds.
+
+### State Evaluation Order & Rendering Contract
+
+| Priority | State | Condition | Bar Fill | Text / Animation |
+|----------|-------|-----------|----------|-----------------|
+| 1 | **BREACHED** | `CURRENT_TIMESTAMP > due_at` **AND** `status NOT IN ('RESOLVED', 'CLOSED')` | Drain bar width to `0%` | Header flag renders as **"⚠️ SLA BREACHED / EXPIRED"** in `text-red-600 font-semibold` |
+| 2 | **PAUSED** | `status == 'PENDING_EMPLOYEE'` | Freeze bar at its current width | Apply `opacity-50` muted tint; display italicized caption below bar: *"SLA Clock Paused (Awaiting Employee response)"* |
+| 3 | **ALERT** | `remaining_time < 25%` of total window | Bar fills to current `remaining_time%` | `bg-red-500` with `animate-pulse` applied to both the bar and the remaining-time text label |
+| 4 | **WARNING** | `remaining_time` is between `25%` and `50%` of total window | Bar fills to current `remaining_time%` | Steady `bg-amber-500`, no animation |
+| 5 | **SAFE** | `remaining_time > 50%` of total window | Bar fills to current `remaining_time%` | Steady `bg-blue-500`, no animation |
+
+### Calculation Reference
+
+```
+remaining_time_pct = ((due_at - CURRENT_TIMESTAMP) / (due_at - created_at)) * 100
+```
+
+- `due_at` and `created_at` are ISO 8601 timestamps sourced from the ticket payload.
+- The percentage must be clamped: `max(0, min(100, remaining_time_pct))`.
+- When `due_at` is `null` or missing (e.g. SLA rule not yet applied), the bar must render in a neutral `bg-slate-300` state with no state label.
+
+### Per-Component Rendering Rules
+
+- **`SlaProgressBar.jsx`**: The canonical state-evaluation component. All five states are implemented here. Other components must delegate to this component rather than re-implementing the logic.
+- **`TicketCard.jsx`**: Renders `<SlaProgressBar />` inline below the ticket subject. In **BREACHED** state, the card's left accent border must switch to `border-l-4 border-red-500`.
+- **`TicketDetailPanel.jsx`**: Renders `<SlaProgressBar />` in the metadata header block. In **BREACHED** state, the panel's section title block must display the **"⚠️ SLA BREACHED / EXPIRED"** flag text in place of the normal time-remaining string.
+
+---
+
 ## 3. UI/UX Interaction Behaviors
 *   **Input Focus States**: All active search engines and textual form fields must highlight clean border changes without shifting layout boundaries: `focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`.
 *   **Modal & Panel Animations**: Transitions, panel slips, and dropzone entries must avoid complex bouncy dynamics. Use standard swift step adjustments: `transition-all duration-150 ease-in-out`.
@@ -67,3 +99,4 @@ All component code generation must strictly map background, text, and boundary l
 - **Medium Priority / In Progress (Blue State)**: Light: `bg-blue-50 text-blue-700 border-blue-200` | Dark: `bg-blue-950/20 text-blue-400 border-blue-900/50`
 - **High Priority / Attention Need (Amber State)**: Light: `bg-amber-50 text-amber-700 border-amber-200` | Dark: `bg-amber-950/20 text-amber-400 border-amber-900/50`
 - **Critical Breaches / Blocker Alerts (Red Alarm)**: Light: `bg-red-50 text-red-700 border-red-200` | Dark: `bg-red-950/30 text-red-400 border-red-900/50`
+

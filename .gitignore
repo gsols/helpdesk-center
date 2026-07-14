@@ -17,3 +17,5 @@ front-end-design/
 
 # Bob MCP config (contains secrets)
 .bob/mcp.json
+
+helpdesk-center-backend/src/main/resources/application-local.properties

@@ -70,7 +70,18 @@ function LiveClock() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="font-mono text-[12px] bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200 text-slate-600 select-none tabular-nums">
+    <span style={{
+      fontFamily: "'JetBrains Mono', monospace",
+      fontSize: 12,
+      background: '#f1f5f9',
+      padding: '6px 32px',
+      borderRadius: 4,
+      border: '1px solid #e2e8f0',
+      color: '#475569',
+      userSelect: 'none',
+      fontVariantNumeric: 'tabular-nums',
+      letterSpacing: '0.04em',
+    }}>
       {time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
     </span>
   );
@@ -437,7 +448,7 @@ function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
         {(user?.companyName || user?.companyId) && (
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+            fontSize: 10, fontWeight: 700, padding: '6px 12px', borderRadius: 4,
             border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8',
             letterSpacing: '0.04em',
             display: 'flex', alignItems: 'center', gap: 4,

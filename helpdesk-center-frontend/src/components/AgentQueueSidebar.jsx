@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMyQueue, usePool, useArchive } from '../hooks/useTickets';
 import { ChevronLeft, Search } from 'lucide-react';
+import SlaProgressBar from './SlaProgressBar';
 
 const TABS = ['My Queue', 'Dept Pool', 'Archive'];
 
@@ -208,6 +209,14 @@ export default function AgentQueueSidebar({ activeTicketId, collapsed, onToggle,
               }}>
                 {t.title}
               </p>
+              {/* SLA remaining bar */}
+              <div style={{ marginTop: 6 }}>
+                <SlaProgressBar
+                  createdAt={t.createdAt}
+                  dueAt={t.dueAt}
+                  status={t.status}
+                />
+              </div>
             </div>
           );
         })}
