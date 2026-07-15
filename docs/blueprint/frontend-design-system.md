@@ -76,6 +76,41 @@ remaining_time_pct = ((due_at - CURRENT_TIMESTAMP) / (due_at - created_at)) * 10
 
 ---
 
+## 2C. Department Manager Hub Component Rules (`DepartmentManager.jsx`)
+
+All elements inside `DepartmentManager.jsx` and its sub-components must inherit the global sharp-edge structural rule (`rounded-none`) and the high-density table pattern.
+
+### Inspector Drawer Panel (`DepartmentInspectorDrawer.jsx`)
+- **Drawer Container**: Fixed right-side slide-in panel (`w-96`), `rounded-none`, `border-l border-slate-200/80 dark:border-slate-800`, `bg-white dark:bg-slate-900`.
+- **Manager Name Row**: Displayed as a single inline flex row. Name string uses `text-slate-900 font-medium`. The pencil edit icon (`lucide:Pencil`, `w-3.5 h-3.5`) renders in `text-slate-400 hover:text-slate-700 cursor-pointer` immediately to the right.
+- **Manager Live-Search Input** (active edit state): `w-full border border-slate-300 rounded-none px-2 py-1 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`. Dropdown results render as a `rounded-none` floating list panel below the input.
+- **Active Agents Data Grid**: Identical token pattern to the global High-Density Jira-Style Grid (`§ 2B`). Column headers: `text-[11px] font-semibold tracking-wider text-slate-500 uppercase bg-slate-50`. No outer border frame — horizontal `divide-y divide-slate-100 dark:divide-slate-800/60` only.
+
+### Action Buttons
+- **"Add New Agent" Button**: `bg-slate-900 text-white text-xs px-3 py-1.5 rounded-none hover:bg-slate-700 transition-colors`.
+- **"Delete Department" Button**: `bg-red-600 text-white text-xs px-3 py-1.5 rounded-none hover:bg-red-700 transition-colors`.
+- **"Create New Department" Button**: `bg-slate-900 text-white text-sm px-4 py-2 rounded-none hover:bg-slate-700 transition-colors`.
+
+### Create Department Modal
+The creation modal contains three input sections stacked vertically:
+- **Department Name Input**: Standard `inputStyle` text field, required. Placeholder: "e.g. Information Technology".
+- **Manager Picker**: Live-search input returning all company users. Selected user renders as a dismissible chip below the input. Required — the "Create" confirm button stays disabled until a manager is selected.
+- **Initial Agents Multi-Picker**: Live-search input filtered to exclude the already-selected manager. Selected users render as a row of dismissible chips. Optional — may be left empty.
+- **Action Row**: Right-aligned. "Cancel" (`btnSecondary`) + "Create Department" (`btnPrimary`, disabled until name + manager are filled).
+
+### Confirmation / Interlock Modals
+All three confirmation modals (Delete Department, Manager Handover, Agent Transfer) share a consistent structure:
+- **Backdrop**: `fixed inset-0 bg-black/40 z-50`.
+- **Modal Panel**: `bg-white dark:bg-slate-900 rounded-none border border-slate-200/80 dark:border-slate-800 p-6 max-w-md w-full shadow-lg`.
+- **Title**: `text-slate-900 font-semibold text-base`.
+- **Body Copy**: `text-slate-500 text-sm mt-2 leading-relaxed`.
+- **Action Row**: `flex gap-3 mt-6 justify-end`.
+  - **Confirm Target** (destructive context): `bg-red-600 text-white text-sm px-4 py-2 rounded-none hover:bg-red-700`.
+  - **Confirm Target** (non-destructive / handover context): `bg-slate-900 text-white text-sm px-4 py-2 rounded-none hover:bg-slate-700`.
+  - **Cancel Target**: `bg-white text-slate-700 border border-slate-300 text-sm px-4 py-2 rounded-none hover:bg-slate-50`.
+
+---
+
 ## 3. UI/UX Interaction Behaviors
 *   **Input Focus States**: All active search engines and textual form fields must highlight clean border changes without shifting layout boundaries: `focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`.
 *   **Modal & Panel Animations**: Transitions, panel slips, and dropzone entries must avoid complex bouncy dynamics. Use standard swift step adjustments: `transition-all duration-150 ease-in-out`.

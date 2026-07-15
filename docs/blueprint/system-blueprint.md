@@ -40,7 +40,10 @@ The system enforces strict data-privacy isolation across four explicit roles:
    - Can view all tickets inside their assigned department.
    - Has permission to manually override workloads, reassign tickets to specific agents, and view team resolution performance metrics.
 4. **System Admin**:
-   - Global multi-tenant clearance. Configures systemic parameters, creates/deletes company spaces, manages global settings, and configures third-party integrations.
+    - Global multi-tenant clearance. Configures systemic parameters, creates/deletes company spaces, manages global settings, and configures third-party integrations.
+    - **Department Lifecycle Authority**: Creates and destroys department records. Destruction is an atomic cascade — see **§ I** below.
+    - **Agent Allocation Control**: Assigns unassigned employees or transfers active agents from other departments directly from the Department Inspector Panel.
+    - **Manager Handover Control**: Replaces the active `DEPT_MANAGER` of any department. The outgoing manager is immediately downgraded to `EMPLOYEE`.
 
 ### C. Handling Misclassifications & AI Feedback Loops
 1. **The Re-Route Mechanism**: If the AI misclassifies a ticket (e.g., routes a confidential payroll ticket to the IT department queue), the IT agent must click a **"Re-Route Ticket"** action.
@@ -60,6 +63,34 @@ Every ticket must transition through these precise, state-controlled enums:
 1. **Database Decoupling**: File payloads must never be written into PostgreSQL as binary data blocks. 
 2. **Object Storage Engine**: Binary assets must be uploaded to an Object Storage Service (AWS S3, Google Cloud Storage, or MinIO). PostgreSQL stores only metadata and a secure web retrieval locator string (`secure_url`).
 3. **Association Scope**: Attachments are valid on initial ticket generation (associated to `ticket_id`) or dynamically appended inside conversation text blocks (associated to `message_id`).
+
+### I. System Admin Department Management Rules
+
+#### I.0 — Department Creation
+`POST /api/departments` accepts `{ name, managerId, agentIds[] }`. In a single transaction:
+1. A new `departments` row is inserted.
+2. The selected manager's row is updated: `role = 'DEPT_MANAGER'`, `department_id = new_department.id`.
+3. Each selected agent's row is updated: `role = 'AGENT'`, `department_id = new_department.id` (cross-department transfers are treated the same as the Add Agent pipeline in § I.2).
+
+#### I.1 — Cascading Department Deletion (Tear-Down Rule)
+When a System Admin confirms the "Delete Department" action, the backend executes a single atomic transaction:
+1. **Ticket Purge**: Every `tickets` row with `department_id == deleted_department.id` is hard-deleted via `ON DELETE CASCADE`. All child tickets (`parent_id` cascade), `ticket_messages`, `attachments`, `ai_classification_logs`, and `notifications` referencing those tickets are purged with them.
+2. **Agent Status Strip**: Every `users` row inside the deleted department where `role IN ('AGENT', 'DEPT_MANAGER')` is updated: `department_id = NULL`, `role = 'EMPLOYEE'`. These users lose all agent queue access instantly.
+
+#### I.2 — Dynamic Agent Allocation Pipeline (Add / Transfer)
+When an admin opens the Department Inspector Panel and clicks **"Add New Agent"**:
+1. **Eligibility Filter**: The backend returns all users in the same company *except* those already in the current department. This combined list includes unassigned employees and agents active in other departments.
+2. **Standard Employee Promotion**: Selecting an employee with no department sets `department_id = current_department.id`, `role = 'AGENT'`.
+3. **Cross-Department Agent Transfer Interlock**: If the selected user is currently `role = 'AGENT'` in another department, the frontend intercepts the action and forces a confirmation modal before proceeding. On confirmation: `department_id` is updated to the target department; `role` remains `'AGENT'`. The user's active ticket assignments in the original department are implicitly wiped by the change.
+
+#### I.3 — Department Manager Handover Interlock
+The System Admin may replace the active `DEPT_MANAGER` of any department at any time:
+1. The admin clicks the inline pencil icon next to the manager's name in the Inspector Panel.
+2. A live search input appears, returning all company users **except** the currently assigned manager.
+3. Selecting a new user triggers a confirmation modal: *"Are you sure you want to change the manager of this department? The previous manager will be downgraded to a standard employee, and the new user will gain full administrative operational clearance over this department's teams and analytics metrics."*
+4. On confirmation, the backend executes two updates atomically:
+   - Previous manager row: `role = 'EMPLOYEE'` (department_id remains unchanged unless admin explicitly removes them).
+   - New manager row: `role = 'DEPT_MANAGER'`, `department_id = target_department.id`.
 
 ### F. Asynchronous Non-Blocking Email Layer
 1. **Asynchronous Execution Constraint**: Email transmission commands must never run directly within the HTTP Request-Response lifecycle threads. Doing so creates artificial execution latency for the client.
@@ -157,6 +188,10 @@ To support arbitrary operational models for different companies, the system pane
 - [ ] Write the transactional layer for Parent-Child splitting logic.
 - [ ] Program the fair-share assignment routing mechanisms (Manual Pull vs. Round-Robin Workload Calculation).
 - [ ] Write internal validation controls protecting against cross-department data leakage.
+- [ ] Implement `DELETE /api/departments/{id}` — atomic cascade: PostgreSQL `ON DELETE CASCADE` purges tickets; backend bulk-updates all former agents/managers to `role = 'EMPLOYEE'`, `department_id = NULL`.
+- [ ] Implement `GET /api/departments/{id}/eligible-agents` — returns all company users excluding current department members (for the Add Agent overlay).
+- [ ] Implement `POST /api/departments/{id}/agents` — promotes an employee or transfers an agent; cross-department transfer requires confirmation flag in request body.
+- [ ] Implement `PATCH /api/departments/{id}/manager` — atomically downgrades previous manager to `EMPLOYEE` and promotes new user to `DEPT_MANAGER`.
 
 ### Phase 6: Frontend Dashboard & TanStack Syncing
 - [ ] Scaffolding layout folders with Vite, Tailwind CSS v4, and React Router DOM v7.

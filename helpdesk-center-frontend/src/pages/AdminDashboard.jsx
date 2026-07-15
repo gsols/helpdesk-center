@@ -11,17 +11,19 @@
  *   sla        → SlaConfigPanel
  */
 import { useSearchParams } from 'react-router-dom';
-import AppShell          from '../components/AppShell';
-import AdminOverviewPanel from '../components/AdminOverviewPanel';
-import TriageQueue        from '../components/TriageQueue';
-import AnalyticsPanel     from '../components/AnalyticsPanel';
-import SlaConfigPanel     from '../components/SlaConfigPanel';
+import AppShell            from '../components/AppShell';
+import AdminOverviewPanel  from '../components/AdminOverviewPanel';
+import TriageQueue         from '../components/TriageQueue';
+import AnalyticsPanel      from '../components/AnalyticsPanel';
+import SlaConfigPanel      from '../components/SlaConfigPanel';
+import DepartmentManager   from '../components/DepartmentManager';
 
 const TABS = [
-  { id: 'overview',   label: 'Overview'      },
-  { id: 'triage',     label: 'Triage Queue'  },
-  { id: 'analytics',  label: 'Analytics'     },
-  { id: 'sla',        label: 'SLA Rules'     },
+  { id: 'overview',     label: 'Overview'     },
+  { id: 'triage',       label: 'Triage Queue' },
+  { id: 'analytics',    label: 'Analytics'    },
+  { id: 'sla',          label: 'SLA Rules'    },
+  { id: 'departments',  label: 'Departments'  },
 ];
 
 export default function AdminDashboard() {
@@ -31,10 +33,11 @@ export default function AdminDashboard() {
 
   const content = (() => {
     switch (activeTab) {
-      case 'triage':    return <TriageQueue />;
-      case 'analytics': return <AnalyticsPanel />;
-      case 'sla':       return <SlaConfigPanel />;
-      default:          return <AdminOverviewPanel />;
+      case 'triage':      return <TriageQueue />;
+      case 'analytics':   return <AnalyticsPanel />;
+      case 'sla':         return <SlaConfigPanel />;
+      case 'departments': return <DepartmentManager />;
+      default:            return <AdminOverviewPanel />;
     }
   })();
 

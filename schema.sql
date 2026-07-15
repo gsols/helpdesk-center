@@ -45,7 +45,7 @@ CREATE TABLE sla_rules (
 CREATE TABLE tickets (
     id BIGSERIAL PRIMARY KEY,
     company_id BIGINT NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-    department_id BIGINT REFERENCES departments(id) ON DELETE SET NULL, -- NULL implies "Uncategorized" Queue
+    department_id BIGINT REFERENCES departments(id) ON DELETE CASCADE,
     creator_id BIGINT NOT NULL REFERENCES users(id),
     assignee_id BIGINT REFERENCES users(id) ON DELETE SET NULL, -- NULL implies unassigned in pool
     parent_id BIGINT REFERENCES tickets(id) ON DELETE CASCADE, -- Self-reference for multi-department splits
@@ -117,3 +117,19 @@ CREATE INDEX idx_messages_ticket         ON ticket_messages(ticket_id);
 CREATE INDEX idx_attachments_ticket      ON attachments(ticket_id);
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
 CREATE INDEX idx_notifications_unread    ON notifications(recipient_id, is_read);
+
+-- ============================================================================
+-- 7. CASCADING CONSTRAINT MIGRATIONS (Department Deletion Rules)
+-- ============================================================================
+
+-- Users: downgrade to EMPLOYEE + NULL department when a division is deleted
+--        (already ON DELETE SET NULL in CREATE TABLE; ALTER ensures enforcement
+--         if the schema was previously deployed with a stricter constraint)
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_department_id_fkey;
+ALTER TABLE users ADD CONSTRAINT fk_users_department
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE SET NULL;
+
+-- Tickets: fully wipe all ticket rows belonging to a deleted department
+ALTER TABLE tickets DROP CONSTRAINT IF EXISTS tickets_department_id_fkey;
+ALTER TABLE tickets ADD CONSTRAINT fk_tickets_department
+    FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE;

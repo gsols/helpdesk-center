@@ -76,6 +76,36 @@ The universal app shell acts as the boundary container wrapping all screens post
   - A settings interface where managers manipulate priority parameters.
   - Features high-density row sliders or form metrics allowing admins to update `target_resolution_hours` variables matching specific priorities, directly editing records inside the `sla_rules` table.
 
+### Flow 7: System Admin Department & Team Manager Hub (`DepartmentManager.jsx`)
+Accessible only when `currentUser.role == 'SYS_ADMIN'`. Provides full structural control over tenant corporate divisions.
+
+#### Screen A: Master Department List View
+- **Layout Topology**: High-density `rounded-none` card grid. Each row represents one department record.
+- **"Create New Department" Button**: Opens a sharp-edged modal form with three fields:
+  1. **Department Name** (text input, required).
+  2. **Manager** (live-search user picker, required) — returns all company users; the selected user will be assigned `role = 'DEPT_MANAGER'` on creation.
+  3. **Initial Agents** (multi-select user picker, optional) — returns all company users excluding the selected manager; zero or more may be added at creation time.
+  On confirm: `POST /api/departments` with `{ name, managerId, agentIds[] }`.
+- **Department Card Click**: Slides open the right-side **Inspector Drawer Panel** (Screen B).
+- **"Delete Department" Button** (per row): Red-themed action target. On click, surfaces a hard-edged absolute confirmation modal with a cascade data warning:
+  - Modal copy: *"Deleting this department will permanently purge all associated tickets, messages, and attachments. All agents and managers will be downgraded to standard employees."*
+  - On confirm: fires `DELETE /api/departments/{id}`. The PostgreSQL `ON DELETE CASCADE` constraint purges all ticket rows. The backend then bulk-updates all former `AGENT` / `DEPT_MANAGER` rows to `role = 'EMPLOYEE'`, `department_id = NULL`.
+
+#### Screen B: Department Inspector Drawer Panel
+The right-side drawer opens when a department card is clicked on Screen A.
+
+- **Department Name Display**: Static read-only string at the top of the drawer.
+- **Manager Field with Handover Interlock**:
+  - Displays the current manager's name with an **inline pencil icon** target beside it.
+  - **Pencil Click**: Converts the field into a live-search input. Backend call: `GET /api/users?company={id}&exclude_manager={managerId}`. Returns all company users except the current manager.
+  - **Selecting a New Manager**: Triggers the handover confirmation modal: *"Are you sure you want to change the manager of this department? The previous manager will be downgraded to a standard employee, and the new user will gain full administrative operational clearance over this department's teams and analytics metrics."*
+  - **On Confirm**: `PATCH /api/departments/{id}/manager` — atomically sets new user to `role = 'DEPT_MANAGER'` + `department_id = target_department.id`; previous manager reverts to `role = 'EMPLOYEE'`.
+- **Active Agents Data Grid**: High-density table listing all users where `role == 'AGENT' AND department_id == current_department.id`. Columns: Name, Email, Active Ticket Count.
+- **"Add New Agent" Button**: Opens an overlay selection panel.
+  - Backend call: `GET /api/departments/{id}/eligible-agents` — returns all company users not in the current department (unassigned employees + agents from other departments).
+  - **Selecting an Unassigned Employee**: `POST /api/departments/{id}/agents` with `{ userId }` — sets `department_id = current_department.id`, `role = 'AGENT'`.
+  - **Selecting an Active Agent from Another Department**: The frontend intercepts and renders the **Transfer Interlock Modal**: *"Transfer this agent to this department? This will instantly remove them from their original department queues and wipe their active ticket assignments."* On confirm: same `POST` call with a `{ userId, confirmTransfer: true }` flag.
+
 ### Flow 6: Account System Settings (`SettingsPage.jsx`)
 - **Visual Structure**: Twin-panel split framework. Left sidebar selects setting target domains; right panel surfaces editable inputs.
 - **Functional Configuration Fields**:
