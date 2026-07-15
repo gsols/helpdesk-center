@@ -7,7 +7,7 @@
  *   - Active agents table
  *   - "Add New Agent" overlay with transfer interlock
  */
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { X, Pencil, UserPlus, Users } from 'lucide-react';
 import {
   useDepartmentDetail,
@@ -321,11 +321,22 @@ export default function DepartmentInspectorDrawer({ deptId, allUsers, onClose })
 // ─── Drawer shell wrapper ─────────────────────────────────────────────────────
 
 function DrawerShell({ name, onClose, children }) {
+  const [visible, setVisible] = useState(false);
+
+  // Trigger the enter animation on the next paint after mount
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
   return (
     <div style={{
       position: 'relative', width: 380, flexShrink: 0,
       borderLeft: `1px solid ${T.border}`, background: '#fff',
       display: 'flex', flexDirection: 'column', overflowY: 'auto',
+      transform: visible ? 'translateX(0)' : 'translateX(24px)',
+      opacity: visible ? 1 : 0,
+      transition: 'transform 240ms ease, opacity 220ms ease',
     }}>
       {/* Header */}
       <div style={{

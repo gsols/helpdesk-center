@@ -275,7 +275,12 @@ export default function DepartmentManager() {
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden', position: 'relative' }}>
 
       {/* ── Left: Department List ─────────────────────────────────────────── */}
-      <div style={{ flex: 1, overflowY: 'auto', paddingRight: selectedDeptId ? 0 : 0 }}>
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        transition: 'padding-right 250ms ease',
+        paddingRight: selectedDeptId ? 8 : 0,
+      }}>
 
         {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -285,7 +290,7 @@ export default function DepartmentManager() {
               {departments.length} department{departments.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <button onClick={() => setShowCreate(true)} style={{ ...btnPrimary, gap: 6 }}>
+          <button onClick={() => setShowCreate(true)} style={{ ...btnPrimary, gap: 6, marginRight: 12 }}>
             <Plus size={14} />
             Create New Department
           </button>
