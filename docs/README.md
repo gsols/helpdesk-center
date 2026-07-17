@@ -27,6 +27,7 @@ Each plan records a discrete body of work with sub-tasks, expected outcomes, and
 | 03 | [`plans/03-split-panel-plan.md`](plans/03-split-panel-plan.md) | Split-pane ticket detail view, maximize/minimize, URL query-param state | ✅ All sub-tasks done |
 | 04 | [`plans/04-filter-plan.md`](plans/04-filter-plan.md) | Client-side ticket list filtering (category / status / priority) for both dashboards | ✅ All sub-tasks done |
 | 05 | [`plans/05-frontend-makeover-plan.md`](plans/05-frontend-makeover-plan.md) | Frontend UI makeover — hybrid radius rule, Jira-style tables, viewport lock, CRITICAL badge | ✅ All 7 sub-tasks done |
+| — | *(agent-side-improvements branch)* | Real-time WebSocket comments + automated email notifications | ✅ Implemented — see ADR-0007 |
 
 ---
 
@@ -42,6 +43,7 @@ Ratified decisions that lock down specific technical choices.
 | [`adr/0004-decoupled-file-attachments-via-object-storage.md`](adr/0004-decoupled-file-attachments-via-object-storage.md) | Decoupled file attachments via object storage |
 | [`adr/0005-multi-tenant-sla-and-analytical-kpi-metrics-engine.md`](adr/0005-multi-tenant-sla-and-analytical-kpi-metrics-engine.md) | Multi-tenant SLA and KPI analytics engine |
 | [`adr/0006-enforce-zero-radius-high-density-ui.md`](adr/0006-enforce-zero-radius-high-density-ui.md) | Hybrid geometric zero-radius / high-density UI system |
+| [`adr/0007-websocket-realtime-comments-and-async-email.md`](adr/0007-websocket-realtime-comments-and-async-email.md) | Real-time WebSocket comments and async email notifications |
 
 ---
 

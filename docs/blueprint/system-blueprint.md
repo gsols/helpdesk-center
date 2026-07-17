@@ -92,9 +92,26 @@ The System Admin may replace the active `DEPT_MANAGER` of any department at any 
    - Previous manager row: `role = 'EMPLOYEE'` (department_id remains unchanged unless admin explicitly removes them).
    - New manager row: `role = 'DEPT_MANAGER'`, `department_id = target_department.id`.
 
-### F. Asynchronous Non-Blocking Email Layer
+### F. Asynchronous Non-Blocking Email Layer ✅ Implemented
 1. **Asynchronous Execution Constraint**: Email transmission commands must never run directly within the HTTP Request-Response lifecycle threads. Doing so creates artificial execution latency for the client.
 2. **Event Workers**: Critical notification mutations (Ticket Created, Message Appended, State Shifted) dispatch events captured by Spring Boot's background `@Async` worker threads. The user gets a near-instant clean HTTP JSON reply while workers process external SMTP or SES integrations.
+
+**Implementation detail (completed):**
+- `EmailService` uses `@Async` + `JavaMailSender` + Thymeleaf HTML templates (`email/new-comment.html`, `email/ticket-assigned.html`).
+- Triggered from `CommentService.addComment()` (comment posted → email recipient) and `TicketService.assignToMe()` / `TicketService.reassignTicket()` (assignment → email assignee).
+- SMTP is configured via environment variables `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `APP_BASE_URL` (see `.env.example`).
+- `@EnableAsync` is declared on `HelpdeskCenterApplication`.
+
+### J. Real-Time WebSocket Comment Streaming ✅ Implemented
+1. **STOMP-over-SockJS**: The backend runs a Spring WebSocket message broker. All connected clients subscribed to `/topic/tickets/{ticketId}/comments` receive new `CommentPayload` frames instantly when any participant posts a comment — no polling required.
+2. **JWT Handshake Authentication**: WebSocket connections authenticate via a `?token=<JWT>` query parameter. `WebSocketHandshakeInterceptor` validates the token and rejects unauthenticated connections before the STOMP session is established.
+3. **Broadcast Shape**: `CommentPayload` (id, ticketId, sender{id, name, role}, body, createdAt) is serialised as JSON and broadcast over `/topic/tickets/{id}/comments`.
+4. **Frontend Integration**: `useTicketSocket` (STOMP client) injects arriving frames directly into the React Query cache via `setQueryData`, producing sub-second live updates. HTTP polling is retained at 30 s as a safety-net gap-filler. `CommentSection` shows a **Live / Connecting… / Disconnected** status strip.
+5. **Broker Endpoints**:
+   - Connect:   `/ws` (SockJS fallback at `/ws/info`)
+   - Subscribe: `/topic/tickets/{ticketId}/comments` — real-time comment feed
+   - User queue: `/user/queue/notifications` — reserved for future per-user pushes
+   - App prefix: `/app` — for future `@MessageMapping` handlers (e.g. typing indicators)
 
 ### G. Fair-Share Assignment Workflows
 To support arbitrary operational models for different companies, the system panel provides an administrative toggle supporting two distinct distribution modes:
@@ -137,6 +154,7 @@ To support arbitrary operational models for different companies, the system pane
 *   **Build Tooling**: Vite 8+
 *   **Routing Engines**: React Router DOM v7 (Data API routing structures)
 *   **Data Fetching & State Caching**: TanStack Query v5 (React Query) — *Replaces vanilla Axios operations to manage background data syncing, caching, mutation state transitions, and loading skeletons out-of-the-box.*
+*   **Real-Time Transport**: `@stomp/stompjs` v7 — STOMP over native browser WebSocket (`ws://`/`wss://`). `sockjs-client` was removed as it references Node.js `global` and crashes under Vite.
 *   **UI/Styling Utility**: Tailwind CSS v4+ — *Mandatory for fast layout structures and responsive component design.*
 *   **Icon Library**: Lucide React
 *   **Code Linting Quality**: ESLint
@@ -146,6 +164,8 @@ To support arbitrary operational models for different companies, the system pane
 *   **Framework Layer**: Spring Boot 3.4+ (Production-ready stable stream)
 *   **Data Access Abstraction**: Spring Data JPA
 *   **Security Protocol**: Spring Security configured with **JWT (JSON Web Tokens) or OAuth2 Resource Server Patterns** — *Replaces older stateful session cookies to ensure frictionless API authentication, easy scalability across multi-tenancies, and future-proof integrations with third-party messaging systems like Slack/Teams.*
+*   **Real-Time Messaging**: Spring WebSocket (`spring-boot-starter-websocket`) with STOMP broker — enables sub-second comment broadcasting.
+*   **Email Transport**: Spring Mail (`spring-boot-starter-mail`) + Thymeleaf HTML templates — async SMTP notifications for comments and ticket assignments.
 *   **Data Validation Engine**: Spring Validation (`jakarta.validation-api`)
 *   **Code Boilerplate Reduction**: Lombok
 *   **Automation Build Tool**: Maven
@@ -177,11 +197,13 @@ To support arbitrary operational models for different companies, the system pane
 - [ ] Write logic determining whether the returned confidence score beats the 60.00% requirement boundary.
 - [ ] Setup the asynchronous event listeners that write logging events to the `ai_classification_logs` table upon human re-routing actions.
 
-### Phase 4: Storage, Messaging, & Asynchronous Notifications
-- [ ] Write integration adapter service connecting files to Object Storage bucket endpoints.
-- [ ] Build out the `TicketMessage` discussion service layer handling employee-agent threads.
-- [ ] Write automatic status update logic: Transition ticket to `PENDING_EMPLOYEE` upon Agent reply; revert to `IN_PROGRESS` on Employee reply.
-- [ ] Build Spring background asynchronous event execution pipeline (`@Async`) configuring non-blocking transactional mail alerts.
+### Phase 4: Storage, Messaging, & Asynchronous Notifications ✅ Implemented
+- [x] Write integration adapter service connecting files to Object Storage bucket endpoints.
+- [x] Build out the `TicketMessage` discussion service layer handling employee-agent threads.
+- [x] Write automatic status update logic: Transition ticket to `PENDING_EMPLOYEE` upon Agent reply; revert to `IN_PROGRESS` on Employee reply.
+- [x] Build Spring background asynchronous event execution pipeline (`@Async`) configuring non-blocking transactional mail alerts. *(EmailService + @EnableAsync)*
+- [x] WebSocket STOMP broker for real-time comment delivery to all ticket participants. *(WebSocketConfig + WebSocketHandshakeInterceptor + CommentPayload)*
+- [x] Frontend STOMP client (`useTicketSocket`) injecting WS frames into React Query cache instantly.
 
 ### Phase 5: Core Ticket Lifecycle REST API & Distribution Engine
 - [ ] Build transactional endpoints for ticket creation, state modification, and comment tracking.

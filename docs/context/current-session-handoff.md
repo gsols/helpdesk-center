@@ -1,7 +1,7 @@
-# Session Handoff — UI Improvements Branch
+# Session Handoff — Agent Side Improvements Branch
 
 ## Branch
-`ui-improvements`
+`agent-side-improvements`
 
 ## What Has Been Done
 
@@ -54,18 +54,60 @@
     - `hr.manager@ibm.com` — Sam Torres (DEPT_MANAGER, HR)
     - `admin@ibm.com` — System Admin (SYS_ADMIN)
 
+### 5. Real-Time WebSocket Comments (complete)
+
+**Backend**
+- `WebSocketConfig.java` — STOMP broker registered at `/ws` (SockJS fallback), brokers `/topic` + `/user`, app prefix `/app`.
+- `WebSocketHandshakeInterceptor.java` — validates `?token=<JWT>` on WS handshake; rejects unauthenticated connections.
+- `CommentPayload.java` (DTO) — lightweight WS broadcast shape (id, ticketId, sender{id,name,role}, body, createdAt).
+- `CommentService.addComment()` — after saving a comment, broadcasts `CommentPayload` to `/topic/tickets/{id}/comments` via `SimpMessagingTemplate`.
+- `SecurityConfig` — `/ws/**` permitted (JWT auth delegated to handshake interceptor); CORS switched to `setAllowedOriginPatterns` + `allowCredentials(true)` for SockJS.
+- New Maven deps: `spring-boot-starter-websocket`.
+
+**Frontend**
+- `useTicketSocket.js` (new hook) — opens STOMP-over-SockJS connection, subscribes to `/topic/tickets/{ticketId}/comments`, tears down on unmount/ticketId change.
+- `useMessages.js` — wires `useTicketSocket`; arriving WS frames are injected directly into React Query cache via `setQueryData` for instant zero-flicker updates. Polling interval reduced from 5 s → 30 s safety-net.
+- `CommentSection.jsx` — added **Live / Connecting… / Disconnected** status strip at top of thread using `Wifi` / `WifiOff` Lucide icons.
+- New npm deps: `@stomp/stompjs ^7.3.0` (native browser WebSocket — `sockjs-client` removed due to Node.js `global` incompatibility with Vite).
+
+### 6. Automated Email Notifications (complete)
+
+**Backend**
+- `EmailService.java` — `@Async` service with two methods:
+  - `sendNewCommentNotification(recipient, message, ticket)` — fires when a comment is posted.
+  - `sendTicketAssignedNotification(assignee, ticket)` — fires on `assignToMe` and `reassignTicket`.
+- `email/new-comment.html` + `email/ticket-assigned.html` — Thymeleaf HTML email templates with inline CSS; include ticket metadata and a direct "View Ticket / Open Ticket" CTA link (`APP_BASE_URL + /tickets/{id}`).
+- `HelpdeskCenterApplication` — `@EnableAsync` added.
+- `TicketService` — calls `emailService.sendTicketAssignedNotification()` at both assignment paths.
+- `CommentService` — calls `emailService.sendNewCommentNotification()` after persisting each comment.
+- New Maven deps: `spring-boot-starter-mail`, `spring-boot-starter-thymeleaf`, `thymeleaf-extras-springsecurity6`.
+
+**Configuration (environment variables)**
+```
+MAIL_HOST       smtp.gmail.com
+MAIL_PORT       587
+MAIL_USERNAME   your@gmail.com
+MAIL_PASSWORD   <gmail-app-password>
+MAIL_FROM       no-reply@helpdesk.local
+APP_BASE_URL    https://your-app.vercel.app
+```
+Documented in `helpdesk-center-backend/.env.example`.
+
+---
+
 ## Known Issues / Pending
 - GitHub push blocked by secret scanning on old commit `0b197134` (Slack webhook URL)
   - Fix: visit https://github.com/gsols/helpdesk-center/security/secret-scanning/unblock-secret/3GGv1llWmR6NxcvDoiEEWosSTsa to allow/bypass, then push
   - OR: `git rebase -i 0b197134^` and drop that commit, then force push
 - DB needs to be wiped and backend restarted for new seeder to run (seeder skips if users exist)
+- Mail will silently log errors if `MAIL_USERNAME` / `MAIL_PASSWORD` env vars are not set (no crash — `@Async` swallows the exception gracefully).
 
 ## Tech Stack
-- Frontend: React + Vite, Tailwind CSS, lucide-react, @tanstack/react-query
-- Backend: Spring Boot 3.3.5, PostgreSQL (`helpdesk_db`, user `helpdesk_user`, pass `helpdesk_pass`, port 5432)
+- Frontend: React + Vite, Tailwind CSS, lucide-react, @tanstack/react-query, **@stomp/stompjs, sockjs-client**
+- Backend: Spring Boot 3.3.5, PostgreSQL (Neon hosted), **Spring WebSocket (STOMP), Spring Mail, Thymeleaf**
 - Backend port: 8080
 - Frontend dev: `npm run dev` in `helpdesk-center-frontend/`
-- Backend dev: `mvn spring-boot:run` in `helpdesk-center-backend/`
+- Backend dev: `./mvnw spring-boot:run -Dspring-boot.run.profiles=local` in `helpdesk-center-backend/`
 
 ## Wireframe References
 All wireframes in `docs/wireframes/stitch_multi_tenant_support_command_center/`
@@ -76,3 +118,4 @@ All wireframes in `docs/wireframes/stitch_multi_tenant_support_command_center/`
 - Agent dashboard view rework
 - Manager dashboard view rework
 - Admin dashboard view rework
+- Per-user WebSocket push for in-app notifications (infra already wired via `/user/queue/notifications`)

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ticket Assigned to You</title>
+  <style>
+    body { margin:0; padding:0; font-family:-apple-system,"Segoe UI",sans-serif; background:#f4f6f8; color:#1f2328; }
+    .wrapper { max-width:600px; margin:32px auto; background:#ffffff; border:1px solid #e5e7eb; border-radius:6px; overflow:hidden; }
+    .header  { background:#0b1c30; padding:24px 32px; }
+    .header h1 { margin:0; font-size:18px; color:#ffffff; font-weight:700; }
+    .header span { font-size:13px; color:#94a3b8; }
+    .body    { padding:28px 32px; }
+    .body p  { margin:0 0 16px; font-size:15px; line-height:1.6; color:#374151; }
+    .meta-row { display:flex; justify-content:space-between; padding:10px 14px; border-bottom:1px solid #e5e7eb; font-size:13px; }
+    .meta-row:last-child { border-bottom:none; }
+    .meta-label { color:#6b7280; font-weight:600; }
+    .priority-pill { display:inline-block; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700; background:#fee2e2; color:#991b1b; }
+    .meta-table { border:1px solid #e5e7eb; border-radius:4px; overflow:hidden; margin:16px 0; }
+    .btn { display:inline-block; margin-top:8px; padding:10px 22px; background:#0b1c30; color:#ffffff; font-size:13px; font-weight:700; text-decoration:none; border-radius:4px; }
+    .footer { padding:16px 32px; border-top:1px solid #e5e7eb; font-size:12px; color:#9ca3af; }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+  <div class="header">
+    <h1>Helpdesk Center</h1>
+    <span>Ticket assignment notification</span>
+  </div>
+  <div class="body">
+    <p>Hi <strong th:text="${recipientName}">Agent</strong>,</p>
+    <p>A ticket has been assigned to you. Please review it and respond as soon as possible.</p>
+
+    <div class="meta-table">
+      <div class="meta-row">
+        <span class="meta-label">Ticket</span>
+        <span th:text="'TCK-' + ${ticketId}">TCK-0</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Title</span>
+        <span th:text="${ticketTitle}">—</span>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Priority</span>
+        <span class="priority-pill" th:text="${priority}">MEDIUM</span>
+      </div>
+    </div>
+
+    <p>
+      <a class="btn" th:href="${ticketUrl}">Open Ticket</a>
+    </p>
+  </div>
+  <div class="footer">
+    You received this email because this ticket was assigned to your queue.
+  </div>
+</div>
+</body>
+</html>
