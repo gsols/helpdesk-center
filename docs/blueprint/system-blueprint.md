@@ -1,4 +1,4 @@
-# System Blueprint: Multi-Tenant AI Help Desk Platform
+# ClassifAi — System Blueprint: Multi-Tenant AI Help Desk Platform
 
 This document serves as the absolute source of truth and comprehensive master plan for the implementation of the Multi-Tenant Support Help Desk application. All AI coding assistants, agents, and developers must strictly adhere to the architecture, business logic, constraints, and development phases outlined below.
 
@@ -103,12 +103,12 @@ The System Admin may replace the active `DEPT_MANAGER` of any department at any 
 - `@EnableAsync` is declared on `HelpdeskCenterApplication`.
 
 ### J. Real-Time WebSocket Comment Streaming ✅ Implemented
-1. **STOMP-over-SockJS**: The backend runs a Spring WebSocket message broker. All connected clients subscribed to `/topic/tickets/{ticketId}/comments` receive new `CommentPayload` frames instantly when any participant posts a comment — no polling required.
-2. **JWT Handshake Authentication**: WebSocket connections authenticate via a `?token=<JWT>` query parameter. `WebSocketHandshakeInterceptor` validates the token and rejects unauthenticated connections before the STOMP session is established.
+1. **STOMP over native browser WebSocket**: The backend runs a Spring WebSocket STOMP message broker (`spring-boot-starter-websocket`). All connected clients subscribed to `/topic/tickets/{ticketId}/comments` receive new `CommentPayload` frames instantly when any participant posts a comment — no polling required. `sockjs-client` is **not used** (it references Node.js `global` and crashes under Vite); instead `@stomp/stompjs` v7 connects directly via `brokerURL: "ws://host/ws/websocket?token=<JWT>"`.
+2. **JWT Handshake Authentication**: WebSocket connections authenticate via a `?token=<JWT>` query parameter on the HTTP upgrade request. `WebSocketHandshakeInterceptor` validates the token and populates the WS session with an `AuthenticatedUser` principal; unauthenticated handshakes are rejected before the STOMP session is established.
 3. **Broadcast Shape**: `CommentPayload` (id, ticketId, sender{id, name, role}, body, createdAt) is serialised as JSON and broadcast over `/topic/tickets/{id}/comments`.
-4. **Frontend Integration**: `useTicketSocket` (STOMP client) injects arriving frames directly into the React Query cache via `setQueryData`, producing sub-second live updates. HTTP polling is retained at 30 s as a safety-net gap-filler. `CommentSection` shows a **Live / Connecting… / Disconnected** status strip.
+4. **Frontend Integration**: `useTicketSocket` hook (`@stomp/stompjs` Client) injects arriving frames directly into the React Query cache via `setQueryData`, producing sub-second live updates. HTTP polling is retained at 30 s as a safety-net gap-filler. `CommentSection` shows a **Live / Connecting…** status strip derived from the STOMP connection state.
 5. **Broker Endpoints**:
-   - Connect:   `/ws` (SockJS fallback at `/ws/info`)
+   - Connect (WS upgrade): `ws://host/ws/websocket?token=<JWT>`
    - Subscribe: `/topic/tickets/{ticketId}/comments` — real-time comment feed
    - User queue: `/user/queue/notifications` — reserved for future per-user pushes
    - App prefix: `/app` — for future `@MessageMapping` handlers (e.g. typing indicators)

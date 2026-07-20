@@ -8,7 +8,7 @@ This document specifies the exact UI elements, form inputs, navigation tabs, and
 A centralized, hard-edged card centered on a neutral background.
 
 ### UI Elements & Inputs:
-- **Title Block**: Heading text reading "Log in to Helpdesk Center".
+- **Title Block**: Heading text reading "Log in to ClassifAi".
 - **Subtitle Block**: Secondary text reading "Enter your corporate credentials below".
 - **Input Field 1**: Label: "Company email", Placeholder: "name@company.com", Type: email, Required: true.
 - **Input Field 2**: Label: "Password", Placeholder: "••••••••", Type: password, Required: true.

@@ -3,7 +3,7 @@
  *
  * Layout:
  *  • #f8f9ff background, dot-grid pattern
- *  • OMNISUPPORT shield logo + wordmark centered above card
+ *  • ClassifAi stacked-chevron mark + wordmark centered above card
  *  • White card with 3px left-edge blue accent bar, sharp corners
  *  • Fields: Workspace ID (.omnisupport.io suffix), Corporate Email, Password (eye toggle)
  *  • FORGOT SECURITY KEY? link on password row
@@ -13,7 +13,20 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
+
+/* ── ClassifAi brand mark — inline SVG matching the stacked chevron logo ── */
+function ClassifAiMark({ size = 22 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="8,6 40,6 36,14 4,14"  fill="#0f172a" opacity="0.40" />
+      <polygon points="4,16 36,16 32,24 0,24" fill="#0f172a" opacity="0.65" />
+      <polygon points="8,26 40,26 36,34 4,34" fill="#0f172a" opacity="1.00" />
+      <polygon points="0,24 8,6 8,14 4,14"   fill="#0f172a" opacity="0.30" />
+      <polygon points="4,34 12,16 8,16 0,34"  fill="#0f172a" opacity="0.50" />
+    </svg>
+  );
+}
 
 /* ── Sample accounts matching the data seeder ───────────────────────────── */
 const SAMPLE_ACCOUNTS = [
@@ -100,20 +113,11 @@ export default function LoginPage() {
         backgroundSize:  '24px 24px',
       }}
     >
-      {/* ── OMNISUPPORT logo + wordmark ─────────────────────────────────── */}
+      {/* ── ClassifAi logo + wordmark ────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <div
-          style={{
-            width: 40, height: 40, borderRadius: 6,
-            background: '#0f172a',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <ShieldCheck size={22} color="#ffffff" />
-        </div>
+        <ClassifAiMark size={32} />
         <span style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-          OMNISUPPORT
+          Classif<span style={{ color: '#3b82f6' }}>Ai</span>
         </span>
       </div>
 
@@ -134,10 +138,10 @@ export default function LoginPage() {
 
         <div style={{ padding: '32px 36px 36px' }}>
           <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0f172a', marginBottom: 4, letterSpacing: '-0.02em' }}>
-            Gateway Access
+            Log in to ClassifAi
           </h1>
           <p style={{ fontSize: 13, color: '#64748b', marginBottom: 28 }}>
-            Authorize your secure support session.
+            Enter your corporate credentials below.
           </p>
 
           {error && (

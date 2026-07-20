@@ -13,7 +13,7 @@ The universal app shell acts as the boundary container wrapping all screens post
    - Core Navigation Icon Anchors: Workspace/Queue, Analytics Panel, SLA Config (Admin/Manager Only), Settings.
    - Bottom Profile Avatar widget (Triggers Quick Logout / Theme Shift Overlay).
 2. **Top Application Header (Fixed: 4rem Height, `border-b`, Slate White/Ink Panels)**:
-   - Left section: Breadcrumb string navigation (e.g., `Helpdesk / Agent Workspace / Open Queue`).
+   - Left section: Breadcrumb string navigation (e.g., `ClassifAi / Agent Workspace / Open Queue`).
    - Right section: Global Tenant Context Indicator Badge + System Clock (Live SLA tracking synchronization).
 
 ---

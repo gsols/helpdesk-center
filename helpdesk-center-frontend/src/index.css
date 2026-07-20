@@ -1,5 +1,90 @@
 @import "tailwindcss";
 
+/* ── Tailwind v4 theme tokens ─────────────────────────────────────────────── */
+@theme {
+  /* Fonts */
+  --font-body-md:       "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-title-md:      "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-headline-sm:   "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-display-sm:    "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-label-caps:    "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-body-sm:       "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --font-technical-md:  "JetBrains Mono", "Fira Code", monospace;
+
+  /* Dark obsidian palette — LandingPage */
+  --color-background:                  #0B0F19;
+  --color-surface:                     #0B0F19;
+  --color-surface-dim:                 #0f172a;
+  --color-surface-bright:              #111827;
+  --color-surface-container-lowest:    #020617;
+  --color-surface-container-low:       #0f172a;
+  --color-surface-container:           #0B0F19;
+  --color-surface-container-high:      #1e293b;
+  --color-surface-container-highest:   #131b2e;
+  --color-surface-variant:             #1e293b;
+  --color-on-surface:                  #f8f9ff;
+  --color-on-surface-variant:          #cbd5e1;
+  --color-on-background:               #f8f9ff;
+  --color-primary:                     #ffffff;
+  --color-on-primary:                  #000000;
+  --color-primary-container:           #131b2e;
+  --color-on-primary-container:        #7c839b;
+  --color-primary-fixed:               #dae2fd;
+  --color-primary-fixed-dim:           #bec6e0;
+  --color-inverse-primary:             #bec6e0;
+  --color-secondary:                   #94a3b8;
+  --color-on-secondary:                #ffffff;
+  --color-secondary-container:         #1e293b;
+  --color-on-secondary-container:      #94a3b8;
+  --color-tertiary:                    #000000;
+  --color-on-tertiary:                 #ffffff;
+  --color-tertiary-container:          #271901;
+  --color-on-tertiary-container:       #98805d;
+  --color-error:                       #ba1a1a;
+  --color-on-error:                    #ffffff;
+  --color-error-container:             #ffdad6;
+  --color-outline:                     #334155;
+  --color-outline-variant:             #1e293b;
+  --color-inverse-surface:             #f8f9ff;
+  --color-inverse-on-surface:          #0b1c30;
+
+  /* Spacing tokens */
+  --spacing-shell-header-height: 48px;
+  --spacing-gutter:              16px;
+  --spacing-sidebar-width:       260px;
+  --spacing-shell-nav-width:     64px;
+  --spacing-container-padding:   24px;
+  --spacing-stack-sm:            4px;
+  --spacing-stack-md:            8px;
+
+  /* Border radius */
+  --radius-DEFAULT: 0px;
+  --radius-lg:      0px;
+  --radius-xl:      0px;
+  --radius-md:      0.375rem;
+  --radius-full:    9999px;
+}
+
+/* ── Landing page: dark-theme custom properties (obsidian palette) ────────── */
+/* These override the light-mode defaults only on the landing page root div.   */
+/* Scoped to [data-theme="dark"] so app pages keep their light tokens.         */
+.landing-dark,
+.landing-dark body {
+  color-scheme: dark;
+}
+
+/* ── Razor-border utilities (used by LandingPage) ─────────────────────────── */
+.razor-border   { border: 1px solid rgba(148, 163, 184, 0.10); }
+.razor-border-b { border-bottom: 1px solid rgba(148, 163, 184, 0.10); }
+.razor-border-t { border-top: 1px solid rgba(148, 163, 184, 0.10); }
+.razor-border-r { border-right: 1px solid rgba(148, 163, 184, 0.10); }
+.razor-border-l { border-left: 1px solid rgba(148, 163, 184, 0.10); }
+
+/* ── Shell dimension utilities ────────────────────────────────────────────── */
+.h-shell-header-height  { height: 48px; }
+.pt-shell-header-height { padding-top: 48px; }
+.px-gutter  { padding-left: 16px; padding-right: 16px; }
+
 /* ── Reset ───────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 

@@ -1,4 +1,4 @@
-# Helpdesk Center — Documentation Index
+# ClassifAi — Documentation Index
 
 This directory is the single source of truth for all project documentation.
 

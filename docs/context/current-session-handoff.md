@@ -1,4 +1,4 @@
-# Session Handoff — Agent Side Improvements Branch
+# ClassifAi — Session Handoff (Agent Side Improvements Branch)
 
 ## Branch
 `agent-side-improvements`

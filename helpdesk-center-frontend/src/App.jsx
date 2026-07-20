@@ -1,5 +1,6 @@
 import { createBrowserRouter, RouterProvider, Outlet, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, NavigateInjector } from './context/AuthContext';
+import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import AgentDashboard from './pages/AgentDashboard';
@@ -11,6 +12,22 @@ import ForbiddenPage from './pages/ForbiddenPage';
 import ManagerDashboard from './pages/ManagerDashboard';
 import TeamPage from './pages/TeamPage';
 import TeammateWorkspacePage from './pages/TeammateWorkspacePage';
+
+/**
+ * Public landing gate: unauthenticated users see the marketing page;
+ * authenticated users are sent directly to their role dashboard.
+ */
+function LandingGate() {
+  const { user } = useAuth();
+  if (user) {
+    const role = user.role?.toLowerCase?.() ?? '';
+    if (role === 'employee')     return <Navigate to="/dashboard" replace />;
+    if (role === 'sys_admin')    return <Navigate to="/admin"     replace />;
+    if (role === 'dept_manager') return <Navigate to="/manager"   replace />;
+    return <Navigate to="/agent" replace />;
+  }
+  return <LandingPage />;
+}
 
 /**
  * Guards the protected subtree.
@@ -52,16 +69,15 @@ function RoleRedirect() {
  * are called until the route components actually render inside RouterProvider.)
  */
 const router = createBrowserRouter([
+  // ── Public routes (no auth required) ────────────────────────────────
+  { path: '/',      element: <LandingGate /> },
+  { path: '/login', element: <LoginPage /> },
+
+  // ── Protected subtree — AuthGuard checks auth before rendering ───────
   {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    // Protected subtree — AuthGuard checks auth before rendering children
     path: '/',
     element: <AuthGuard />,
     children: [
-      { index: true,          element: <RoleRedirect /> },
       { path: 'dashboard',    element: <EmployeeDashboard /> },
       { path: 'agent',        element: <AgentDashboard /> },
       { path: 'agent/team',              element: <TeamPage /> },
@@ -77,14 +93,11 @@ const router = createBrowserRouter([
       { path: 'manager/risk',      element: <ManagerDashboard tab="risk" /> },
       { path: 'settings',     element: <SettingsPage /> },
       { path: '403',          element: <ForbiddenPage /> },
-      { path: '*',            element: <RoleRedirect /> },
     ],
   },
-  {
-    // Catch-all outside the protected subtree
-    path: '*',
-    element: <RoleRedirect />,
-  },
+
+  // ── Catch-all — unknown paths go to landing gate ─────────────────────
+  { path: '*', element: <LandingGate /> },
 ]);
 
 /**

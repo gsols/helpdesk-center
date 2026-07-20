@@ -372,7 +372,7 @@ function TopHeader({ title, sidebarWidth, panelToggle, panelCollapsed }) {
   const { pathname } = useLocation();
 
   const segments = pathname.split('/').filter(Boolean);
-  const crumbs = ['Helpdesk', ...segments.map(s =>
+  const crumbs = ['ClassifAi', ...segments.map(s =>
     s.charAt(0).toUpperCase() + s.slice(1).replace(/-/g, ' ')
   )];
   if (title && crumbs.length > 0) {
