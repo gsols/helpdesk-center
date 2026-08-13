@@ -1,469 +1,888 @@
-/**
- * LandingPage — ClassifAi enterprise marketing page (dark obsidian theme)
- *
- * Design matches the provided HTML spec:
- *   - Palette: obsidian #0B0F19 background, slate surfaces, white text
- *   - Fonts: Hanken Grotesk (body/headings) + JetBrains Mono (technical)
- *   - Icons: Material Symbols Outlined (loaded via index.html <link>)
- *   - ADR-0006 hybrid radius: structural containers → 0px, interactive → rounded-md
- *
- * Fonts and Material Symbols are declared in index.html so they are available here.
- */
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import {
+  ArrowRight,
+  BarChart3,
+  BrainCircuit,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  LockKeyhole,
+  MessageSquareText,
+  Route,
+  ShieldCheck,
+  TicketCheck,
+  UsersRound,
+} from 'lucide-react';
+import ClassifAiMark from '../components/ClassifAiMark';
+import heroImage from '../assets/hero.svg';
 
-/* ── Small helpers ──────────────────────────────────────────────────────────── */
-function Icon({ name, className = '' }) {
+const FEATURES = [
+  {
+    icon: BrainCircuit,
+    title: 'AI triage',
+    text: 'Classifies requests into HR, software, and hardware queues with confidence signals.',
+  },
+  {
+    icon: Route,
+    title: 'Smart routing',
+    text: 'Moves tickets to the right team and keeps reroutes visible when ownership changes.',
+  },
+  {
+    icon: Clock3,
+    title: 'SLA tracking',
+    text: 'Shows urgency, deadline pressure, and queue risk before work gets buried.',
+  },
+  {
+    icon: MessageSquareText,
+    title: 'Ticket context',
+    text: 'Keeps notes, attachments, updates, and teammate handoffs connected to the request.',
+  },
+];
+
+const ROLES = [
+  ['Employees', 'Submit requests', 'Create tickets, upload attachments, and track progress.'],
+  ['Agents', 'Resolve queues', 'Work assigned tickets and collaborate with teammates.'],
+  ['Managers', 'Review risk', 'Monitor load, analytics, SLA exposure, and escalations.'],
+  ['Admins', 'Manage setup', 'Maintain users, departments, and SLA rules.'],
+];
+
+const METRICS = [
+  ['3', 'Departments'],
+  ['4', 'Role spaces'],
+  ['24/7', 'Visibility'],
+];
+
+function LogoLockup({ dark = false }) {
   return (
-    <span className={`material-symbols-outlined ${className}`}>{name}</span>
-  );
-}
-
-/* ════════════════════════════════════════════════════════════════════════════ */
-export default function LandingPage() {
-  const navigate = useNavigate();
-  const [email, setEmail]         = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [scrolled, setScrolled]   = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const handleDemoSubmit = (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSubmitted(true);
-  };
-
-  return (
-    <div
-      className="font-body-md text-on-surface overflow-x-hidden"
-      style={{ background: '#0B0F19', minHeight: '100vh' }}
-    >
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          HEADER
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <header
-        className={`
-          h-shell-header-height fixed top-0 left-0 right-0 z-50
-          backdrop-blur-md razor-border-b flex items-center px-gutter
-          transition-all duration-200
-          ${scrolled ? 'bg-background/95 shadow-2xl' : 'bg-background/80'}
-        `}
-      >
-        <div className="flex items-center justify-between w-full max-w-7xl mx-auto">
-
-          {/* Brand */}
-          <div className="flex items-center space-x-8">
-            <span
-              className="font-technical-md text-headline-sm tracking-tighter text-white cursor-pointer"
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              ClassifAi
-            </span>
-            <nav className="hidden md:flex space-x-6">
-              {[
-                { label: 'Features',       href: '#features' },
-                { label: 'Security Matrix',href: '#security' },
-                { label: 'SLA Engine',     href: '#sla'      },
-                { label: 'Pricing',        href: '#pricing'  },
-              ].map(({ label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  className="font-label-caps text-on-secondary-container hover:text-white transition-colors"
-                  style={{ fontSize: 13, textDecoration: 'none' }}
-                >
-                  {label}
-                </a>
-              ))}
-            </nav>
-          </div>
-
-          {/* CTA */}
-          <button
-            onClick={() => navigate('/login')}
-            className="bg-primary text-on-primary font-title-md px-4 py-1.5 rounded-md hover:opacity-90 transition-all flex items-center gap-2"
-            style={{ fontSize: 13, fontWeight: 700 }}
-          >
-            Launch App
-            <Icon name="arrow_right_alt" className="!text-[18px]" />
-          </button>
-
-        </div>
-      </header>
-
-      <main className="pt-shell-header-height">
-
-        {/* ═════════════════════════════════════════════════════════════════════
-            HERO
-        ═════════════════════════════════════════════════════════════════════ */}
-        <section className="relative min-h-[716px] flex flex-col items-center justify-center text-center px-gutter py-24 razor-border-b overflow-hidden">
-
-          {/* Ambient glow blobs */}
-          <div className="absolute inset-0 z-0 pointer-events-none opacity-20">
-            <div
-              className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full"
-              style={{ background: 'rgba(190,198,224,0.2)', filter: 'blur(120px)' }}
-            />
-            <div
-              className="absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full"
-              style={{ background: 'rgba(152,128,93,0.10)', filter: 'blur(120px)' }}
-            />
-          </div>
-
-          <div className="relative z-10 max-w-4xl mx-auto">
-
-            {/* Eyebrow */}
-            <div className="inline-flex items-center space-x-2 px-3 py-1 bg-surface-container-high razor-border mb-8">
-              <span className="font-technical-md text-[10px] text-on-primary-container tracking-widest uppercase">
-                Integration Active
-              </span>
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="font-technical-md text-[10px] text-white">IBM watsonx.ai</span>
-            </div>
-
-            {/* H1 */}
-            <h1
-              className="font-display-sm leading-[1.1] mb-6 tracking-tight font-bold"
-              style={{ fontSize: 'clamp(36px, 6vw, 64px)' }}
-            >
-              Automate Enterprise Support <br />
-              with <span className="text-on-primary-container">Zero Triage Delay</span>.
-            </h1>
-
-            {/* Subtitle */}
-            <p className="font-body-md text-on-surface-variant max-w-2xl mx-auto mb-10 leading-relaxed">
-              Powered by high-density multi-tenant architecture and departmental isolation.
-              Deploy autonomous routing hubs that manage enterprise-scale tickets with
-              cryptographic security and real-time watsonx.ai inference.
-            </p>
-
-            {/* Email form / success state */}
-            {submitted ? (
-              <div
-                className="inline-flex items-center gap-3 px-5 py-3 razor-border"
-                style={{
-                  background: 'rgba(16,185,129,0.08)',
-                  border: '1px solid rgba(16,185,129,0.35)',
-                  borderRadius: 6,
-                  color: '#34d399', fontSize: 14, fontWeight: 600,
-                }}
-              >
-                <Icon name="check_circle" className="!text-[18px]" />
-                Demo request received — we'll be in touch.
-              </div>
-            ) : (
-              <form
-                onSubmit={handleDemoSubmit}
-                className="flex flex-col sm:flex-row items-center justify-center gap-0 w-full max-w-md mx-auto"
-              >
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                  placeholder="corporate@enterprise.com"
-                  className="w-full h-12 bg-surface-container-low razor-border border-r-0 focus:outline-none focus:ring-1 focus:ring-outline text-white px-4 placeholder:text-outline-variant font-technical-md"
-                />
-                <button
-                  type="submit"
-                  className="w-full sm:w-auto whitespace-nowrap h-12 px-8 bg-white text-black font-title-md rounded-md sm:ml-[-2px] transition-transform active:scale-95 z-10 hover:opacity-90"
-                  style={{ fontWeight: 700, fontSize: 13 }}
-                >
-                  Request Demo Access
-                </button>
-              </form>
-            )}
-
-            {/* Social proof strip */}
-            <div className="mt-12 flex items-center justify-center space-x-12 opacity-50 grayscale contrast-125">
-              <span className="font-technical-md text-[10px]">TCK-ID: 8842-X</span>
-              <span className="font-technical-md text-[10px]">AUTH: MT-ISOLATE</span>
-              <span className="font-technical-md text-[10px]">NODE: US-EAST-1</span>
-            </div>
-          </div>
-        </section>
-
-        {/* ═════════════════════════════════════════════════════════════════════
-            FEATURE MATRIX
-        ═════════════════════════════════════════════════════════════════════ */}
-        <section id="features" className="grid grid-cols-1 md:grid-cols-3 razor-border-b">
-
-          {/* Column 1 — AI Routing Hub */}
-          <div className="p-12 razor-border-r flex flex-col hover:bg-surface-container-low transition-colors group">
-            <div className="mb-8">
-              <Icon name="hub" className="text-on-primary-container !text-[32px] mb-4 block" />
-              <h3 className="font-headline-sm text-headline-sm mb-4">AI Routing Hub</h3>
-              <p className="font-body-sm text-on-surface-variant leading-relaxed mb-6">
-                An autonomous Triage Engine utilizing a 60% confidence gate sorting protocol.
-                Redirect workloads instantly based on semantic intent and agent capability matrices.
-              </p>
-            </div>
-            <div className="mt-auto">
-              <div className="flex items-center space-x-2 mb-2">
-                <div className="h-1 flex-1 bg-surface-variant">
-                  <div className="h-full bg-on-primary-container" style={{ width: '60%' }} />
-                </div>
-                <span className="font-technical-md text-[10px] text-on-primary-container">60% CONFIDENCE</span>
-              </div>
-              <a href="#pricing" className="font-technical-md text-white group-hover:underline cursor-pointer" style={{ textDecoration: 'none', fontSize: 12 }}>
-                View Schema ➔
-              </a>
-            </div>
-          </div>
-
-          {/* Column 2 — Data Security */}
-          <div id="security" className="p-12 razor-border-r flex flex-col hover:bg-surface-container-low transition-colors group">
-            <div className="mb-8">
-              <Icon name="shield_lock" className="text-on-primary-container !text-[32px] mb-4 block" />
-              <h3 className="font-headline-sm text-headline-sm mb-4">Data Security</h3>
-              <p className="font-body-sm text-on-surface-variant leading-relaxed mb-6">
-                Hardened Departmental Isolation walls prevent cross-tenant data leakage.
-                Every object storage attachment is encrypted at the tenant-root level with
-                zero-trust handshake.
-              </p>
-            </div>
-            <div className="mt-auto">
-              <div className="flex space-x-2">
-                {['lock', 'key', 'verified_user'].map(icon => (
-                  <div key={icon} className="w-8 h-8 razor-border flex items-center justify-center bg-surface-container-highest">
-                    <Icon name={icon} className="!text-[16px]" />
-                  </div>
-                ))}
-              </div>
-              <span className="block mt-4 font-technical-md text-[10px] text-white">AES-256 COMPLIANT</span>
-            </div>
-          </div>
-
-          {/* Column 3 — SLA Target Radar */}
-          <div id="sla" className="p-12 flex flex-col hover:bg-surface-container-low transition-colors group">
-            <div className="mb-8">
-              <Icon name="radar" className="text-on-primary-container !text-[32px] mb-4 block" />
-              <h3 className="font-headline-sm text-headline-sm mb-4">SLA Target Radar</h3>
-              <p className="font-body-sm text-on-surface-variant leading-relaxed mb-6">
-                Dynamic Deadline Management with smart countdown bars. System automatically
-                pauses timers during pending-customer states to ensure accurate performance metrics.
-              </p>
-            </div>
-            <div className="mt-auto space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-technical-md text-[10px]">TICKET #829</span>
-                <span className="text-error font-technical-md text-[10px]">04:12:00</span>
-              </div>
-              <div className="h-1 bg-surface-variant overflow-hidden">
-                <div className="h-full bg-error" style={{ width: '85%' }} />
-              </div>
-              <a href="#" className="font-technical-md text-[10px] text-white group-hover:underline cursor-pointer" style={{ textDecoration: 'none', display: 'block' }}>
-                Open Dashboard ➔
-              </a>
-            </div>
-          </div>
-
-        </section>
-
-        {/* ═════════════════════════════════════════════════════════════════════
-            PRODUCT PREVIEW (Bento-style)
-        ═════════════════════════════════════════════════════════════════════ */}
-        <section className="py-24 px-gutter razor-border-b" style={{ background: 'rgba(2,6,23,0.30)' }}>
-          <div className="max-w-7xl mx-auto">
-
-            {/* Section header row */}
-            <div className="flex flex-col md:flex-row items-end justify-between mb-16">
-              <div className="max-w-xl">
-                <h2 className="font-display-sm text-[32px] mb-4">The Command Center</h2>
-                <p className="text-on-surface-variant font-body-sm">
-                  High-density interfaces designed for expert support engineers.
-                  Minimal friction, maximal data visibility.
-                </p>
-              </div>
-              <div className="flex space-x-4 mt-8 md:mt-0">
-                <button
-                  className="h-10 px-6 razor-border bg-surface-container hover:bg-surface-container-high transition-all font-title-md rounded-md"
-                  style={{ fontSize: 13, fontWeight: 600 }}
-                >
-                  Docs
-                </button>
-                <button
-                  onClick={() => navigate('/login')}
-                  className="h-10 px-6 bg-white text-black font-title-md rounded-md hover:opacity-90 transition-all"
-                  style={{ fontSize: 13, fontWeight: 700 }}
-                >
-                  View Live Demo
-                </button>
-              </div>
-            </div>
-
-            {/* Bento grid */}
-            <div className="grid grid-cols-12 gap-4" style={{ height: 600 }}>
-
-              {/* Main workspace tile */}
-              <div className="col-span-12 md:col-span-8 razor-border bg-surface relative overflow-hidden group">
-                <div
-                  className="w-full h-full"
-                  style={{
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 40%, #0b1c30 100%)',
-                    display: 'flex', flexDirection: 'column',
-                    padding: 24, gap: 12,
-                  }}
-                >
-                  {/* Simulated ticket rows */}
-                  {[
-                    { id: 'TCK-8842', dept: 'IT',      status: 'IN_PROGRESS', priority: 'HIGH',     ai: '94%' },
-                    { id: 'TCK-8841', dept: 'HR',      status: 'PENDING',     priority: 'MEDIUM',   ai: '87%' },
-                    { id: 'TCK-8839', dept: 'Finance', status: 'OPEN',        priority: 'CRITICAL', ai: '71%' },
-                    { id: 'TCK-8837', dept: 'IT',      status: 'RESOLVED',    priority: 'LOW',      ai: '96%' },
-                  ].map(row => (
-                    <div
-                      key={row.id}
-                      className="flex items-center gap-4 razor-border px-4 py-3 bg-surface-container"
-                      style={{ fontSize: 12 }}
-                    >
-                      <span className="font-technical-md text-on-primary-container w-24 flex-shrink-0">{row.id}</span>
-                      <span
-                        className="font-technical-md px-2 py-0.5 rounded-md flex-shrink-0"
-                        style={{
-                          fontSize: 10, fontWeight: 700,
-                          background: row.priority === 'CRITICAL' ? 'rgba(186,26,26,0.18)' : 'rgba(59,130,246,0.12)',
-                          color:      row.priority === 'CRITICAL' ? '#fca5a5' : '#93c5fd',
-                        }}
-                      >
-                        {row.priority}
-                      </span>
-                      <span className="text-on-secondary-container flex-1">{row.dept}</span>
-                      <span className="font-technical-md text-[10px] text-on-primary-container">{row.status}</span>
-                      <span className="font-technical-md text-[10px] text-emerald-400 ml-auto">{row.ai} AI</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-t from-surface to-transparent pointer-events-none" />
-                <div className="absolute bottom-8 left-8">
-                  <span className="font-technical-md text-[10px] text-on-primary-container uppercase tracking-widest">Core Workspace</span>
-                  <h4 className="font-headline-sm mt-2">Unified Message Streams</h4>
-                </div>
-              </div>
-
-              {/* Side tiles */}
-              <div className="col-span-12 md:col-span-4 grid grid-rows-2 gap-4">
-                <div className="razor-border bg-surface-container p-8 flex flex-col justify-center">
-                  <Icon name="analytics" className="text-on-primary-container mb-4 block" />
-                  <h4 className="font-title-md mb-2" style={{ fontWeight: 600 }}>Real-time Inference</h4>
-                  <p className="font-body-sm text-on-surface-variant">
-                    Watch watsonx.ai classify intent in <span className="text-white font-technical-md">200ms</span>.
-                  </p>
-                </div>
-                <div className="razor-border bg-surface-container p-8 flex flex-col justify-center">
-                  <Icon name="inventory_2" className="text-on-primary-container mb-4 block" />
-                  <h4 className="font-title-md mb-2" style={{ fontWeight: 600 }}>Object Storage</h4>
-                  <p className="font-body-sm text-on-surface-variant">
-                    Unlimited attachments with per-file security scanning.
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </section>
-
-        {/* ═════════════════════════════════════════════════════════════════════
-            PRICING
-        ═════════════════════════════════════════════════════════════════════ */}
-        <section id="pricing" className="py-24 px-gutter">
-          <div className="max-w-3xl mx-auto text-center mb-16">
-            <h2 className="font-display-sm mb-4" style={{ fontSize: 'clamp(28px, 4vw, 40px)' }}>
-              Transparent Enterprise Pricing
-            </h2>
-            <p className="text-on-surface-variant font-body-md">One tier. Total isolation. Infinite scale.</p>
-          </div>
-
-          <div className="max-w-xl mx-auto razor-border bg-surface-container overflow-hidden relative">
-            {/* Preferred badge */}
-            <div className="absolute top-0 right-0 p-4">
-              <span className="px-3 py-1 bg-on-primary-container/20 text-white font-technical-md text-[10px] tracking-widest razor-border">
-                PREFERRED
-              </span>
-            </div>
-
-            {/* Price header */}
-            <div className="p-12 text-center razor-border-b">
-              <h3 className="font-headline-sm text-headline-sm mb-2 text-on-primary-container">Enterprise Plan</h3>
-              <div className="flex items-baseline justify-center space-x-2">
-                <span className="font-display-sm font-bold" style={{ fontSize: 56 }}>$19</span>
-                <span className="text-on-surface-variant font-body-md">/ agent / month</span>
-              </div>
-            </div>
-
-            {/* Feature list + CTA */}
-            <div className="p-12 bg-surface-container-low">
-              <ul className="space-y-6 mb-12">
-                {[
-                  'Infinite Multi-Tenant Isolation',
-                  'Unified Message Streams (Omnichannel)',
-                  'Full Object Storage Attachment Integration',
-                  'Custom SLA Sliders Control Board',
-                  'IBM watsonx.ai Classification Engine',
-                  'Real-Time WebSocket Comment Feed',
-                  'Round-Robin Fair-Share Assignment',
-                  'Priority Escalation Automation',
-                ].map(feature => (
-                  <li key={feature} className="flex items-start space-x-3 text-on-surface-variant font-body-md">
-                    <Icon name="check_circle" className="text-white !text-[20px] flex-shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              <button
-                onClick={() => navigate('/login')}
-                className="w-full py-4 bg-white text-black font-title-md rounded-md hover:scale-[1.01] transition-transform active:scale-95"
-                style={{ fontWeight: 700, fontSize: 14 }}
-              >
-                Deploy ClassifAi Now
-              </button>
-
-              <p className="mt-6 text-center font-technical-md text-[11px] text-outline uppercase tracking-widest">
-                Billed annually. Custom instance hosting available.
-              </p>
-            </div>
-          </div>
-        </section>
-
-      </main>
-
-      {/* ═══════════════════════════════════════════════════════════════════════
-          FOOTER
-      ═══════════════════════════════════════════════════════════════════════ */}
-      <footer className="py-12 px-gutter razor-border-b bg-surface-container-lowest">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
-          <div className="flex flex-col items-center md:items-start">
-            <span className="font-technical-md text-title-md text-white" style={{ fontWeight: 700 }}>ClassifAi</span>
-            <span className="font-body-sm text-on-surface-variant mt-1">
-              © {new Date().getFullYear()} Enterprise Systems Inc.
-            </span>
-          </div>
-          <div className="flex space-x-8">
-            {['Privacy', 'Security', 'API Reference', 'Compliance'].map(item => (
-              <a
-                key={item}
-                href="#"
-                className="font-label-caps text-outline hover:text-white transition-colors"
-                style={{ fontSize: 12, textDecoration: 'none' }}
-              >
-                {item}
-              </a>
-            ))}
-          </div>
-          <div className="flex items-center space-x-4 opacity-50">
-            <Icon name="terminal" className="!text-[18px]" />
-            <span className="font-technical-md text-[10px]">v2.4.0-stable</span>
-          </div>
-        </div>
-      </footer>
-
+    <div className="landing-logo">
+      <span className="landing-logo-mark">
+        <ClassifAiMark size={25} />
+      </span>
+      <span>
+        <span className={dark ? 'landing-logo-name is-dark' : 'landing-logo-name'}>
+          Classif<span>Ai</span>
+        </span>
+        <span className={dark ? 'landing-logo-sub is-dark' : 'landing-logo-sub'}>
+          Helpdesk Center
+        </span>
+      </span>
     </div>
   );
 }
+
+function SectionIntro({ eyebrow, title, text }) {
+  return (
+    <div className="landing-section-intro">
+      <p>{eyebrow}</p>
+      <h2>{title}</h2>
+      <span>{text}</span>
+    </div>
+  );
+}
+
+function FeatureCard({ icon: Icon, title, text }) {
+  return (
+    <article className="landing-card landing-feature-card">
+      <span className="landing-icon">
+        <Icon size={18} />
+      </span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </article>
+  );
+}
+
+function RoleCard({ title, label, text }) {
+  return (
+    <article className="landing-card landing-role-card">
+      <div>
+        <h3>{title}</h3>
+        <span>{label}</span>
+      </div>
+      <p>{text}</p>
+    </article>
+  );
+}
+
+function HeroPreview() {
+  return (
+    <aside className="landing-preview" aria-label="Support workspace preview">
+      <div className="landing-preview-top">
+        <div>
+          <span>Queue health</span>
+          <strong>Operational</strong>
+        </div>
+        <span className="landing-live">LIVE</span>
+      </div>
+
+      <div className="landing-preview-body">
+        <div className="landing-visual">
+          <img src={heroImage} alt="ClassifAi support workspace illustration" />
+        </div>
+
+        <div className="landing-ticket">
+          <div className="landing-ticket-head">
+            <TicketCheck size={17} />
+            <strong>Ticket triage</strong>
+          </div>
+          {['Employee request received', 'AI category prediction ready', 'Assigned to queue owner'].map((item, index) => (
+            <div className="landing-step" key={item}>
+              <span>{index + 1}</span>
+              <p>{item}</p>
+              {index === 2 && <CheckCircle2 size={15} />}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="landing-metrics">
+        {METRICS.map(([value, label]) => (
+          <div key={label}>
+            <strong>{value}</strong>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
+function MiniWorkflow() {
+  return (
+    <div className="landing-workflow-panel">
+      {[
+        ['Intake', 'Employee submits the issue with details and files.'],
+        ['Classify', 'AI suggests department, priority, and confidence.'],
+        ['Resolve', 'The right team works the ticket with shared context.'],
+      ].map(([title, text], index) => (
+        <div className="landing-workflow-item" key={title}>
+          <span>{index + 1}</span>
+          <div>
+            <strong>{title}</strong>
+            <p>{text}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function LandingPage() {
+  return (
+    <main className="landing-page">
+      <style>{landingStyles}</style>
+
+      <header className="landing-header">
+        <div className="landing-container landing-header-inner">
+          <LogoLockup />
+          <nav className="landing-nav" aria-label="Landing navigation">
+            <a href="#features">Features</a>
+            <a href="#roles">Roles</a>
+            <a href="#workflow">Workflow</a>
+          </nav>
+          <Link to="/login" className="landing-button landing-button-primary">
+            Login
+            <ArrowRight size={16} />
+          </Link>
+        </div>
+      </header>
+
+      <section className="landing-container landing-hero">
+        <div className="landing-hero-copy">
+          <p className="landing-eyebrow">AI-assisted support operations</p>
+          <h1>Helpdesk work, routed clearly.</h1>
+          <p className="landing-lede">
+            ClassifAi gives employees, agents, managers, and admins one simple place to submit,
+            classify, track, and resolve support tickets.
+          </p>
+
+          <div className="landing-actions">
+            <Link to="/login" className="landing-button landing-button-primary">
+              Open workspace
+              <ArrowRight size={16} />
+            </Link>
+            <a href="#features" className="landing-button landing-button-secondary">
+              View features
+            </a>
+          </div>
+
+          <div className="landing-checks">
+            {[
+              [ClipboardList, 'Ticket intake'],
+              [ShieldCheck, 'Role access'],
+              [BarChart3, 'Manager analytics'],
+            ].map(([Icon, text]) => (
+              <span key={text}>
+                <Icon size={16} />
+                {text}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <HeroPreview />
+      </section>
+
+      <section className="landing-band" id="features">
+        <div className="landing-container">
+          <SectionIntro
+            eyebrow="Core features"
+            title="Built around the ticket lifecycle."
+            text="The interface stays focused on the work: request, classify, route, resolve, and review."
+          />
+          <div className="landing-feature-grid">
+            {FEATURES.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="landing-container landing-section" id="roles">
+        <SectionIntro
+          eyebrow="Role workspaces"
+          title="Every user lands where they need to work."
+          text="Each dashboard is scoped to the person using it, without extra clutter."
+        />
+        <div className="landing-role-grid">
+          {ROLES.map(([title, label, text]) => (
+            <RoleCard key={title} title={title} label={label} text={text} />
+          ))}
+        </div>
+      </section>
+
+      <section className="landing-band" id="workflow">
+        <div className="landing-container landing-workflow">
+          <div>
+            <p className="landing-eyebrow">Workflow</p>
+            <h2>One clean path from request to resolution.</h2>
+            <p>
+              ClassifAi keeps support moving with fewer handoff gaps and clearer ownership at each
+              step of the queue.
+            </p>
+            <div className="landing-workflow-note">
+              <UsersRound size={18} />
+              Built for HR, IT software, and IT hardware support teams.
+            </div>
+          </div>
+          <MiniWorkflow />
+        </div>
+      </section>
+
+      <footer className="landing-footer">
+        <div className="landing-container landing-footer-inner">
+          <LogoLockup dark />
+          <Link to="/login" className="landing-button landing-button-light">
+            Sign in
+            <LockKeyhole size={16} />
+          </Link>
+        </div>
+      </footer>
+    </main>
+  );
+}
+
+const landingStyles = `
+.landing-page {
+  min-height: 100vh;
+  background: #f8f9ff;
+  color: #0f172a;
+  overflow-x: hidden;
+}
+
+.landing-container {
+  width: min(1120px, calc(100vw - 40px));
+  margin: 0 auto;
+}
+
+.landing-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom: 1px solid #dbe3ef;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+}
+
+.landing-header-inner,
+.landing-footer-inner {
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.landing-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 190px;
+}
+
+.landing-logo-mark {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  flex: 0 0 auto;
+}
+
+.landing-logo-name,
+.landing-logo-sub {
+  display: block;
+}
+
+.landing-logo-name {
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 850;
+  color: #0f172a;
+}
+
+.landing-logo-name span {
+  color: #2563eb;
+}
+
+.landing-logo-name.is-dark {
+  color: #ffffff;
+}
+
+.landing-logo-sub {
+  margin-top: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  line-height: 14px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.landing-logo-sub.is-dark {
+  color: #94a3b8;
+}
+
+.landing-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.landing-nav a {
+  color: #475569;
+  text-decoration: none;
+}
+
+.landing-nav a:hover {
+  color: #0f172a;
+}
+
+.landing-button {
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 14px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.landing-button-primary {
+  background: #020617;
+  color: #ffffff;
+}
+
+.landing-button-primary:hover {
+  background: #1e293b;
+}
+
+.landing-button-secondary {
+  border-color: #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+.landing-button-secondary:hover {
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.landing-button-light {
+  background: #ffffff;
+  color: #020617;
+}
+
+.landing-button-light:hover {
+  background: #e2e8f0;
+}
+
+.landing-hero {
+  min-height: 620px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(420px, 1.05fr);
+  align-items: center;
+  gap: 56px;
+  padding: 56px 0 72px;
+}
+
+.landing-eyebrow {
+  width: fit-content;
+  margin: 0 0 18px;
+  padding: 6px 10px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.landing-hero h1 {
+  max-width: 660px;
+  margin: 0;
+  color: #020617;
+  font-size: clamp(42px, 5.2vw, 66px);
+  line-height: 0.98;
+  font-weight: 900;
+}
+
+.landing-lede,
+.landing-workflow p,
+.landing-section-intro span {
+  color: #475569;
+  font-size: 16px;
+  line-height: 28px;
+}
+
+.landing-lede {
+  max-width: 620px;
+  margin: 24px 0 0;
+}
+
+.landing-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 32px;
+}
+
+.landing-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 22px;
+  margin-top: 28px;
+}
+
+.landing-checks span,
+.landing-workflow-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.landing-checks svg,
+.landing-workflow-note svg {
+  color: #2563eb;
+}
+
+.landing-preview,
+.landing-card,
+.landing-workflow-panel {
+  border: 1px solid #dbe3ef;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06);
+}
+
+.landing-preview {
+  overflow: hidden;
+}
+
+.landing-preview-top,
+.landing-metrics {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+}
+
+.landing-preview-top {
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.landing-preview-top span,
+.landing-metrics span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.landing-preview-top strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  line-height: 24px;
+}
+
+.landing-live {
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #ecfdf5;
+  color: #047857 !important;
+}
+
+.landing-preview-body {
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  min-height: 300px;
+}
+
+.landing-visual {
+  display: grid;
+  place-items: center;
+  border-right: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.landing-visual img {
+  width: min(210px, 80%);
+  height: auto;
+  object-fit: contain;
+}
+
+.landing-ticket {
+  padding: 18px;
+}
+
+.landing-ticket-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.landing-ticket-head svg {
+  color: #2563eb;
+}
+
+.landing-step {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.landing-step span,
+.landing-workflow-item > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 850;
+  box-shadow: inset 0 0 0 1px #dbe3ef;
+}
+
+.landing-step p {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 750;
+}
+
+.landing-step svg {
+  color: #059669;
+}
+
+.landing-metrics {
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #e2e8f0;
+}
+
+.landing-metrics strong {
+  display: block;
+  color: #020617;
+  font-size: 24px;
+  line-height: 30px;
+}
+
+.landing-band {
+  border-top: 1px solid #dbe3ef;
+  border-bottom: 1px solid #dbe3ef;
+  background: #ffffff;
+  padding: 72px 0;
+}
+
+.landing-section {
+  padding: 72px 0;
+}
+
+.landing-section-intro {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing-section-intro p {
+  margin: 0 0 10px;
+  color: #2563eb;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.landing-section-intro h2,
+.landing-workflow h2 {
+  margin: 0;
+  color: #020617;
+  font-size: clamp(28px, 3.2vw, 38px);
+  line-height: 1.1;
+  font-weight: 900;
+}
+
+.landing-section-intro span {
+  display: block;
+  margin-top: 14px;
+}
+
+.landing-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.landing-card {
+  padding: 22px;
+}
+
+.landing-feature-card {
+  min-height: 220px;
+}
+
+.landing-icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  border-radius: 8px;
+  background: #020617;
+  color: #ffffff;
+}
+
+.landing-card h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 16px;
+  line-height: 22px;
+  font-weight: 850;
+}
+
+.landing-card p {
+  margin: 9px 0 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 23px;
+}
+
+.landing-role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.landing-role-card {
+  min-height: 136px;
+}
+
+.landing-role-card div {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.landing-role-card span {
+  padding: 5px 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.landing-workflow {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(420px, 1.2fr);
+  align-items: center;
+  gap: 48px;
+}
+
+.landing-workflow > div > p:not(.landing-eyebrow) {
+  max-width: 520px;
+  margin: 16px 0 0;
+}
+
+.landing-workflow-note {
+  margin-top: 26px;
+}
+
+.landing-workflow-panel {
+  padding: 20px;
+}
+
+.landing-workflow-item {
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: 14px;
+  padding: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.landing-workflow-item:last-child {
+  border-bottom: none;
+}
+
+.landing-workflow-item strong {
+  display: block;
+  color: #0f172a;
+  font-size: 15px;
+  line-height: 20px;
+}
+
+.landing-workflow-item p {
+  margin: 4px 0 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 22px;
+}
+
+.landing-footer {
+  background: #020617;
+  color: #ffffff;
+}
+
+@media (max-width: 960px) {
+  .landing-nav {
+    display: none;
+  }
+
+  .landing-hero,
+  .landing-workflow {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-preview-body {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-visual {
+    min-height: 230px;
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .landing-feature-grid,
+  .landing-role-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .landing-container {
+    width: min(100% - 28px, 1120px);
+  }
+
+  .landing-header-inner {
+    min-height: 58px;
+    gap: 12px;
+  }
+
+  .landing-logo {
+    min-width: 0;
+  }
+
+  .landing-logo-sub {
+    display: none;
+  }
+
+  .landing-hero {
+    min-height: auto;
+    gap: 32px;
+    padding: 36px 0 52px;
+  }
+
+  .landing-hero h1 {
+    font-size: 40px;
+  }
+
+  .landing-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .landing-feature-grid,
+  .landing-role-grid,
+  .landing-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-role-card div {
+    flex-direction: column;
+  }
+
+  .landing-band,
+  .landing-section {
+    padding: 52px 0;
+  }
+
+  .landing-footer-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 18px 0;
+  }
+}
+`;
