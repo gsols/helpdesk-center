@@ -1,8 +1,8 @@
-# Helpdesk Center — Implementation Plan
+# ClassifAi — Implementation Plan
 
 ## Overview
 
-Implement the full Helpdesk Center application as defined in `plan.md`.
+Implement the full ClassifAi application as defined in `plan.md`.
 
 **Stack confirmed:** Spring Boot 3.3.5 · Java 21 · PostgreSQL · Session auth (no JWT) · Local disk file storage · IBM Watson NLU · React 19 + Vite · Axios · React Router 7
 

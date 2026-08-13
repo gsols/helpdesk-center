@@ -44,6 +44,73 @@ The agent workspace is structured into a fluid, side-by-side layout:
 
 ---
 
+## 2B. SLA Progress Bar UI State Engine
+
+All rendering loops inside `SlaProgressBar.jsx`, `TicketCard.jsx`, and `TicketDetailPanel.jsx` **must** evaluate the `due_at` timestamp and the ticket `status` field to derive one of the following five mutually exclusive states. States are evaluated in priority order — **BREACHED** and **PAUSED** are checked before percentage thresholds.
+
+### State Evaluation Order & Rendering Contract
+
+| Priority | State | Condition | Bar Fill | Text / Animation |
+|----------|-------|-----------|----------|-----------------|
+| 1 | **BREACHED** | `CURRENT_TIMESTAMP > due_at` **AND** `status NOT IN ('RESOLVED', 'CLOSED')` | Drain bar width to `0%` | Header flag renders as **"⚠️ SLA BREACHED / EXPIRED"** in `text-red-600 font-semibold` |
+| 2 | **PAUSED** | `status == 'PENDING_EMPLOYEE'` | Freeze bar at its current width | Apply `opacity-50` muted tint; display italicized caption below bar: *"SLA Clock Paused (Awaiting Employee response)"* |
+| 3 | **ALERT** | `remaining_time < 25%` of total window | Bar fills to current `remaining_time%` | `bg-red-500` with `animate-pulse` applied to both the bar and the remaining-time text label |
+| 4 | **WARNING** | `remaining_time` is between `25%` and `50%` of total window | Bar fills to current `remaining_time%` | Steady `bg-amber-500`, no animation |
+| 5 | **SAFE** | `remaining_time > 50%` of total window | Bar fills to current `remaining_time%` | Steady `bg-blue-500`, no animation |
+
+### Calculation Reference
+
+```
+remaining_time_pct = ((due_at - CURRENT_TIMESTAMP) / (due_at - created_at)) * 100
+```
+
+- `due_at` and `created_at` are ISO 8601 timestamps sourced from the ticket payload.
+- The percentage must be clamped: `max(0, min(100, remaining_time_pct))`.
+- When `due_at` is `null` or missing (e.g. SLA rule not yet applied), the bar must render in a neutral `bg-slate-300` state with no state label.
+
+### Per-Component Rendering Rules
+
+- **`SlaProgressBar.jsx`**: The canonical state-evaluation component. All five states are implemented here. Other components must delegate to this component rather than re-implementing the logic.
+- **`TicketCard.jsx`**: Renders `<SlaProgressBar />` inline below the ticket subject. In **BREACHED** state, the card's left accent border must switch to `border-l-4 border-red-500`.
+- **`TicketDetailPanel.jsx`**: Renders `<SlaProgressBar />` in the metadata header block. In **BREACHED** state, the panel's section title block must display the **"⚠️ SLA BREACHED / EXPIRED"** flag text in place of the normal time-remaining string.
+
+---
+
+## 2C. Department Manager Hub Component Rules (`DepartmentManager.jsx`)
+
+All elements inside `DepartmentManager.jsx` and its sub-components must inherit the global sharp-edge structural rule (`rounded-none`) and the high-density table pattern.
+
+### Inspector Drawer Panel (`DepartmentInspectorDrawer.jsx`)
+- **Drawer Container**: Fixed right-side slide-in panel (`w-96`), `rounded-none`, `border-l border-slate-200/80 dark:border-slate-800`, `bg-white dark:bg-slate-900`.
+- **Manager Name Row**: Displayed as a single inline flex row. Name string uses `text-slate-900 font-medium`. The pencil edit icon (`lucide:Pencil`, `w-3.5 h-3.5`) renders in `text-slate-400 hover:text-slate-700 cursor-pointer` immediately to the right.
+- **Manager Live-Search Input** (active edit state): `w-full border border-slate-300 rounded-none px-2 py-1 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`. Dropdown results render as a `rounded-none` floating list panel below the input.
+- **Active Agents Data Grid**: Identical token pattern to the global High-Density Jira-Style Grid (`§ 2B`). Column headers: `text-[11px] font-semibold tracking-wider text-slate-500 uppercase bg-slate-50`. No outer border frame — horizontal `divide-y divide-slate-100 dark:divide-slate-800/60` only.
+
+### Action Buttons
+- **"Add New Agent" Button**: `bg-slate-900 text-white text-xs px-3 py-1.5 rounded-none hover:bg-slate-700 transition-colors`.
+- **"Delete Department" Button**: `bg-red-600 text-white text-xs px-3 py-1.5 rounded-none hover:bg-red-700 transition-colors`.
+- **"Create New Department" Button**: `bg-slate-900 text-white text-sm px-4 py-2 rounded-none hover:bg-slate-700 transition-colors`.
+
+### Create Department Modal
+The creation modal contains three input sections stacked vertically:
+- **Department Name Input**: Standard `inputStyle` text field, required. Placeholder: "e.g. Information Technology".
+- **Manager Picker**: Live-search input returning all company users. Selected user renders as a dismissible chip below the input. Required — the "Create" confirm button stays disabled until a manager is selected.
+- **Initial Agents Multi-Picker**: Live-search input filtered to exclude the already-selected manager. Selected users render as a row of dismissible chips. Optional — may be left empty.
+- **Action Row**: Right-aligned. "Cancel" (`btnSecondary`) + "Create Department" (`btnPrimary`, disabled until name + manager are filled).
+
+### Confirmation / Interlock Modals
+All three confirmation modals (Delete Department, Manager Handover, Agent Transfer) share a consistent structure:
+- **Backdrop**: `fixed inset-0 bg-black/40 z-50`.
+- **Modal Panel**: `bg-white dark:bg-slate-900 rounded-none border border-slate-200/80 dark:border-slate-800 p-6 max-w-md w-full shadow-lg`.
+- **Title**: `text-slate-900 font-semibold text-base`.
+- **Body Copy**: `text-slate-500 text-sm mt-2 leading-relaxed`.
+- **Action Row**: `flex gap-3 mt-6 justify-end`.
+  - **Confirm Target** (destructive context): `bg-red-600 text-white text-sm px-4 py-2 rounded-none hover:bg-red-700`.
+  - **Confirm Target** (non-destructive / handover context): `bg-slate-900 text-white text-sm px-4 py-2 rounded-none hover:bg-slate-700`.
+  - **Cancel Target**: `bg-white text-slate-700 border border-slate-300 text-sm px-4 py-2 rounded-none hover:bg-slate-50`.
+
+---
+
 ## 3. UI/UX Interaction Behaviors
 *   **Input Focus States**: All active search engines and textual form fields must highlight clean border changes without shifting layout boundaries: `focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500`.
 *   **Modal & Panel Animations**: Transitions, panel slips, and dropzone entries must avoid complex bouncy dynamics. Use standard swift step adjustments: `transition-all duration-150 ease-in-out`.
@@ -67,3 +134,4 @@ All component code generation must strictly map background, text, and boundary l
 - **Medium Priority / In Progress (Blue State)**: Light: `bg-blue-50 text-blue-700 border-blue-200` | Dark: `bg-blue-950/20 text-blue-400 border-blue-900/50`
 - **High Priority / Attention Need (Amber State)**: Light: `bg-amber-50 text-amber-700 border-amber-200` | Dark: `bg-amber-950/20 text-amber-400 border-amber-900/50`
 - **Critical Breaches / Blocker Alerts (Red Alarm)**: Light: `bg-red-50 text-red-700 border-red-200` | Dark: `bg-red-950/30 text-red-400 border-red-900/50`
+

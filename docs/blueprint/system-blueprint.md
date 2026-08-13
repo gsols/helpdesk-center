@@ -1,4 +1,4 @@
-# System Blueprint: Multi-Tenant AI Help Desk Platform
+# ClassifAi — System Blueprint: Multi-Tenant AI Help Desk Platform
 
 This document serves as the absolute source of truth and comprehensive master plan for the implementation of the Multi-Tenant Support Help Desk application. All AI coding assistants, agents, and developers must strictly adhere to the architecture, business logic, constraints, and development phases outlined below.
 
@@ -40,7 +40,10 @@ The system enforces strict data-privacy isolation across four explicit roles:
    - Can view all tickets inside their assigned department.
    - Has permission to manually override workloads, reassign tickets to specific agents, and view team resolution performance metrics.
 4. **System Admin**:
-   - Global multi-tenant clearance. Configures systemic parameters, creates/deletes company spaces, manages global settings, and configures third-party integrations.
+    - Global multi-tenant clearance. Configures systemic parameters, creates/deletes company spaces, manages global settings, and configures third-party integrations.
+    - **Department Lifecycle Authority**: Creates and destroys department records. Destruction is an atomic cascade — see **§ I** below.
+    - **Agent Allocation Control**: Assigns unassigned employees or transfers active agents from other departments directly from the Department Inspector Panel.
+    - **Manager Handover Control**: Replaces the active `DEPT_MANAGER` of any department. The outgoing manager is immediately downgraded to `EMPLOYEE`.
 
 ### C. Handling Misclassifications & AI Feedback Loops
 1. **The Re-Route Mechanism**: If the AI misclassifies a ticket (e.g., routes a confidential payroll ticket to the IT department queue), the IT agent must click a **"Re-Route Ticket"** action.
@@ -61,9 +64,54 @@ Every ticket must transition through these precise, state-controlled enums:
 2. **Object Storage Engine**: Binary assets must be uploaded to an Object Storage Service (AWS S3, Google Cloud Storage, or MinIO). PostgreSQL stores only metadata and a secure web retrieval locator string (`secure_url`).
 3. **Association Scope**: Attachments are valid on initial ticket generation (associated to `ticket_id`) or dynamically appended inside conversation text blocks (associated to `message_id`).
 
-### F. Asynchronous Non-Blocking Email Layer
+### I. System Admin Department Management Rules
+
+#### I.0 — Department Creation
+`POST /api/departments` accepts `{ name, managerId, agentIds[] }`. In a single transaction:
+1. A new `departments` row is inserted.
+2. The selected manager's row is updated: `role = 'DEPT_MANAGER'`, `department_id = new_department.id`.
+3. Each selected agent's row is updated: `role = 'AGENT'`, `department_id = new_department.id` (cross-department transfers are treated the same as the Add Agent pipeline in § I.2).
+
+#### I.1 — Cascading Department Deletion (Tear-Down Rule)
+When a System Admin confirms the "Delete Department" action, the backend executes a single atomic transaction:
+1. **Ticket Purge**: Every `tickets` row with `department_id == deleted_department.id` is hard-deleted via `ON DELETE CASCADE`. All child tickets (`parent_id` cascade), `ticket_messages`, `attachments`, `ai_classification_logs`, and `notifications` referencing those tickets are purged with them.
+2. **Agent Status Strip**: Every `users` row inside the deleted department where `role IN ('AGENT', 'DEPT_MANAGER')` is updated: `department_id = NULL`, `role = 'EMPLOYEE'`. These users lose all agent queue access instantly.
+
+#### I.2 — Dynamic Agent Allocation Pipeline (Add / Transfer)
+When an admin opens the Department Inspector Panel and clicks **"Add New Agent"**:
+1. **Eligibility Filter**: The backend returns all users in the same company *except* those already in the current department. This combined list includes unassigned employees and agents active in other departments.
+2. **Standard Employee Promotion**: Selecting an employee with no department sets `department_id = current_department.id`, `role = 'AGENT'`.
+3. **Cross-Department Agent Transfer Interlock**: If the selected user is currently `role = 'AGENT'` in another department, the frontend intercepts the action and forces a confirmation modal before proceeding. On confirmation: `department_id` is updated to the target department; `role` remains `'AGENT'`. The user's active ticket assignments in the original department are implicitly wiped by the change.
+
+#### I.3 — Department Manager Handover Interlock
+The System Admin may replace the active `DEPT_MANAGER` of any department at any time:
+1. The admin clicks the inline pencil icon next to the manager's name in the Inspector Panel.
+2. A live search input appears, returning all company users **except** the currently assigned manager.
+3. Selecting a new user triggers a confirmation modal: *"Are you sure you want to change the manager of this department? The previous manager will be downgraded to a standard employee, and the new user will gain full administrative operational clearance over this department's teams and analytics metrics."*
+4. On confirmation, the backend executes two updates atomically:
+   - Previous manager row: `role = 'EMPLOYEE'` (department_id remains unchanged unless admin explicitly removes them).
+   - New manager row: `role = 'DEPT_MANAGER'`, `department_id = target_department.id`.
+
+### F. Asynchronous Non-Blocking Email Layer ✅ Implemented
 1. **Asynchronous Execution Constraint**: Email transmission commands must never run directly within the HTTP Request-Response lifecycle threads. Doing so creates artificial execution latency for the client.
 2. **Event Workers**: Critical notification mutations (Ticket Created, Message Appended, State Shifted) dispatch events captured by Spring Boot's background `@Async` worker threads. The user gets a near-instant clean HTTP JSON reply while workers process external SMTP or SES integrations.
+
+**Implementation detail (completed):**
+- `EmailService` uses `@Async` + `JavaMailSender` + Thymeleaf HTML templates (`email/new-comment.html`, `email/ticket-assigned.html`).
+- Triggered from `CommentService.addComment()` (comment posted → email recipient) and `TicketService.assignToMe()` / `TicketService.reassignTicket()` (assignment → email assignee).
+- SMTP is configured via environment variables `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `APP_BASE_URL` (see `.env.example`).
+- `@EnableAsync` is declared on `HelpdeskCenterApplication`.
+
+### J. Real-Time WebSocket Comment Streaming ✅ Implemented
+1. **STOMP over native browser WebSocket**: The backend runs a Spring WebSocket STOMP message broker (`spring-boot-starter-websocket`). All connected clients subscribed to `/topic/tickets/{ticketId}/comments` receive new `CommentPayload` frames instantly when any participant posts a comment — no polling required. `sockjs-client` is **not used** (it references Node.js `global` and crashes under Vite); instead `@stomp/stompjs` v7 connects directly via `brokerURL: "ws://host/ws/websocket?token=<JWT>"`.
+2. **JWT Handshake Authentication**: WebSocket connections authenticate via a `?token=<JWT>` query parameter on the HTTP upgrade request. `WebSocketHandshakeInterceptor` validates the token and populates the WS session with an `AuthenticatedUser` principal; unauthenticated handshakes are rejected before the STOMP session is established.
+3. **Broadcast Shape**: `CommentPayload` (id, ticketId, sender{id, name, role}, body, createdAt) is serialised as JSON and broadcast over `/topic/tickets/{id}/comments`.
+4. **Frontend Integration**: `useTicketSocket` hook (`@stomp/stompjs` Client) injects arriving frames directly into the React Query cache via `setQueryData`, producing sub-second live updates. HTTP polling is retained at 30 s as a safety-net gap-filler. `CommentSection` shows a **Live / Connecting…** status strip derived from the STOMP connection state.
+5. **Broker Endpoints**:
+   - Connect (WS upgrade): `ws://host/ws/websocket?token=<JWT>`
+   - Subscribe: `/topic/tickets/{ticketId}/comments` — real-time comment feed
+   - User queue: `/user/queue/notifications` — reserved for future per-user pushes
+   - App prefix: `/app` — for future `@MessageMapping` handlers (e.g. typing indicators)
 
 ### G. Fair-Share Assignment Workflows
 To support arbitrary operational models for different companies, the system panel provides an administrative toggle supporting two distinct distribution modes:
@@ -106,6 +154,7 @@ To support arbitrary operational models for different companies, the system pane
 *   **Build Tooling**: Vite 8+
 *   **Routing Engines**: React Router DOM v7 (Data API routing structures)
 *   **Data Fetching & State Caching**: TanStack Query v5 (React Query) — *Replaces vanilla Axios operations to manage background data syncing, caching, mutation state transitions, and loading skeletons out-of-the-box.*
+*   **Real-Time Transport**: `@stomp/stompjs` v7 — STOMP over native browser WebSocket (`ws://`/`wss://`). `sockjs-client` was removed as it references Node.js `global` and crashes under Vite.
 *   **UI/Styling Utility**: Tailwind CSS v4+ — *Mandatory for fast layout structures and responsive component design.*
 *   **Icon Library**: Lucide React
 *   **Code Linting Quality**: ESLint
@@ -115,6 +164,8 @@ To support arbitrary operational models for different companies, the system pane
 *   **Framework Layer**: Spring Boot 3.4+ (Production-ready stable stream)
 *   **Data Access Abstraction**: Spring Data JPA
 *   **Security Protocol**: Spring Security configured with **JWT (JSON Web Tokens) or OAuth2 Resource Server Patterns** — *Replaces older stateful session cookies to ensure frictionless API authentication, easy scalability across multi-tenancies, and future-proof integrations with third-party messaging systems like Slack/Teams.*
+*   **Real-Time Messaging**: Spring WebSocket (`spring-boot-starter-websocket`) with STOMP broker — enables sub-second comment broadcasting.
+*   **Email Transport**: Spring Mail (`spring-boot-starter-mail`) + Thymeleaf HTML templates — async SMTP notifications for comments and ticket assignments.
 *   **Data Validation Engine**: Spring Validation (`jakarta.validation-api`)
 *   **Code Boilerplate Reduction**: Lombok
 *   **Automation Build Tool**: Maven
@@ -146,17 +197,23 @@ To support arbitrary operational models for different companies, the system pane
 - [ ] Write logic determining whether the returned confidence score beats the 60.00% requirement boundary.
 - [ ] Setup the asynchronous event listeners that write logging events to the `ai_classification_logs` table upon human re-routing actions.
 
-### Phase 4: Storage, Messaging, & Asynchronous Notifications
-- [ ] Write integration adapter service connecting files to Object Storage bucket endpoints.
-- [ ] Build out the `TicketMessage` discussion service layer handling employee-agent threads.
-- [ ] Write automatic status update logic: Transition ticket to `PENDING_EMPLOYEE` upon Agent reply; revert to `IN_PROGRESS` on Employee reply.
-- [ ] Build Spring background asynchronous event execution pipeline (`@Async`) configuring non-blocking transactional mail alerts.
+### Phase 4: Storage, Messaging, & Asynchronous Notifications ✅ Implemented
+- [x] Write integration adapter service connecting files to Object Storage bucket endpoints.
+- [x] Build out the `TicketMessage` discussion service layer handling employee-agent threads.
+- [x] Write automatic status update logic: Transition ticket to `PENDING_EMPLOYEE` upon Agent reply; revert to `IN_PROGRESS` on Employee reply.
+- [x] Build Spring background asynchronous event execution pipeline (`@Async`) configuring non-blocking transactional mail alerts. *(EmailService + @EnableAsync)*
+- [x] WebSocket STOMP broker for real-time comment delivery to all ticket participants. *(WebSocketConfig + WebSocketHandshakeInterceptor + CommentPayload)*
+- [x] Frontend STOMP client (`useTicketSocket`) injecting WS frames into React Query cache instantly.
 
 ### Phase 5: Core Ticket Lifecycle REST API & Distribution Engine
 - [ ] Build transactional endpoints for ticket creation, state modification, and comment tracking.
 - [ ] Write the transactional layer for Parent-Child splitting logic.
 - [ ] Program the fair-share assignment routing mechanisms (Manual Pull vs. Round-Robin Workload Calculation).
 - [ ] Write internal validation controls protecting against cross-department data leakage.
+- [ ] Implement `DELETE /api/departments/{id}` — atomic cascade: PostgreSQL `ON DELETE CASCADE` purges tickets; backend bulk-updates all former agents/managers to `role = 'EMPLOYEE'`, `department_id = NULL`.
+- [ ] Implement `GET /api/departments/{id}/eligible-agents` — returns all company users excluding current department members (for the Add Agent overlay).
+- [ ] Implement `POST /api/departments/{id}/agents` — promotes an employee or transfers an agent; cross-department transfer requires confirmation flag in request body.
+- [ ] Implement `PATCH /api/departments/{id}/manager` — atomically downgrades previous manager to `EMPLOYEE` and promotes new user to `DEPT_MANAGER`.
 
 ### Phase 6: Frontend Dashboard & TanStack Syncing
 - [ ] Scaffolding layout folders with Vite, Tailwind CSS v4, and React Router DOM v7.

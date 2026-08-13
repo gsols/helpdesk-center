@@ -9,12 +9,14 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import com.helpdeskcenter.dto.EligibleUserResponse;
 
 @RestController
 @RequestMapping("/api/users")
@@ -90,5 +92,31 @@ public class UsersController {
             ))
             .toList();
         return ResponseEntity.ok(team);
+    }
+
+    /**
+     * GET /api/users/all-users — SYS_ADMIN only.
+     * Returns every user in the company (any role), used by the manager picker
+     * and initial-agents picker inside the "Create Department" modal.
+     */
+    @GetMapping("/all-users")
+    @PreAuthorize("hasRole('SYS_ADMIN')")
+    @Transactional(readOnly = true)
+    public ResponseEntity<List<EligibleUserResponse>> getAllUsers(
+        @AuthenticationPrincipal AuthenticatedUser principal
+    ) {
+        List<EligibleUserResponse> users = userRepository
+            .findByCompanyIdOrderByNameAsc(principal.companyId())
+            .stream()
+            .map(u -> new EligibleUserResponse(
+                u.getId(),
+                u.getName(),
+                u.getEmail(),
+                u.getRole().name(),
+                u.getDepartment() != null ? u.getDepartment().getName() : null,
+                u.getRole() == UserRole.AGENT
+            ))
+            .toList();
+        return ResponseEntity.ok(users);
     }
 }

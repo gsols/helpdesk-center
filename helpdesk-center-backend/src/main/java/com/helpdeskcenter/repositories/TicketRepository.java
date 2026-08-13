@@ -1,6 +1,7 @@
 package com.helpdeskcenter.repositories;
 
 import com.helpdeskcenter.entities.Ticket;
+import com.helpdeskcenter.enums.Priority;
 import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,6 +31,22 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
     /** All child tickets of a parent */
     List<Ticket> findByParentIdOrderByCreatedAtAsc(Long parentId);
+
+    /**
+     * Active (non-resolved, non-closed) tickets in a department+priority that have no due_at set.
+     * Used to backfill SLA deadlines when a rule is created or updated.
+     */
+    @Query("""
+        select t from Ticket t
+        where t.department.id = :departmentId
+          and t.priority = :priority
+          and t.dueAt is null
+          and t.status not in (com.helpdeskcenter.enums.TicketStatus.RESOLVED, com.helpdeskcenter.enums.TicketStatus.CLOSED)
+        """)
+    List<Ticket> findActiveWithoutDueAt(
+        @Param("departmentId") Long departmentId,
+        @Param("priority") Priority priority
+    );
 
     @Query("""
         select t from Ticket t

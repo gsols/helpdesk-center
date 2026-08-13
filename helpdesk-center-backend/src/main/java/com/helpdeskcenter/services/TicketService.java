@@ -40,6 +40,7 @@ public class TicketService {
     private final PriorityService priorityService;
     private final RoundRobinAssignmentService roundRobin;
     private final NotificationService notificationService;
+    private final EmailService emailService;
 
     @Transactional
     public Ticket createTicket(Map<String, String> body, AuthenticatedUser principal) {
@@ -278,6 +279,8 @@ public class TicketService {
                 agent.getName() + " assigned ticket TCK-" + saved.getId() + " to your queue"
             );
         }
+        // Email the agent about their new assignment
+        emailService.sendTicketAssignedNotification(agent, saved);
         return saved;
     }
 
@@ -314,6 +317,8 @@ public class TicketService {
                 saved.getAssignee(), saved, NotificationType.ASSIGNED,
                 managerName + " assigned ticket TCK-" + saved.getId() + " to your queue"
             );
+            // Email the new assignee
+            emailService.sendTicketAssignedNotification(saved.getAssignee(), saved);
         }
         return saved;
     }

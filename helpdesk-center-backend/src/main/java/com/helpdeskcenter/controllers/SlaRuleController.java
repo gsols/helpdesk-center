@@ -7,6 +7,7 @@ import com.helpdeskcenter.enums.Priority;
 import com.helpdeskcenter.repositories.DepartmentRepository;
 import com.helpdeskcenter.repositories.SlaRuleRepository;
 import com.helpdeskcenter.security.AuthenticatedUser;
+import com.helpdeskcenter.services.SlaBackfillService;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,7 @@ public class SlaRuleController {
 
     private final SlaRuleRepository slaRuleRepository;
     private final DepartmentRepository departmentRepository;
+    private final SlaBackfillService slaBackfillService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('DEPT_MANAGER','SYS_ADMIN')")
@@ -66,7 +68,9 @@ public class SlaRuleController {
         rule.setDepartment(dept);
         rule.setPriority(priority);
         rule.setTargetResolutionHours(hours);
-        return ResponseEntity.status(201).body(SlaRuleResponse.from(slaRuleRepository.save(rule)));
+        SlaRule saved = slaRuleRepository.save(rule);
+        slaBackfillService.backfill(saved);
+        return ResponseEntity.status(201).body(SlaRuleResponse.from(saved));
     }
 
     @PutMapping("/{id}")
@@ -84,7 +88,9 @@ public class SlaRuleController {
         }
 
         rule.setTargetResolutionHours(((Number) body.get("targetResolutionHours")).intValue());
-        return ResponseEntity.ok(SlaRuleResponse.from(slaRuleRepository.save(rule)));
+        SlaRule saved = slaRuleRepository.save(rule);
+        slaBackfillService.backfill(saved);
+        return ResponseEntity.ok(SlaRuleResponse.from(saved));
     }
 
     @DeleteMapping("/{id}")

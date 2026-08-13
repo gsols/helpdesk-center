@@ -24,24 +24,40 @@ import SlaProgressBar from './SlaProgressBar';
 import RerouteModal from './RerouteModal';
 import { FileText, ImageIcon, Plus, Sparkles, X, Download, Loader, ArrowLeftRight, CheckCircle, ChevronRight } from 'lucide-react';
 
-/* ── SLA remaining time helper (mirrors SlaProgressBar logic) ─────────────── */
-function useSlaRemaining(createdAt, dueAt) {
+/* ── SLA remaining time helper — full 5-state engine ─────────────────────── */
+function useSlaRemaining(createdAt, dueAt, status) {
   return useMemo(() => {
-    if (!createdAt || !dueAt) return null;
+    const STATUS = status?.toUpperCase();
+    const isClosed  = STATUS === 'RESOLVED' || STATUS === 'CLOSED';
+    const isPending = STATUS === 'PENDING_EMPLOYEE';
+
+    if (!createdAt || !dueAt) return { state: 'NO_SLA', label: 'No SLA set', color: '#9ca3af' };
+
     const now     = Date.now();
     const created = new Date(createdAt).getTime();
     const due     = new Date(dueAt).getTime();
     const total   = due - created;
     const ms      = Math.max(0, due - now);
-    if (ms === 0) return { label: 'BREACHED', color: '#dc2626' };
-    const h         = Math.floor(ms / 3600000);
-    const m         = Math.floor((ms % 3600000) / 60000);
-    const label     = h > 0 ? `${h}H ${m}M REMAINING` : `${m}M REMAINING`;
-    const remaining = total > 0 ? (ms / total) * 100 : 0;
-    const color     = remaining < 25 ? '#dc2626' : remaining < 50 ? '#d97706' : '#45464d';
-    return { label, color };
+
+    if (!isClosed && due < now)
+      return { state: 'BREACHED', label: '⚠️ SLA BREACHED / EXPIRED', color: '#dc2626' };
+    if (isPending) {
+      const h = Math.floor(ms / 3600000);
+      const m = Math.floor((ms % 3600000) / 60000);
+      const timeStr = h > 0 ? `${h}H ${m}M` : `${m}M`;
+      return { state: 'PAUSED', label: `${timeStr} (PAUSED)`, color: '#b45309' };
+    }
+
+    const remainingPct = total > 0 ? (ms / total) * 100 : 0;
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const label = h > 0 ? `${h}H ${m}M REMAINING` : `${m}M REMAINING`;
+
+    if (remainingPct < 25) return { state: 'ALERT',   label, color: '#dc2626' };
+    if (remainingPct < 50) return { state: 'WARNING',  label, color: '#d97706' };
+    return { state: 'SAFE', label, color: '#45464d' };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [createdAt, dueAt]);
+  }, [createdAt, dueAt, status]);
 }
 
 /* ── Attachment icon ──────────────────────────────────────────────────────── */
@@ -713,11 +729,15 @@ const actionSolidBtn = {
 
 /* ── TicketHeader ─────────────────────────────────────────────────────────── */
 function TicketHeader({ ticket }) {
-  const sla = useSlaRemaining(ticket.createdAt, ticket.dueAt);
+  const sla = useSlaRemaining(ticket.createdAt, ticket.dueAt, ticket.status);
+
+  const isBreached = sla?.state === 'BREACHED';
+  const isPaused   = sla?.state === 'PAUSED';
+  const isAlert    = sla?.state === 'ALERT';
 
   /* Derive SLA window label from createdAt→dueAt span */
   const slaWindowLabel = useMemo(() => {
-    if (!ticket.createdAt || !ticket.dueAt) return null;
+    if (!ticket.createdAt || !ticket.dueAt) return 'Resolution SLA';
     const ms = new Date(ticket.dueAt).getTime() - new Date(ticket.createdAt).getTime();
     const h  = Math.round(ms / 3600000);
     return `Resolution SLA (Standard ${h}h)`;
@@ -755,17 +775,33 @@ function TicketHeader({ ticket }) {
       {/* SLA label row + progress bar */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-          <span style={{ fontSize: 9, fontWeight: 700, color: '#45464d', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            {slaWindowLabel ?? 'Resolution SLA'}
-          </span>
-          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sla ? sla.color : '#9ca3af' }}>
-            {sla ? sla.label : 'No SLA set'}
+          {/* Left: section title — swaps to breach flag when BREACHED */}
+          {isBreached ? (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              ⚠️ SLA BREACHED / EXPIRED
+            </span>
+          ) : (
+            <span style={{ fontSize: 9, fontWeight: 700, color: '#45464d', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {slaWindowLabel}
+            </span>
+          )}
+          {/* Right: remaining time label — pulses on ALERT */}
+          <span
+            className={isAlert ? 'animate-pulse' : ''}
+            style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: sla.color }}
+          >
+            {sla.label}
           </span>
         </div>
-        {ticket.dueAt ? (
-          <SlaProgressBar ticket={ticket} darkTrack />
-        ) : (
-          <div style={{ width: '100%', height: 4, background: '#e5e7eb', borderRadius: 0 }} />
+
+        {/* Bar — always delegated to SlaProgressBar (handles NO_SLA placeholder too) */}
+        <SlaProgressBar ticket={ticket} darkTrack />
+
+        {/* PAUSED caption */}
+        {isPaused && (
+          <p style={{ margin: '4px 0 0', fontSize: 9, fontStyle: 'italic', color: '#b45309' }}>
+            SLA Clock Paused (Awaiting Employee response)
+          </p>
         )}
       </div>
     </div>

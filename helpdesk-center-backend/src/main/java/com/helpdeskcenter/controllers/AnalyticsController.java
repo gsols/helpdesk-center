@@ -7,6 +7,7 @@ import com.helpdeskcenter.dto.DeptSummaryResponse;
 import com.helpdeskcenter.dto.FrtResponse;
 import com.helpdeskcenter.dto.MttrEntry;
 import com.helpdeskcenter.entities.Ticket;
+import com.helpdeskcenter.repositories.SlaRuleRepository;
 import com.helpdeskcenter.repositories.TicketRepository;
 import com.helpdeskcenter.security.AuthenticatedUser;
 import java.util.List;
@@ -28,6 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 public class AnalyticsController {
 
     private final TicketRepository ticketRepository;
+    private final SlaRuleRepository slaRuleRepository;
 
     /** Average First Response Time in hours across all resolved tickets for the caller's company */
     @GetMapping("/frt")
@@ -133,6 +135,8 @@ public class AnalyticsController {
         long closedCount     = ticketRepository.countClosedByCompany(companyId);
         long triageCount     = ticketRepository.countTriageByCompany(companyId);
         long breachedCount   = ticketRepository.countBreachedByCompany(companyId);
+        boolean slaConfigured = !slaRuleRepository
+            .findByDepartmentCompanyIdOrderByDepartmentIdAscPriorityAsc(companyId).isEmpty();
         var  slaRate         = ticketRepository.findSlaComplianceRate(companyId);
         var  avgFrt          = ticketRepository.findAverageFirstResponseTimeHours(companyId);
         var  aiAccuracy      = ticketRepository.findAiClassificationAccuracy(companyId);
@@ -174,7 +178,7 @@ public class AnalyticsController {
 
         return ResponseEntity.ok(new AdminOverviewResponse(
             openCount, inProgressCount, resolvedCount, closedCount,
-            triageCount, breachedCount, slaRate, avgFrt, aiAccuracy,
+            triageCount, breachedCount, slaConfigured, slaRate, avgFrt, aiAccuracy,
             deptBreakdown, agentSummary, recentActivity
         ));
     }

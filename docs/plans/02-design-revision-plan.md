@@ -1,4 +1,4 @@
-# Helpdesk Center — Full Design Revision Plan
+# ClassifAi — Full Design Revision Plan
 
 ## Overview
 
@@ -363,7 +363,7 @@ generate the reference frames for this redesign:
 
 ---
 
-> **Design a modern internal helpdesk web application called "Helpdesk Center".**
+> **Design a modern internal helpdesk web application called "ClassifAi".**
 >
 > **Brand & Color**
 > - Primary: Navy blue `#1e3a5f` for sidebar, headers, and primary buttons
@@ -374,7 +374,7 @@ generate the reference frames for this redesign:
 >
 > **Layout (Desktop 1280px)**
 > - Persistent left sidebar, 240px wide, navy background
->   - Top: app logo (white headphones icon + "Helpdesk Center" wordmark)
+>   - Top: app logo (white headphones icon + "ClassifAi" wordmark)
 >   - Middle: vertical nav list with icon + label per item, active item has
 >     brighter navy bg and white text
 >   - Bottom: user avatar circle (initials), full name, role badge, logout button
@@ -412,7 +412,7 @@ generate the reference frames for this redesign:
 >    avatars and timestamps, comment input box.
 >
 > 6. **Login Page** — Centered card on off-white bg. Navy headphones logo icon.
->    "Helpdesk Center" title. Username + Password fields. Navy "Sign In" button.
+>    "ClassifAi" title. Username + Password fields. Navy "Sign In" button.
 >
 > **Component styles:**
 > - Buttons: 6px border radius, 36px height, 600 weight

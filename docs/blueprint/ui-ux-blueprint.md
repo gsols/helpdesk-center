@@ -13,7 +13,7 @@ The universal app shell acts as the boundary container wrapping all screens post
    - Core Navigation Icon Anchors: Workspace/Queue, Analytics Panel, SLA Config (Admin/Manager Only), Settings.
    - Bottom Profile Avatar widget (Triggers Quick Logout / Theme Shift Overlay).
 2. **Top Application Header (Fixed: 4rem Height, `border-b`, Slate White/Ink Panels)**:
-   - Left section: Breadcrumb string navigation (e.g., `Helpdesk / Agent Workspace / Open Queue`).
+   - Left section: Breadcrumb string navigation (e.g., `ClassifAi / Agent Workspace / Open Queue`).
    - Right section: Global Tenant Context Indicator Badge + System Clock (Live SLA tracking synchronization).
 
 ---
@@ -46,7 +46,7 @@ The universal app shell acts as the boundary container wrapping all screens post
   - **Tab C: Department Archive (Teammate View)**: Pulls tickets matching `department_id == agent.department_id AND assignee_id != current_user.id`. Enforces a persistent overlay banner alert: `[Read-Only Mode: Teammate Assigned Workspace]`.
 - **The Interactive Right Detail View (`TicketDetailPanel.jsx`)**:
   - Displays the active conversation thread (`CommentSection.jsx`).
-  - Integrates the live **SLA Timeline Tracking Bar**. If a ticket status flips to `PENDING_EMPLOYEE`, the bar displays an animated amber pause state indicator.
+  - Integrates the live **SLA Timeline Tracking Bar**. The bar evaluates five mutually exclusive render states (`SAFE`, `WARNING`, `ALERT`, `PAUSED`, `BREACHED`) defined in full in `frontend-design-system.md § 2B`. If a ticket status flips to `PENDING_EMPLOYEE`, the bar enters the **PAUSED** state and freezes width with a muted opacity and italic caption. If `CURRENT_TIMESTAMP > due_at` and status is not `RESOLVED` or `CLOSED`, the bar enters **BREACHED** state and drains to 0% with a **"⚠️ SLA BREACHED / EXPIRED"** header flag.
   - **Reroute Trigger Overlay (`RerouteModal.jsx`)**: A rounded click modal window that lets agents override classification mistakes. Choosing a target department instantly clears the ticket from the agent's view.
 
 ### Flow 3B: Teammate Workspace View (`/agent/team/:teammateId`)
@@ -65,8 +65,8 @@ The universal app shell acts as the boundary container wrapping all screens post
 ### Flow 4: Core Conversation & Collaborative Thread (`CommentSection.jsx`)
 - **Visual Structure**: Threaded discussion logs. Employee comments align to the left margins; internal Agent entries use subtle slate callout shading backgrounds and align to the right margins.
 - **State Machine Trigger Mechanics**:
-  - **Action A: Agent Posts Comment**: Backend saves message payload, fires async background update email notification threads, and auto-mutates `ticket.status` state to `PENDING_EMPLOYEE`.
-  - **Action B: Employee Posts Comment**: Reverts state instantly back to `IN_PROGRESS`, restarting the SLA tracking timer math routines in the database.
+  - **Action A: Agent Posts Comment**: Backend saves message payload, fires async background update email notification threads, and auto-mutates `ticket.status` state to `PENDING_EMPLOYEE`. This transition triggers the **PAUSED** render state on `SlaProgressBar.jsx` (see `frontend-design-system.md § 2B`).
+  - **Action B: Employee Posts Comment**: Reverts state instantly back to `IN_PROGRESS`, restarting the SLA tracking timer math routines in the database. The progress bar exits the **PAUSED** state and resumes live percentage evaluation.
 
 ### Flow 5: Operational Governance & Management Hub (`AdminDashboard.jsx`)
 - **Analytics Management Engine (`AnalyticsPanel.jsx`)**:
@@ -75,6 +75,36 @@ The universal app shell acts as the boundary container wrapping all screens post
 - **SLA Policy Panel (`SlaConfigPanel.jsx`)**:
   - A settings interface where managers manipulate priority parameters.
   - Features high-density row sliders or form metrics allowing admins to update `target_resolution_hours` variables matching specific priorities, directly editing records inside the `sla_rules` table.
+
+### Flow 7: System Admin Department & Team Manager Hub (`DepartmentManager.jsx`)
+Accessible only when `currentUser.role == 'SYS_ADMIN'`. Provides full structural control over tenant corporate divisions.
+
+#### Screen A: Master Department List View
+- **Layout Topology**: High-density `rounded-none` card grid. Each row represents one department record.
+- **"Create New Department" Button**: Opens a sharp-edged modal form with three fields:
+  1. **Department Name** (text input, required).
+  2. **Manager** (live-search user picker, required) — returns all company users; the selected user will be assigned `role = 'DEPT_MANAGER'` on creation.
+  3. **Initial Agents** (multi-select user picker, optional) — returns all company users excluding the selected manager; zero or more may be added at creation time.
+  On confirm: `POST /api/departments` with `{ name, managerId, agentIds[] }`.
+- **Department Card Click**: Slides open the right-side **Inspector Drawer Panel** (Screen B).
+- **"Delete Department" Button** (per row): Red-themed action target. On click, surfaces a hard-edged absolute confirmation modal with a cascade data warning:
+  - Modal copy: *"Deleting this department will permanently purge all associated tickets, messages, and attachments. All agents and managers will be downgraded to standard employees."*
+  - On confirm: fires `DELETE /api/departments/{id}`. The PostgreSQL `ON DELETE CASCADE` constraint purges all ticket rows. The backend then bulk-updates all former `AGENT` / `DEPT_MANAGER` rows to `role = 'EMPLOYEE'`, `department_id = NULL`.
+
+#### Screen B: Department Inspector Drawer Panel
+The right-side drawer opens when a department card is clicked on Screen A.
+
+- **Department Name Display**: Static read-only string at the top of the drawer.
+- **Manager Field with Handover Interlock**:
+  - Displays the current manager's name with an **inline pencil icon** target beside it.
+  - **Pencil Click**: Converts the field into a live-search input. Backend call: `GET /api/users?company={id}&exclude_manager={managerId}`. Returns all company users except the current manager.
+  - **Selecting a New Manager**: Triggers the handover confirmation modal: *"Are you sure you want to change the manager of this department? The previous manager will be downgraded to a standard employee, and the new user will gain full administrative operational clearance over this department's teams and analytics metrics."*
+  - **On Confirm**: `PATCH /api/departments/{id}/manager` — atomically sets new user to `role = 'DEPT_MANAGER'` + `department_id = target_department.id`; previous manager reverts to `role = 'EMPLOYEE'`.
+- **Active Agents Data Grid**: High-density table listing all users where `role == 'AGENT' AND department_id == current_department.id`. Columns: Name, Email, Active Ticket Count.
+- **"Add New Agent" Button**: Opens an overlay selection panel.
+  - Backend call: `GET /api/departments/{id}/eligible-agents` — returns all company users not in the current department (unassigned employees + agents from other departments).
+  - **Selecting an Unassigned Employee**: `POST /api/departments/{id}/agents` with `{ userId }` — sets `department_id = current_department.id`, `role = 'AGENT'`.
+  - **Selecting an Active Agent from Another Department**: The frontend intercepts and renders the **Transfer Interlock Modal**: *"Transfer this agent to this department? This will instantly remove them from their original department queues and wipe their active ticket assignments."* On confirm: same `POST` call with a `{ userId, confirmTransfer: true }` flag.
 
 ### Flow 6: Account System Settings (`SettingsPage.jsx`)
 - **Visual Structure**: Twin-panel split framework. Left sidebar selects setting target domains; right panel surfaces editable inputs.

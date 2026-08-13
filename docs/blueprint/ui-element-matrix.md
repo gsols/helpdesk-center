@@ -8,7 +8,7 @@ This document specifies the exact UI elements, form inputs, navigation tabs, and
 A centralized, hard-edged card centered on a neutral background.
 
 ### UI Elements & Inputs:
-- **Title Block**: Heading text reading "Log in to Helpdesk Center".
+- **Title Block**: Heading text reading "Log in to ClassifAi".
 - **Subtitle Block**: Secondary text reading "Enter your corporate credentials below".
 - **Input Field 1**: Label: "Company email", Placeholder: "name@company.com", Type: email, Required: true.
 - **Input Field 2**: Label: "Password", Placeholder: "••••••••", Type: password, Required: true.
@@ -148,3 +148,27 @@ An interactive dropdown panel triggered by a bell icon in the `TopHeader` of `Ap
 - `PATCH /api/notifications/mark-all-read` — mark all read
 - `PATCH /api/tickets/{id}/approve-takeover` — approve a pending takeover; sets `assignee_id`, sets `status = 'IN_PROGRESS'`, fires `ASSIGNED` notification to requesting agent
 - `PATCH /api/tickets/{id}/reject-takeover` — reject a pending takeover; reverts `status = 'IN_PROGRESS'` for original assignee, fires rejection notification to requesting agent
+
+---
+
+## 5. System Admin Department & Team Manager Hub (`DepartmentManager.jsx`)
+A specialized structural view allowing global configuration of tenant corporate divisions.
+
+### Screen A: Master Department List View
+- **Layout Vibe**: High-density grid table array mapping custom cards with zero border radius (`rounded-none`).
+- **Interactive Targets**:
+  - **Button**: "Create New Department" → Pops a sharp-edged modal form with three fields:
+    1. **Department Name** (text input, required).
+    2. **Manager** (live-search user picker, required) — searches all company users; the selected user will be assigned `role = 'DEPT_MANAGER'` on creation.
+    3. **Initial Agents** (multi-select user picker, optional) — searches all company users except the already-selected manager; zero or more agents may be added at creation time.
+    On confirm: `POST /api/departments` with `{ name, managerId, agentIds[] }`.
+  - **Card Rows**: Clicking any department card layout block expands the interactive right inspector drawer panel.
+  - **Button**: "Delete Department" → Triggers a prominent red action cell button. Pops an absolute data warning confirmation modal tracking the cascade rule: all department tickets are permanently purged (`ON DELETE CASCADE`) and all bound agents/managers are downgraded to `EMPLOYEE` with `department_id` set to `NULL`.
+
+### Screen B: Extended Department Detailed Inspector Panel
+- **Content Metrics**: Displays active Department Name string, current Department Manager profile name, and an inline pencil edit icon target next to it.
+  - **Manager Handover Interlock**: Clicking the pencil icon converts the field into a live search input returning all corporate users except the currently assigned manager. Selecting a new user surfaces a confirmation modal: *"Are you sure you want to change the manager of this department? The previous manager will be downgraded to a standard employee, and the new user will gain full administrative operational clearance over this department's teams and analytics metrics."* On confirmation: new user row updates to `role = 'DEPT_MANAGER'` and `department_id = target_department.id`; previous manager row downgrades to `role = 'EMPLOYEE'`.
+- **Teammate Data Grid**: Displays a high-density table mapping all active agents (`role == 'AGENT'`) currently bound to this department.
+- **Action Target (Button)**: Text: "Add New Agent". Clicking loads an overlay selection panel listing all corporate employee accounts **not** already in this department (combines unassigned employees and agents active in other divisions).
+  - **Standard Employee Add**: Selecting an unassigned employee updates their profile row: `department_id = current_department.id`, `role = 'AGENT'`.
+  - **Cross-Department Agent Transfer Interlock**: If the selected user is currently an active agent in another department, execution is intercepted and a confirmation modal renders: *"Transfer this agent to this department? This will instantly remove them from their original department queues and wipe their active ticket assignments."* On confirmation: user row updates `department_id` to the target department and retains `role = 'AGENT'`.

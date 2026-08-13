@@ -148,7 +148,7 @@ export default function SlaConfigPanel() {
   );
 
   return (
-    <div style={{ maxWidth: 900 }}>
+    <div style={{ maxWidth: 900, margin: '0 auto' }}>
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -156,10 +156,17 @@ export default function SlaConfigPanel() {
           <div style={{ fontSize: 15, fontWeight: 700, color: '#0b1c30', letterSpacing: '-0.02em' }}>SLA Deadline Configuration</div>
           <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 3 }}>Define resolution targets per priority tier and manage notification integrations.</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: 20 }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Policy Active</span>
-        </div>
+        {configuredCount > 0 ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', border: '1px solid #bbf7d0', background: '#f0fdf4', borderRadius: 20 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#15803d', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Policy Active</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 14px', border: '1px solid #fde68a', background: '#fffbeb', borderRadius: 20 }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#d97706' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#b45309', letterSpacing: '0.04em', textTransform: 'uppercase' }}>Not Configured</span>
+          </div>
+        )}
       </div>
 
       {/* ── Dept tabs ────────────────────────────────────────────────────── */}

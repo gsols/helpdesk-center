@@ -480,18 +480,46 @@ export default function AdminOverviewPanel() {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: '#e2e8f0', border: '1px solid #e2e8f0' }}>
 
         {/* SLA Compliance */}
-        <div style={{ background: '#fff', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
-          <SlaArc value={data.slaComplianceRate} />
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>
-              SLA Compliance Rate
+        {data.slaConfigured === false ? (
+          <div style={{ background: '#fff', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{
+              width: 56, height: 56, flexShrink: 0, borderRadius: '50%',
+              border: '2px dashed #cbd5e1',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M10 4v6m0 4v.01" stroke="#94a3b8" strokeWidth="1.8" strokeLinecap="round"/>
+                <circle cx="10" cy="10" r="9" stroke="#94a3b8" strokeWidth="1.5"/>
+              </svg>
             </div>
-            <div style={{ fontSize: 36, fontWeight: 700, color: '#0f172a', lineHeight: 1, marginBottom: 6, fontFamily: "'JetBrains Mono', monospace" }}>
-              {slaVal != null ? `${slaVal.toFixed(1)}%` : '—'}
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>
+                SLA Compliance Rate
+              </div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>
+                No SLA Rules Configured
+              </div>
+              <span style={{ fontSize: 11, color: '#94a3b8' }}>
+                Configure SLA deadlines in{' '}
+                <span style={{ fontWeight: 700, color: '#3b82d4' }}>Admin › SLA Rules</span>{' '}
+                to track compliance.
+              </span>
             </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: slaLabelColor }}>{slaLabel}</span>
           </div>
-        </div>
+        ) : (
+          <div style={{ background: '#fff', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: 20 }}>
+            <SlaArc value={data.slaComplianceRate} />
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: '#94a3b8', marginBottom: 6 }}>
+                SLA Compliance Rate
+              </div>
+              <div style={{ fontSize: 36, fontWeight: 700, color: '#0f172a', lineHeight: 1, marginBottom: 6, fontFamily: "'JetBrains Mono', monospace" }}>
+                {slaVal != null ? `${slaVal.toFixed(1)}%` : '—'}
+              </div>
+              <span style={{ fontSize: 11, fontWeight: 700, color: slaLabelColor }}>{slaLabel}</span>
+            </div>
+          </div>
+        )}
 
         {/* Avg FRT */}
         <div style={{ background: '#fff', padding: '20px 24px' }}>

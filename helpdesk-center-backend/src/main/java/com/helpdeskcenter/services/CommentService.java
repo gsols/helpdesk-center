@@ -1,5 +1,6 @@
 package com.helpdeskcenter.services;
 
+import com.helpdeskcenter.dto.CommentPayload;
 import com.helpdeskcenter.entities.Ticket;
 import com.helpdeskcenter.entities.TicketMessage;
 import com.helpdeskcenter.entities.User;
@@ -14,6 +15,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -26,6 +28,8 @@ public class CommentService {
     private final TicketRepository ticketRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final EmailService emailService;
 
     @Transactional
     public TicketMessage addComment(Long ticketId, String message, AuthenticatedUser principal) {
@@ -44,6 +48,14 @@ public class CommentService {
 
         TicketMessage saved = ticketMessageRepository.save(ticketMessage);
 
+        // ── 1. WebSocket broadcast ────────────────────────────────────────────
+        // All subscribers of /topic/tickets/{id}/comments receive the new message instantly.
+        messagingTemplate.convertAndSend(
+            "/topic/tickets/" + ticketId + "/comments",
+            CommentPayload.from(saved)
+        );
+
+        // ── 2. In-app notification + email ───────────────────────────────────
         // Notify the other party: if commenter is the creator → notify assignee; else notify creator.
         User recipient = user.getId().equals(ticket.getCreator().getId())
             ? ticket.getAssignee()
@@ -51,6 +63,8 @@ public class CommentService {
         if (recipient != null && !recipient.getId().equals(user.getId())) {
             String notifMsg = user.getName() + " posted a comment on ticket TCK-" + ticket.getId();
             notificationService.create(recipient, ticket, NotificationType.COMMENT, notifMsg);
+            // Send async email — never blocks the HTTP response
+            emailService.sendNewCommentNotification(recipient, saved, ticket);
         }
 
         return saved;

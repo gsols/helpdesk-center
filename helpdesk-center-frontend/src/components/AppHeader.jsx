@@ -1,4 +1,17 @@
-import { Headphones, LogOut } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+
+/* ── ClassifAi brand mark — inline SVG matching the stacked chevron logo ── */
+function ClassifAiMark({ size = 16 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="8,6 40,6 36,14 4,14"  fill="#0b1c30" opacity="0.45" />
+      <polygon points="4,16 36,16 32,24 0,24" fill="#0b1c30" opacity="0.70" />
+      <polygon points="8,26 40,26 36,34 4,34" fill="#0b1c30" opacity="1.00" />
+      <polygon points="0,24 8,6 8,14 4,14"   fill="#0b1c30" opacity="0.35" />
+      <polygon points="4,34 12,16 8,16 0,34"  fill="#0b1c30" opacity="0.55" />
+    </svg>
+  );
+}
 
 function getInitials(fullName) {
   if (!fullName) return '?';
@@ -22,10 +35,10 @@ export default function AppHeader({ user, onLogout }) {
       {/* Logo / wordmark */}
       <div style={logoWrapStyle}>
         <div style={logoIconStyle}>
-          <Headphones size={16} color="#3b82d4" strokeWidth={2.5} />
+          <ClassifAiMark size={20} />
         </div>
         <span style={wordmarkStyle}>
-          Helpdesk <span style={{ color: '#3b82d4' }}>Center</span>
+          Classif<span style={{ color: '#3b82d4' }}>Ai</span>
         </span>
       </div>
 
@@ -73,10 +86,6 @@ const logoWrapStyle = {
 };
 
 const logoIconStyle = {
-  width:          32,
-  height:         32,
-  borderRadius:   8,
-  background:     '#eff6ff',
   display:        'flex',
   alignItems:     'center',
   justifyContent: 'center',
