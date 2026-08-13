@@ -13,6 +13,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
@@ -39,12 +40,23 @@ public class EmailService {
     @Value("${app.base-url:http://localhost:5173}")
     private String appBaseUrl;
 
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
     /**
      * Sends a "new comment on your ticket" email to the given recipient.
      * Called after a comment is persisted; runs on a separate thread pool thread.
      */
     @Async
     public void sendNewCommentNotification(User recipient, TicketMessage message, Ticket ticket) {
+        if (!isMailConfigured()) {
+            log.debug("[Mail] Skipping new-comment email because SMTP credentials are not configured");
+            return;
+        }
+
         try {
             Context ctx = new Context();
             ctx.setVariable("recipientName",  recipient.getName());
@@ -75,6 +87,11 @@ public class EmailService {
      */
     @Async
     public void sendTicketAssignedNotification(User assignee, Ticket ticket) {
+        if (!isMailConfigured()) {
+            log.debug("[Mail] Skipping ticket-assigned email because SMTP credentials are not configured");
+            return;
+        }
+
         try {
             Context ctx = new Context();
             ctx.setVariable("recipientName", assignee.getName());
@@ -97,5 +114,9 @@ public class EmailService {
         } catch (MessagingException e) {
             log.error("[Mail] Failed to send ticket-assigned email to {}: {}", assignee.getEmail(), e.getMessage());
         }
+    }
+
+    private boolean isMailConfigured() {
+        return StringUtils.hasText(mailUsername) && StringUtils.hasText(mailPassword);
     }
 }
